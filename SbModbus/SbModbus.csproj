@@ -4,14 +4,41 @@
         <TargetFramework>netstandard2.1</TargetFramework>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <AssemblyName>SbModbus</AssemblyName>
+        <PackageId>SbModbus</PackageId>
+        <PackageTags>Modbus;Iot</PackageTags>
+        <PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
+        <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+        <Title>SbModbus</Title>
+        <Authors>MonoLogueChi</Authors>
+        <Company>U2SB</Company>
+        <RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <GenerateDocumentationFile>False</GenerateDocumentationFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\SbModbus.SourceGenerator\SbModbus.SourceGenerator.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <Folder Include="Server\"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="..\LICENSE">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+        <None Include="..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
 </Project>

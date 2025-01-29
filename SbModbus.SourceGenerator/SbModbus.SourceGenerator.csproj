@@ -3,10 +3,35 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <AssemblyName>SbModbus.SourceGenerator</AssemblyName>
+        <PackageId>SbModbus.SourceGeneratorr</PackageId>
+        <PackageTags>Modbus;Iot</PackageTags>
+        <PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
+        <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+        <Title>SbModbus.SourceGenerator</Title>
+        <Authors>MonoLogueChi</Authors>
+        <Company>U2SB</Company>
+        <RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <GenerateDocumentationFile>False</GenerateDocumentationFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.1.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\LICENSE">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+        <None Include="..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
     </ItemGroup>
 
 </Project>
