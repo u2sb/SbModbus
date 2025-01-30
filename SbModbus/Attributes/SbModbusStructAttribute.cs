@@ -3,6 +3,9 @@ using SbModbus.Models;
 
 namespace SbModbus.Attributes;
 
+/// <summary>
+/// </summary>
+/// <param name="mode"></param>
 [AttributeUsage(AttributeTargets.Struct)]
 public class SbModbusStructAttribute(BigAndSmallEndianEncodingMode mode = BigAndSmallEndianEncodingMode.DCBA)
   : Attribute

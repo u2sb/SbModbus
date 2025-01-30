@@ -3,6 +3,9 @@ using System.Buffers;
 
 namespace SbModbus.Utils;
 
+/// <summary>
+///   CRC16校验
+/// </summary>
 public static class Crc16
 {
   private static readonly ushort[] CrcTable =
@@ -36,7 +39,7 @@ public static class Crc16
   ];
 
   /// <summary>
-  ///   计算CRC
+  ///   计算CRC16
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
@@ -52,6 +55,10 @@ public static class Crc16
     return crc;
   }
 
+  /// <summary>
+  ///   写入CRC16
+  /// </summary>
+  /// <param name="writer"></param>
   public static void WriteCrc16(this ArrayBufferWriter<byte> writer)
   {
     var crc = CalculateCrc16(writer.WrittenSpan);

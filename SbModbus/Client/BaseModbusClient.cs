@@ -10,8 +10,14 @@ using SbModbus.Utils;
 
 namespace SbModbus.Client;
 
+/// <summary>
+///   ModbusClient基础类
+/// </summary>
 public abstract class BaseModbusClient : IModbusClient
 {
+  /// <summary>
+  /// </summary>
+  /// <param name="stream"></param>
   protected BaseModbusClient(Stream stream)
   {
     Stream = stream;
@@ -19,18 +25,33 @@ public abstract class BaseModbusClient : IModbusClient
     WriteTimeout = Stream.WriteTimeout;
   }
 
+  /// <summary>
+  ///   读超时时间
+  /// </summary>
   public int ReadTimeout { get; set; }
 
+  /// <summary>
+  ///   写超时时间
+  /// </summary>
   public int WriteTimeout { get; set; }
 
+  /// <inheritdoc />
   public Stream Stream { get; }
 
+  /// <inheritdoc />
   public bool IsConnected => Stream.CanRead;
 
+  /// <inheritdoc />
   public BigAndSmallEndianEncodingMode EncodingMode { get; set; } = BigAndSmallEndianEncodingMode.DCBA;
 
   #region 通用公共方法
 
+  /// <summary>
+  ///   错误
+  /// </summary>
+  /// <param name="functionCode"></param>
+  /// <param name="exceptionCode"></param>
+  /// <exception cref="ModbusException"></exception>
   protected void ProcessError(ModbusFunctionCode functionCode, ModbusExceptionCode exceptionCode)
   {
     switch (exceptionCode)
@@ -89,6 +110,12 @@ public abstract class BaseModbusClient : IModbusClient
     }
   }
 
+  /// <summary>
+  ///   转换到 byte
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <returns></returns>
+  /// <exception cref="Exception"></exception>
   protected byte ConvertByte(int unitIdentifier)
   {
     if (unitIdentifier is < 0 or > byte.MaxValue)
@@ -98,6 +125,12 @@ public abstract class BaseModbusClient : IModbusClient
     return unchecked((byte)unitIdentifier);
   }
 
+  /// <summary>
+  ///   转换到 ushort
+  /// </summary>
+  /// <param name="value"></param>
+  /// <returns></returns>
+  /// <exception cref="Exception"></exception>
   protected ushort ConvertUshort(int value)
   {
     if (value is < 0 or > ushort.MaxValue)
@@ -174,62 +207,81 @@ public abstract class BaseModbusClient : IModbusClient
 
   #region Modbus具体实现
 
+  /// <inheritdoc />
   public abstract BitArray ReadCoils(int unitIdentifier, int startingAddress, int count);
+
+  /// <inheritdoc />
   public abstract ValueTask<BitArray> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count);
 
 
+  /// <inheritdoc />
   public Span<ushort> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
   {
     return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, count);
   }
 
+  /// <inheritdoc />
   public async ValueTask<Memory<ushort>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, count);
   }
 
 
+  /// <inheritdoc />
   public Span<ushort> ReadHoldingRegisters(int unitIdentifier, int startingAddress, int count)
   {
     return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count);
   }
 
+  /// <inheritdoc />
   public async ValueTask<Memory<ushort>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count);
   }
 
 
+  /// <inheritdoc />
   public Span<ushort> ReadInputRegisters(int unitIdentifier, int startingAddress, int count)
   {
     return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count);
   }
 
+  /// <inheritdoc />
   public async ValueTask<Memory<ushort>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count);
   }
 
+  /// <inheritdoc />
   public abstract void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value);
+
+  /// <inheritdoc />
   public abstract ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value);
 
 
+  /// <inheritdoc />
   public abstract void WriteSingleRegister(int unitIdentifier, int startingAddress, ushort value);
+
+  /// <inheritdoc />
   public abstract ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value);
 
 
+  /// <inheritdoc />
   public void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<ushort> data)
   {
     WriteMultipleRegisters(unitIdentifier, startingAddress, data.AsBytes());
   }
 
+  /// <inheritdoc />
   public abstract void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
 
+  /// <inheritdoc />
   public async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<ushort> data)
   {
     await WriteMultipleRegistersAsync(unitIdentifier, startingAddress, data.AsBytes());
   }
 
+  /// <inheritdoc />
   public abstract ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<byte> data);
 
   #endregion

@@ -6,6 +6,9 @@ using SbModbus.Models;
 
 namespace SbModbus.Client;
 
+/// <summary>
+///   ModbusClient
+/// </summary>
 public interface IModbusClient
 {
   /// <summary>
@@ -19,7 +22,7 @@ public interface IModbusClient
   public bool IsConnected { get; }
 
   /// <summary>
-  ///   编码方式
+  ///   编码方式 未启用
   /// </summary>
   public BigAndSmallEndianEncodingMode EncodingMode { get; set; }
 

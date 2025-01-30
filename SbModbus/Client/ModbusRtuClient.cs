@@ -8,8 +8,13 @@ using BitConverter = SbModbus.Utils.BitConverter;
 
 namespace SbModbus.Client;
 
+/// <summary>
+/// ModbusRTU Client
+/// </summary>
+/// <param name="stream"></param>
 public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), IModbusClient
 {
+  /// <inheritdoc />
   public override BitArray ReadCoils(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress);
@@ -29,6 +34,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     return new BitArray(result[3..^2].ToArray());
   }
 
+  /// <inheritdoc />
   public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress);
@@ -51,6 +57,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     VerifyFrame(result);
   }
 
+  /// <inheritdoc />
   public override void WriteSingleRegister(int unitIdentifier, int startingAddress, ushort value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress);
@@ -71,6 +78,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     VerifyFrame(result);
   }
 
+  /// <inheritdoc />
   public override void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress,
@@ -101,14 +109,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
 
   #region 通用方法
 
-  /// <summary>
-  ///   读离散输入或寄存器
-  /// </summary>
-  /// <param name="unitIdentifier"></param>
-  /// <param name="functionCode"></param>
-  /// <param name="startingAddress"></param>
-  /// <param name="count"></param>
-  /// <returns></returns>
+  /// <inheritdoc />
   protected override Span<ushort> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress,
     int count)
@@ -129,6 +130,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     return result[3..^2].AsUShorts();
   }
 
+  /// <inheritdoc />
   protected override ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress, int initialCapacity = 8)
   {
@@ -146,6 +148,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     return buffer;
   }
 
+  /// <inheritdoc />
   protected override void VerifyFrame(ReadOnlySpan<byte> data)
   {
     if (data.Length < 5) throw new ModbusException("The response message length is invalid.");

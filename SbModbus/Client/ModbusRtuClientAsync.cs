@@ -11,6 +11,7 @@ namespace SbModbus.Client;
 
 public partial class ModbusRtuClient
 {
+  /// <inheritdoc />
   public override async ValueTask<BitArray> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress);
@@ -30,6 +31,7 @@ public partial class ModbusRtuClient
     return new BitArray(result[3..^2].ToArray());
   }
 
+  /// <inheritdoc />
   public override async ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress);
@@ -52,6 +54,7 @@ public partial class ModbusRtuClient
     VerifyFrame(result.Span);
   }
 
+  /// <inheritdoc />
   public override async ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress);
@@ -73,6 +76,7 @@ public partial class ModbusRtuClient
   }
 
 
+  /// <inheritdoc />
   public override async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress,
     Memory<byte> data)
   {
@@ -105,14 +109,7 @@ public partial class ModbusRtuClient
 
   #region 通用方法
 
-  /// <summary>
-  ///   读离散输入或寄存器
-  /// </summary>
-  /// <param name="unitIdentifier"></param>
-  /// <param name="functionCode"></param>
-  /// <param name="startingAddress"></param>
-  /// <param name="count"></param>
-  /// <returns></returns>
+  /// <inheritdoc />
   protected override async ValueTask<Memory<ushort>> ReadRegistersAsync(int unitIdentifier,
     ModbusFunctionCode functionCode,
     int startingAddress, int count)
@@ -135,6 +132,7 @@ public partial class ModbusRtuClient
   }
 
 
+  /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> ReadWithTimeoutAsync(int length, int initialTimeout)
   {
     if (!Stream.CanRead) throw new ModbusException("Stream can not read");
