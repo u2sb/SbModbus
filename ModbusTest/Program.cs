@@ -5,6 +5,7 @@ using RJCP.IO.Ports;
 using SbModbus.Client;
 using SbModbus.Models;
 using SbModbus.Utils;
+using BitConverter = SbModbus.Utils.BitConverter;
 
 Console.WriteLine("Hello, World!");
 
@@ -25,8 +26,6 @@ await modbusClient.WriteMultipleRegistersAsync(1, 4,
   ]));
 
 var b = await modbusClient.ReadHoldingRegistersAsync(1, 4, 3);
-//
-// Console.WriteLine(BitConverter.ToInt32(b.Span.AsBytes(), true));
 
 var myStruct = new MyStruct(b.Span);
 

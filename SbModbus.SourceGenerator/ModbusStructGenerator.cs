@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -55,61 +54,83 @@ namespace SbModbus.SourceGenerator
 
       foreach (var fieldInfo in fieldInfos)
       {
-        toTStringBuilder.AppendLine(BitConverterToTString(fieldInfo, encodingMode));
-        toBytesStringBuilder.AppendLine(BitConverterToBytesString(fieldInfo, encodingMode));
+        toTStringBuilder.AppendLine(BitConverterToTString(fieldInfo));
+        toBytesStringBuilder.AppendLine(BitConverterToBytesString(fieldInfo));
       }
 
       return $@"
 // Auto-generated code
+using SbModbus.Utils;
+using System.Runtime.CompilerServices;
+
+using static SbModbus.Utils.Utils;
+
 namespace {namespaceName}
 {{
   public partial struct {structName}
   {{
-    public {structName}(ReadOnlySpan<byte> data)
+    public {structName}(ReadOnlySpan<byte> data, byte mode = {encodingMode})
     {{
+      CheckLength(data, Unsafe.SizeOf<{structName}>());
 {toTStringBuilder}
     }}
 
-    public {structName}(ReadOnlySpan<ushort> data0)
+    public {structName}(ReadOnlySpan<ushort> data0, byte mode = {encodingMode})
     {{
-      var data = SbModbus.Utils.BitConverter.AsBytes(data0);
+      var data = data0.AsBytes();
+      CheckLength(data, Unsafe.SizeOf<{structName}>());
 {toTStringBuilder}
     }}
 
-    public byte[] ToBytes()
+    public byte[] ToBytes(byte mode = {encodingMode})
     {{
-      var data = new byte[System.Runtime.InteropServices.Marshal.SizeOf<{structName}>()];
+      var data = new byte[Unsafe.SizeOf<{structName}>()];
       var span = data.AsSpan();
-{toBytesStringBuilder}
+      this.ToBytes(span, mode);
       return data;
+    }}
+
+    public void ToBytes(Span<byte> span, byte mode = {encodingMode})
+    {{
+      CheckLength(span, Unsafe.SizeOf<{structName}>());
+{toBytesStringBuilder}
     }}
 
     public static implicit operator {structName}(ReadOnlySpan<byte> data)
     {{
-        return new {structName}(data);
+      return new {structName}(data);
     }}
 
     public static implicit operator byte[]({structName} value)
     {{
-        return value.ToBytes();
+      return value.ToBytes();
     }}
   }}
 }}
 ";
     }
 
-    private static string BitConverterToTString(FieldInfo fieldInfo, byte mode)
+    private static string BitConverterToTString(FieldInfo fieldInfo)
     {
       var size = SizeOfType(fieldInfo.Type);
+      if (size != 0)
+        return
+          $"      this.{fieldInfo.Name} = data[{fieldInfo.Offset}..{fieldInfo.Offset + size}].ToT<{fieldInfo.Type.ToDisplayString()}>(mode);";
+
       return
-        $"      this.{fieldInfo.Name} = SbModbus.Utils.BitConverter.ToT<{fieldInfo.Type.ToDisplayString()}>(data[{fieldInfo.Offset}..{fieldInfo.Offset + size}], (byte){mode});";
+        $"      this.{fieldInfo.Name} = new {fieldInfo.Type.ToDisplayString()}(data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
     }
 
-    private static string BitConverterToBytesString(FieldInfo fieldInfo, byte mode)
+    private static string BitConverterToBytesString(FieldInfo fieldInfo)
     {
       var size = SizeOfType(fieldInfo.Type);
+
+      if (size != 0)
+        return
+          $"      this.{fieldInfo.Name}.ToBytes<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);";
+
       return
-        $"      SbModbus.Utils.BitConverter.ToBytes<{fieldInfo.Type.ToDisplayString()}>(this.{fieldInfo.Name}, span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], (byte){mode});";
+        $"      this.{fieldInfo.Name}.ToBytes(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
     }
 
     private static int SizeOfType(ITypeSymbol typeSymbol)
@@ -137,7 +158,8 @@ namespace {namespaceName}
           size = 8;
           break;
         default:
-          throw new ArgumentOutOfRangeException();
+          size = 0;
+          break;
       }
 
       return size;

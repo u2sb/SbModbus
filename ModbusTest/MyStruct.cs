@@ -15,4 +15,19 @@ public partial struct MyStruct
   [FieldOffset(0)] private int _a;
 
   [field: FieldOffset(4)] public ushort B { get; set; }
+  
+  [field: FieldOffset(0)]public MyStruct2 MyStruct2 { get; set; }
+}
+
+[SbModbusStruct(BigAndSmallEndianEncodingMode.ABCD)]
+[StructLayout(LayoutKind.Explicit, Pack = 2)]
+public partial struct MyStruct2
+{
+  public MyStruct2()
+  {
+  }
+  
+  [FieldOffset(0)] private int _a;
+
+  [field: FieldOffset(4)] public ushort B { get; set; }
 }

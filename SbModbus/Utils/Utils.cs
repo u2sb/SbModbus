@@ -3,7 +3,7 @@ using SbModbus.Models;
 
 namespace SbModbus.Utils
 {
-  internal static class Utils
+  public static class Utils
   {
     #region 检查长度
 

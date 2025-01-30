@@ -229,7 +229,6 @@ namespace SbModbus.Utils
             var sp = data.Slice(i, 2);
             sp.Reverse();
           }
-
           break;
         case BigAndSmallEndianEncodingMode.CDAB:
           // 二字节不翻转，前后翻转
@@ -252,7 +251,7 @@ namespace SbModbus.Utils
     /// <param name="data">数据</param>
     /// <param name="useBigEndianMode">是否使用大端模式</param>
     /// <returns></returns>
-    public static T ToT<T>(ReadOnlySpan<byte> data, bool useBigEndianMode = false) where T : unmanaged
+    public static T ToT<T>(this ReadOnlySpan<byte> data, bool useBigEndianMode = false) where T : unmanaged
     {
       var size = Unsafe.SizeOf<T>();
       CheckLength(data, size);
@@ -266,7 +265,7 @@ namespace SbModbus.Utils
       return MemoryMarshal.Read<T>(span);
     }
 
-    public static T ToT<T>(ReadOnlySpan<byte> data, byte mode) where T : unmanaged
+    public static T ToT<T>(this ReadOnlySpan<byte> data, byte mode) where T : unmanaged
     {
       return ToT<T>(data, (BigAndSmallEndianEncodingMode)mode);
     }
@@ -280,7 +279,7 @@ namespace SbModbus.Utils
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static T ToT<T>(ReadOnlySpan<byte> data, BigAndSmallEndianEncodingMode mode) where T : unmanaged
+    public static T ToT<T>(this ReadOnlySpan<byte> data, BigAndSmallEndianEncodingMode mode) where T : unmanaged
     {
       var size = Unsafe.SizeOf<T>();
       if (size % 2 != 0)
