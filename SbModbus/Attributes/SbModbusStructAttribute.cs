@@ -1,19 +1,14 @@
 using System;
 using SbModbus.Models;
 
-namespace SbModbus.Attributes
-{
-  [AttributeUsage(AttributeTargets.Struct)]
-  public class SbModbusStructAttribute : Attribute
-  {
-    public SbModbusStructAttribute(BigAndSmallEndianEncodingMode mode = BigAndSmallEndianEncodingMode.DCBA)
-    {
-      BigAndSmallEndianEncodingMode = mode;
-    }
+namespace SbModbus.Attributes;
 
-    /// <summary>
-    ///   编码方式
-    /// </summary>
-    public BigAndSmallEndianEncodingMode BigAndSmallEndianEncodingMode { get; }
-  }
+[AttributeUsage(AttributeTargets.Struct)]
+public class SbModbusStructAttribute(BigAndSmallEndianEncodingMode mode = BigAndSmallEndianEncodingMode.DCBA)
+  : Attribute
+{
+  /// <summary>
+  ///   编码方式
+  /// </summary>
+  public BigAndSmallEndianEncodingMode BigAndSmallEndianEncodingMode { get; } = mode;
 }

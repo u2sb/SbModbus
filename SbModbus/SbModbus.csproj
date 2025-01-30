@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <TargetFrameworks>netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
         <Nullable>enable</Nullable>
-        <LangVersion>9</LangVersion>
+        <LangVersion>preview</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <AssemblyName>SbModbus</AssemblyName>
         <PackageId>SbModbus</PackageId>
@@ -30,7 +30,7 @@
               Visible="false"/>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition = "'$(TargetFramework)' == 'netstandard2.1'">
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0"/>
     </ItemGroup>
     <ItemGroup>
