@@ -183,6 +183,46 @@ public static class BitConverter
     return cmm.Memory;
   }
 
+  /// <summary>
+  ///   转换到Memory
+  /// </summary>
+  /// <param name="data"></param>
+  /// <typeparam name="TFrom"></typeparam>
+  /// <typeparam name="TTo"></typeparam>
+  /// <returns></returns>
+  public static Memory<TTo> ToMemory<TFrom, TTo>(this ReadOnlySpan<TFrom> data)
+    where TFrom : unmanaged where TTo : unmanaged
+  {
+    unsafe
+    {
+      fixed (void* ptr = &MemoryMarshal.GetReference(data))
+      {
+        using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
+        return cmm.Memory;
+      }
+    }
+  }
+
+  /// <summary>
+  ///   转换到Memory
+  /// </summary>
+  /// <param name="data"></param>
+  /// <typeparam name="TFrom"></typeparam>
+  /// <typeparam name="TTo"></typeparam>
+  /// <returns></returns>
+  public static Memory<TTo> ToMemory<TFrom, TTo>(this Span<TFrom> data)
+    where TFrom : unmanaged where TTo : unmanaged
+  {
+    unsafe
+    {
+      fixed (void* ptr = &MemoryMarshal.GetReference(data))
+      {
+        using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
+        return cmm.Memory;
+      }
+    }
+  }
+
   #endregion
 
   #region MemoryManager类

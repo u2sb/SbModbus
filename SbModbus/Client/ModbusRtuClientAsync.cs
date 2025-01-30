@@ -18,15 +18,10 @@ public partial class ModbusRtuClient
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
-    await Stream.WriteAsync(buffer.WrittenMemory);
-    await Stream.FlushAsync();
-
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
-    var result = await ReadWithTimeoutAsync(length, ReadTimeout);
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
 
-    // 验证数据帧
-    VerifyFrame(result.Span);
     // 返回数据
     return new BitArray(result[3..^2].ToArray());
   }
@@ -43,15 +38,9 @@ public partial class ModbusRtuClient
 
     buffer.WriteCrc16();
 
-    await Stream.WriteAsync(buffer.WrittenMemory);
-    await Stream.FlushAsync();
-
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    var result = await ReadWithTimeoutAsync(length, ReadTimeout);
-
-    // 验证数据帧
-    VerifyFrame(result.Span);
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
   }
 
   /// <inheritdoc />
@@ -64,15 +53,9 @@ public partial class ModbusRtuClient
 
     buffer.WriteCrc16();
 
-    await Stream.WriteAsync(buffer.WrittenMemory);
-    await Stream.FlushAsync();
-
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    var result = await ReadWithTimeoutAsync(length, ReadTimeout);
-
-    // 验证数据帧
-    VerifyFrame(result.Span);
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
   }
 
 
@@ -95,16 +78,9 @@ public partial class ModbusRtuClient
     // 写校验
     buffer.WriteCrc16();
 
-    await Stream.WriteAsync(buffer.WrittenMemory);
-    await Stream.FlushAsync();
-
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    var result = await ReadWithTimeoutAsync(length, ReadTimeout);
-
-
-    // 验证数据帧
-    VerifyFrame(result.Span);
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
   }
 
   #region 通用方法
@@ -118,23 +94,23 @@ public partial class ModbusRtuClient
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
-    await Stream.WriteAsync(buffer.WrittenMemory);
-    await Stream.FlushAsync();
-
     // 1设备地址 1功能码 1数据长度 2n数据 2校验
     var length = 1 + 1 + 1 + count * 2 + 2;
-    var result = await ReadWithTimeoutAsync(length, ReadTimeout);
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
 
-    // 验证数据帧
-    VerifyFrame(result.Span);
     // 返回数据
     return result[3..^2].Cast<byte, ushort>();
   }
 
 
   /// <inheritdoc />
-  protected override async ValueTask<Memory<byte>> ReadWithTimeoutAsync(int length, int initialTimeout)
+  protected override async ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length,
+    int initialTimeout)
   {
+    // 写入数据
+    await Stream.WriteAsync(data);
+    await Stream.FlushAsync();
+
     if (!Stream.CanRead) throw new ModbusException("Stream can not read");
 
     using var cts = new CancellationTokenSource();
@@ -147,29 +123,25 @@ public partial class ModbusRtuClient
     {
       throw new ModbusException($"Timeout occurred after {initialTimeout} milliseconds");
     }
-    catch (Exception ex)
-    {
-      throw new ModbusException($"Unknown error {ex.Message}");
-    }
 
 
     async Task<Memory<byte>> ReadAsync(CancellationToken ct)
     {
       return await Task.Run(async () =>
       {
-        var buffer = new byte[length];
-        var span = buffer.AsMemory();
-        var bytesRead = 0;
-
         // 先设置到最后一位
         if (Stream.CanSeek) Stream.Seek(0, SeekOrigin.End);
+
+        var buffer = new byte[length];
+        var memory = buffer.AsMemory();
+        var bytesRead = 0;
 
         // 是否已验证功能码
         var verificationFunctionCode = false;
 
         while (bytesRead < length)
         {
-          var read = await Stream.ReadAsync(span[bytesRead..], ct);
+          var read = await Stream.ReadAsync(memory[bytesRead..], ct);
 
           // 如果没读到数据就跳过
           if (read == 0) continue;
@@ -187,7 +159,12 @@ public partial class ModbusRtuClient
           await Task.Yield();
         }
 
-        return span[..length];
+        var result = memory[..bytesRead];
+
+        // 验证数据帧
+        VerifyFrame(result.Span);
+
+        return result;
       }, ct);
     }
   }

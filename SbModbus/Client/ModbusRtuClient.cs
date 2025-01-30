@@ -9,7 +9,7 @@ using BitConverter = SbModbus.Utils.BitConverter;
 namespace SbModbus.Client;
 
 /// <summary>
-/// ModbusRTU Client
+///   ModbusRTU Client
 /// </summary>
 /// <param name="stream"></param>
 public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), IModbusClient
@@ -21,15 +21,10 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
-    Stream.Write(buffer.WrittenSpan);
-    Stream.Flush();
-
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
-    var result = ReadWithTimeout(length, ReadTimeout);
+    var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
 
-    // 验证数据帧
-    VerifyFrame(result);
     // 返回数据
     return new BitArray(result[3..^2].ToArray());
   }
@@ -46,15 +41,9 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
 
     buffer.WriteCrc16();
 
-    Stream.Write(buffer.WrittenSpan);
-    Stream.Flush();
-
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    var result = ReadWithTimeout(length, ReadTimeout);
-
-    // 验证数据帧
-    VerifyFrame(result);
+    _ = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
   }
 
   /// <inheritdoc />
@@ -67,15 +56,9 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
 
     buffer.WriteCrc16();
 
-    Stream.Write(buffer.WrittenSpan);
-    Stream.Flush();
-
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    var result = ReadWithTimeout(length, ReadTimeout);
-
-    // 验证数据帧
-    VerifyFrame(result);
+    _ = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
   }
 
   /// <inheritdoc />
@@ -96,15 +79,9 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     // 写校验
     buffer.WriteCrc16();
 
-    Stream.Write(buffer.WrittenSpan);
-    Stream.Flush();
-
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    var result = ReadWithTimeout(length, ReadTimeout);
-
-    // 验证数据帧
-    VerifyFrame(result);
+    _ = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
   }
 
   #region 通用方法
@@ -118,14 +95,10 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
-    Stream.Write(buffer.WrittenSpan);
-
     // 1设备地址 1功能码 1数据长度 2n数据 2校验
     var length = 1 + 1 + 1 + count * 2 + 2;
-    var result = ReadWithTimeout(length, ReadTimeout);
+    var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
 
-    // 验证数据帧
-    VerifyFrame(result);
     // 返回数据
     return result[3..^2].AsUShorts();
   }

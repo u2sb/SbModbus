@@ -43,6 +43,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public BigAndSmallEndianEncodingMode EncodingMode { get; set; } = BigAndSmallEndianEncodingMode.DCBA;
+  
 
   #region 通用公共方法
 
@@ -157,22 +158,24 @@ public abstract class BaseModbusClient : IModbusClient
   /// <summary>
   ///   读取数据
   /// </summary>
+  /// <param name="data">要写入的数据</param>
   /// <param name="length">需要读取的数据长度</param>
   /// <param name="initialTimeout">超时时间 单位ms</param>
   /// <returns></returns>
-  protected Span<byte> ReadWithTimeout(int length, int initialTimeout)
+  protected Span<byte> WriteAndReadWithTimeout(ReadOnlySpan<byte> data, int length, int initialTimeout)
   {
-    return ReadWithTimeoutAsync(length, initialTimeout).Result.Span;
+    return WriteAndReadWithTimeoutAsync(data.ToMemory<byte, byte>(), length, initialTimeout).Result.Span;
   }
 
   /// <summary>
   ///   读取数据
   /// </summary>
+  /// <param name="data">要写入的数据</param>
   /// <param name="length">需要读取的数据长度</param>
   /// <param name="initialTimeout">超时时间 单位ms</param>
   /// <returns></returns>
   /// <exception cref="ModbusException"></exception>
-  protected abstract ValueTask<Memory<byte>> ReadWithTimeoutAsync(int length, int initialTimeout);
+  protected abstract ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length, int initialTimeout);
 
   /// <summary>
   ///   读寄存器通用方法
