@@ -9,7 +9,7 @@
         <PackageId>SbModbus</PackageId>
         <PackageTags>Modbus,Iot</PackageTags>
         <PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
-        <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <Title>SbModbus</Title>
         <Authors>MonoLogueChi</Authors>
         <Company>U2SB</Company>
@@ -17,18 +17,11 @@
         <RepositoryType>git</RepositoryType>
         <PackageIcon>avatar.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <GenerateDocumentationFile>False</GenerateDocumentationFile>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <Copyright>U2SB</Copyright>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
-
-    <ItemGroup>
-        <None Include="..\SbModbus.SourceGenerator\bin\$(Configuration)\netstandard2.0\SbModbus.SourceGenerator.dll"
-              PackagePath="analyzers\dotnet\roslyn4.1\cs"
-              Pack="true"
-              Visible="false"/>
-    </ItemGroup>
 
     <ItemGroup Condition = "'$(TargetFramework)' == 'netstandard2.1'">
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0"/>
@@ -36,6 +29,10 @@
     <ItemGroup>
         <ProjectReference Include="..\SbModbus.SourceGenerator\SbModbus.SourceGenerator.csproj"
                           ReferenceOutputAssembly="false"/>
+        <None Include="..\SbModbus.SourceGenerator\bin\$(Configuration)\netstandard2.0\SbModbus.SourceGenerator.dll"
+              PackagePath="analyzers\dotnet\roslyn4.1\cs"
+              Pack="true"
+              Visible="false"/>
     </ItemGroup>
 
     <ItemGroup>
