@@ -47,6 +47,7 @@ public class ModbusStructGenerator : ISourceGenerator
     List<FieldInfo> fieldInfos)
   {
     var structName = structSymbol.Name;
+    var isGlobalNamespace = structSymbol.ContainingNamespace.IsGlobalNamespace;
     var namespaceName = structSymbol.ContainingNamespace.ToDisplayString();
 
     var toTStringBuilder = new StringBuilder();
@@ -58,64 +59,70 @@ public class ModbusStructGenerator : ISourceGenerator
       toBytesStringBuilder.AppendLine(BitConverterToBytesString(fieldInfo));
     }
 
-    return $@"
-// Auto-generated code
-using SbModbus.Utils;
-using System.Runtime.CompilerServices;
 
-using static SbModbus.Utils.Utils;
+    var sb = new StringBuilder();
+    sb.AppendLine("// Auto-generated code");
+    sb.AppendLine("using SbModbus.Utils;");
+    sb.AppendLine("using System;");
+    sb.AppendLine("using System.Runtime.CompilerServices;");
+    sb.AppendLine("using static SbModbus.Utils.Utils;");
 
-namespace {namespaceName}
-{{
-  public partial struct {structName}
-  {{
-    public {structName}(ReadOnlySpan<byte> data, byte mode = {encodingMode})
-    {{
-      CheckLength(data, Unsafe.SizeOf<{structName}>());
-{toTStringBuilder}
-    }}
+    if (!isGlobalNamespace)
+    {
+      sb.AppendLine($"namespace {namespaceName}");
+      sb.AppendLine("{");
+    }
 
-    public {structName}(ReadOnlySpan<ushort> data0, byte mode = {encodingMode})
-    {{
-      var data = data0.AsBytes();
-      CheckLength(data, Unsafe.SizeOf<{structName}>());
-{toTStringBuilder}
-    }}
+    sb.AppendLine($"public partial struct {structName}");
+    sb.AppendLine("{");
+    sb.AppendLine($"public {structName}(ReadOnlySpan<byte> data, byte mode = {encodingMode})");
+    sb.AppendLine("{");
+    sb.AppendLine($"CheckLength(data, Unsafe.SizeOf<{structName}>());");
+    sb.AppendLine($"{toTStringBuilder}");
+    sb.AppendLine("}");
+    sb.AppendLine($"public {structName}(ReadOnlySpan<ushort> data0, byte mode = {encodingMode})");
+    sb.AppendLine("{");
+    sb.AppendLine("var data = data0.AsBytes();");
+    sb.AppendLine($"CheckLength(data, Unsafe.SizeOf<{structName}>());");
+    sb.AppendLine($"{toTStringBuilder}");
+    sb.AppendLine("}");
+    sb.AppendLine($"public byte[] ToBytes(byte mode = {encodingMode})");
+    sb.AppendLine("{");
+    sb.AppendLine($"var data = new byte[Unsafe.SizeOf<{structName}>()];");
+    sb.AppendLine("var span = data.AsSpan();");
+    sb.AppendLine("this.ToBytes(span, mode);");
+    sb.AppendLine("return data;");
+    sb.AppendLine("}");
+    sb.AppendLine($"public void ToBytes(Span<byte> span, byte mode = {encodingMode})");
+    sb.AppendLine("{");
+    sb.AppendLine($"CheckLength(span, Unsafe.SizeOf<{structName}>());");
+    sb.AppendLine($"{toBytesStringBuilder}");
+    sb.AppendLine("}");
+    sb.AppendLine($"public static implicit operator {structName}(ReadOnlySpan<byte> data)");
+    sb.AppendLine("{");
+    sb.AppendLine($"return new {structName}(data);");
+    sb.AppendLine("}");
+    sb.AppendLine($"public static implicit operator {structName}(ReadOnlySpan<ushort> data)");
+    sb.AppendLine("{");
+    sb.AppendLine($"return new {structName}(data);");
+    sb.AppendLine("}");
+    sb.AppendLine($"public static implicit operator byte[]({structName} value)");
+    sb.AppendLine("{");
+    sb.AppendLine("return value.ToBytes();");
+    sb.AppendLine("}");
 
-    public byte[] ToBytes(byte mode = {encodingMode})
-    {{
-      var data = new byte[Unsafe.SizeOf<{structName}>()];
-      var span = data.AsSpan();
-      this.ToBytes(span, mode);
-      return data;
-    }}
+    sb.AppendLine("}");
+    if (!isGlobalNamespace) sb.AppendLine("}");
 
-    public void ToBytes(Span<byte> span, byte mode = {encodingMode})
-    {{
-      CheckLength(span, Unsafe.SizeOf<{structName}>());
-{toBytesStringBuilder}
-    }}
-
-    public static implicit operator {structName}(ReadOnlySpan<byte> data)
-    {{
-      return new {structName}(data);
-    }}
-
-    public static implicit operator byte[]({structName} value)
-    {{
-      return value.ToBytes();
-    }}
-  }}
-}}
-";
+    return sb.ToString();
   }
 
   private static string BitConverterToTString(FieldInfo fieldInfo)
   {
     var size = SizeOfType(fieldInfo.Type);
     return size != 0
-      ? $"      this.{fieldInfo.Name} = data[{fieldInfo.Offset}..{fieldInfo.Offset + size}].ToT<{fieldInfo.Type.ToDisplayString()}>(mode);"
-      : $"      this.{fieldInfo.Name} = new {fieldInfo.Type.ToDisplayString()}(data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
+      ? $"this.{fieldInfo.Name} = data[{fieldInfo.Offset}..{fieldInfo.Offset + size}].ToT<{fieldInfo.Type.ToDisplayString()}>(mode);"
+      : $"this.{fieldInfo.Name} = new {fieldInfo.Type.ToDisplayString()}(data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
   }
 
   private static string BitConverterToBytesString(FieldInfo fieldInfo)
@@ -123,8 +130,8 @@ namespace {namespaceName}
     var size = SizeOfType(fieldInfo.Type);
 
     return size != 0
-      ? $"      this.{fieldInfo.Name}.ToBytes<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
-      : $"      this.{fieldInfo.Name}.ToBytes(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
+      ? $"this.{fieldInfo.Name}.ToBytes<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
+      : $"this.{fieldInfo.Name}.ToBytes(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
   }
 
   private static int SizeOfType(ITypeSymbol typeSymbol)
