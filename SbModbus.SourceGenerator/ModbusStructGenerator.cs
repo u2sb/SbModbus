@@ -90,10 +90,10 @@ public class ModbusStructGenerator : ISourceGenerator
     sb.AppendLine("{");
     sb.AppendLine($"var data = new byte[Unsafe.SizeOf<{structName}>()];");
     sb.AppendLine("var span = data.AsSpan();");
-    sb.AppendLine("this.ToBytes(span, mode);");
+    sb.AppendLine("this.CopyTo(span, mode);");
     sb.AppendLine("return data;");
     sb.AppendLine("}");
-    sb.AppendLine($"public void ToBytes(Span<byte> span, byte mode = {encodingMode})");
+    sb.AppendLine($"public void CopyTo(Span<byte> span, byte mode = {encodingMode})");
     sb.AppendLine("{");
     sb.AppendLine($"CheckLength(span, Unsafe.SizeOf<{structName}>());");
     sb.AppendLine($"{toBytesStringBuilder}");
@@ -130,8 +130,8 @@ public class ModbusStructGenerator : ISourceGenerator
     var size = SizeOfType(fieldInfo.Type);
 
     return size != 0
-      ? $"this.{fieldInfo.Name}.ToBytes<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
-      : $"this.{fieldInfo.Name}.ToBytes(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
+      ? $"this.{fieldInfo.Name}.CopyTo<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
+      : $"this.{fieldInfo.Name}.CopyTo(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
   }
 
   private static int SizeOfType(ITypeSymbol typeSymbol)

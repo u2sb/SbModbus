@@ -293,12 +293,7 @@ public static class BitConverter
   /// <returns></returns>
   public static byte[] ToBytes<T>(this T value, bool useBigEndianMode = false) where T : unmanaged
   {
-    Span<byte> result = stackalloc byte[Unsafe.SizeOf<T>()];
-
-    Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(result)) = value;
-
-    if (System.BitConverter.IsLittleEndian == useBigEndianMode) result.Reverse();
-    return result.ToArray();
+    return ToBytes(value, useBigEndianMode ? BigAndSmallEndianEncodingMode.ABCD : BigAndSmallEndianEncodingMode.DCBA);
   }
 
   /// <summary>
@@ -324,7 +319,7 @@ public static class BitConverter
   {
     var size = Unsafe.SizeOf<T>();
     var result = new byte[size];
-    ToBytes(value, result.AsSpan(), mode);
+    CopyTo(value, result.AsSpan(), mode);
     return result;
   }
 
@@ -335,10 +330,10 @@ public static class BitConverter
   /// <param name="data"></param>
   /// <param name="mode"></param>
   /// <typeparam name="T"></typeparam>
-  public static void ToBytes<T>(this T value, Span<byte> data, byte mode)
+  public static void CopyTo<T>(this T value, Span<byte> data, byte mode)
     where T : unmanaged
   {
-    ToBytes(value, data, (BigAndSmallEndianEncodingMode)mode);
+    CopyTo(value, data, (BigAndSmallEndianEncodingMode)mode);
   }
 
   /// <summary>
@@ -349,7 +344,7 @@ public static class BitConverter
   /// <param name="mode"></param>
   /// <typeparam name="T"></typeparam>
   /// <exception cref="ArgumentOutOfRangeException"></exception>
-  public static void ToBytes<T>(this T value, Span<byte> data, BigAndSmallEndianEncodingMode mode)
+  public static void CopyTo<T>(this T value, Span<byte> data, BigAndSmallEndianEncodingMode mode)
     where T : unmanaged
   {
     var size = Unsafe.SizeOf<T>();
@@ -399,16 +394,7 @@ public static class BitConverter
   /// <returns></returns>
   public static T ToT<T>(this ReadOnlySpan<byte> data, bool useBigEndianMode = false) where T : unmanaged
   {
-    var size = Unsafe.SizeOf<T>();
-    CheckLength(data, size);
-
-    Span<byte> span = stackalloc byte[size];
-    data.CopyTo(span);
-
-    // 使用小端模式
-    if (System.BitConverter.IsLittleEndian == useBigEndianMode) span.Reverse();
-
-    return MemoryMarshal.Read<T>(span);
+    return ToT<T>(data, useBigEndianMode ? BigAndSmallEndianEncodingMode.ABCD : BigAndSmallEndianEncodingMode.DCBA);
   }
 
   /// <summary>
@@ -434,49 +420,72 @@ public static class BitConverter
   /// <exception cref="ArgumentOutOfRangeException"></exception>
   public static T ToT<T>(this ReadOnlySpan<byte> data, BigAndSmallEndianEncodingMode mode) where T : unmanaged
   {
+    T value = default;
+    data.CopyTo(ref value, mode);
+    return value;
+  }
+
+  /// <summary>
+  ///   转换到T
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <param name="data"></param>
+  /// <param name="mode"></param>
+  /// <param name="value"></param>
+  /// <returns></returns>
+  /// <exception cref="ArgumentException"></exception>
+  /// <exception cref="ArgumentOutOfRangeException"></exception>
+  public static void CopyTo<T>(this ReadOnlySpan<byte> data, ref T value,
+    BigAndSmallEndianEncodingMode mode = BigAndSmallEndianEncodingMode.DCBA)
+    where T : unmanaged
+  {
     var size = Unsafe.SizeOf<T>();
     if (size % 2 != 0)
       throw new ArgumentException(
         $"The size of the {nameof(T)} type is not a multiple of 2. Actual size is {size} bytes.");
     CheckLength(data, size);
 
-    Span<byte> span = stackalloc byte[size];
-    data.CopyTo(span);
-
-    // 先按小端模式处理
-    switch (mode)
+    unsafe
     {
-      case BigAndSmallEndianEncodingMode.DCBA:
-        // 小端模式不做处理
-        break;
-      case BigAndSmallEndianEncodingMode.ABCD:
-        // 大端模式整体翻转
-        span.Reverse();
-        break;
-      case BigAndSmallEndianEncodingMode.BADC:
-        // 二字节翻转，前后不翻转
-        // 已经判断过，必须为 2 的倍数
-        for (var i = 0; i < size; i += 2)
+      fixed (void* ptr = &value)
+      {
+        var span = new Span<byte>(ptr, size);
+        data.CopyTo(span);
+
+        // 先按小端模式处理
+        switch (mode)
         {
-          var sp = span.Slice(i, 2);
-          sp.Reverse();
+          case BigAndSmallEndianEncodingMode.DCBA:
+            // 小端模式不做处理
+            break;
+          case BigAndSmallEndianEncodingMode.ABCD:
+            // 大端模式整体翻转
+            span.Reverse();
+            break;
+          case BigAndSmallEndianEncodingMode.BADC:
+            // 二字节翻转，前后不翻转
+            // 已经判断过，必须为 2 的倍数
+            for (var i = 0; i < size; i += 2)
+            {
+              var sp = span.Slice(i, 2);
+              sp.Reverse();
+            }
+
+            break;
+          case BigAndSmallEndianEncodingMode.CDAB:
+            // 二字节不翻转，前后翻转
+            // 解释为ushort，然后整体翻转
+            var us = span.AsUShorts();
+            us.Reverse();
+            break;
+          default:
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
         }
 
-        break;
-      case BigAndSmallEndianEncodingMode.CDAB:
-        // 二字节不翻转，前后翻转
-        // 解释为ushort，然后整体翻转
-        var us = span.AsUShorts();
-        us.Reverse();
-        break;
-      default:
-        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+        // 如果不是小端模式，做一次整体翻转
+        if (!System.BitConverter.IsLittleEndian) span.Reverse();
+      }
     }
-
-    // 如果不是小端模式，做一次整体翻转
-    if (!System.BitConverter.IsLittleEndian) span.Reverse();
-
-    return MemoryMarshal.Read<T>(span);
   }
 
   #endregion
