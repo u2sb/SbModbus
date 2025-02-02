@@ -195,7 +195,7 @@ public static class BitConverter
   {
     unsafe
     {
-      fixed (void* ptr = &MemoryMarshal.GetReference(data))
+      fixed (void* ptr = data)
       {
         using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
         return cmm.Memory;
@@ -215,7 +215,7 @@ public static class BitConverter
   {
     unsafe
     {
-      fixed (void* ptr = &MemoryMarshal.GetReference(data))
+      fixed (void* ptr = data)
       {
         using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
         return cmm.Memory;
@@ -295,7 +295,7 @@ public static class BitConverter
   {
     Span<byte> result = stackalloc byte[Unsafe.SizeOf<T>()];
 
-    Unsafe.As<byte, T>(ref result[0]) = value;
+    Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(result)) = value;
 
     if (System.BitConverter.IsLittleEndian == useBigEndianMode) result.Reverse();
     return result.ToArray();
@@ -354,7 +354,7 @@ public static class BitConverter
   {
     var size = Unsafe.SizeOf<T>();
     CheckLength(data, size);
-    Unsafe.As<byte, T>(ref data[0]) = value;
+    Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(data)) = value;
 
     // 先按小端模式处理
     switch (mode)
