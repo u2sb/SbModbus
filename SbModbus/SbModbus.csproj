@@ -8,6 +8,7 @@
         <AssemblyName>SbModbus</AssemblyName>
         <PackageId>SbModbus</PackageId>
         <PackageTags>Modbus,Iot</PackageTags>
+        <Description>Probably the best performing Modbus library</Description>
         <PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <Title>SbModbus</Title>
