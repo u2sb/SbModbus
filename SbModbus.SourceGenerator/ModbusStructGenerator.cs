@@ -102,15 +102,6 @@ public class ModbusStructGenerator : ISourceGenerator
     sb.AppendLine("{");
     sb.AppendLine($"return new {structName}(data);");
     sb.AppendLine("}");
-    sb.AppendLine($"public static implicit operator {structName}(ReadOnlySpan<ushort> data)");
-    sb.AppendLine("{");
-    sb.AppendLine($"return new {structName}(data);");
-    sb.AppendLine("}");
-    sb.AppendLine($"public static implicit operator byte[]({structName} value)");
-    sb.AppendLine("{");
-    sb.AppendLine("return value.ToBytes();");
-    sb.AppendLine("}");
-
     sb.AppendLine("}");
     if (!isGlobalNamespace) sb.AppendLine("}");
 
