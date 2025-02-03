@@ -107,29 +107,53 @@ public class ModbusStructGenerator : ISourceGenerator
   private static string BitConverterToTString(FieldInfo fieldInfo)
   {
     var size = SizeOfType(fieldInfo.Type);
-    return size != 0
-      ? $"this.{fieldInfo.Name} = data[{fieldInfo.Offset}..{fieldInfo.Offset + size}].ToT<{fieldInfo.Type.ToDisplayString()}>(mode);"
-      : $"this.{fieldInfo.Name} = new {fieldInfo.Type.ToDisplayString()}(data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
+    return size switch
+    {
+      0 =>
+        $"this.{fieldInfo.Name} = new {fieldInfo.Type.ToDisplayString()}(data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);",
+      1 or 2 or 4 or 8 =>
+        $"this.{fieldInfo.Name} = data[{fieldInfo.Offset}..{fieldInfo.Offset + size}].ToT<{fieldInfo.Type.ToDisplayString()}>(mode);",
+      _ =>
+        $"this.{fieldInfo.Name} = data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()).ToT<{fieldInfo.Type.ToDisplayString()}>(mode);"
+    };
   }
 
   private static string BitConverterToBytesString(FieldInfo fieldInfo)
   {
     var size = SizeOfType(fieldInfo.Type);
 
-    return size != 0
-      ? $"this.{fieldInfo.Name}.WriteTo<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
-      : $"this.{fieldInfo.Name}.WriteTo(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
+    return size switch
+    {
+      0 =>
+        $"this.{fieldInfo.Name}.WriteTo(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);",
+      1 or 2 or 4 or 8 =>
+        $"this.{fieldInfo.Name}.WriteTo<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);",
+      -1 =>
+        $"this.{fieldInfo.Name}.WriteTo<{fieldInfo.Type.ToDisplayString()}>(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);",
+      _ => string.Empty
+    };
   }
 
   private static int SizeOfType(ITypeSymbol typeSymbol)
   {
-    var size = typeSymbol.SpecialType switch
+    var size = typeSymbol.TypeKind switch
     {
-      SpecialType.System_Byte => 1,
-      SpecialType.System_Int16 or SpecialType.System_UInt16 => 2,
-      SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Single => 4,
-      SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Double => 8,
-      _ => 0
+      // 枚举型
+      TypeKind.Enum => -1,
+
+      // Struct
+      TypeKind.Struct => typeSymbol.SpecialType switch
+      {
+        SpecialType.System_Byte => 1,
+        SpecialType.System_Int16 or SpecialType.System_UInt16 => 2,
+        SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Single => 4,
+        SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Double => 8,
+
+        // 默认为0，即其他 struct
+        _ => 0
+      },
+
+      _ => int.MinValue
     };
 
     return size;

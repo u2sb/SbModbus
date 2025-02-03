@@ -33,8 +33,10 @@ using SbModbus.Utils;
 // sp.Dispose();
 
 
-var a = new MyStruct();
-a.B = 1234567890;
+var a = new MyStruct
+{
+  B = 1234567890
+};
 
 var b = a.ToBytes();
 var c = a.ToBytes(BigAndSmallEndianEncodingMode.DCBA);
