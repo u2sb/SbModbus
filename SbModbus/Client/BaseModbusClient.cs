@@ -43,7 +43,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public BigAndSmallEndianEncodingMode EncodingMode { get; set; } = BigAndSmallEndianEncodingMode.DCBA;
-  
+
 
   #region 通用公共方法
 
@@ -175,7 +175,8 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="initialTimeout">超时时间 单位ms</param>
   /// <returns></returns>
   /// <exception cref="ModbusException"></exception>
-  protected abstract ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length, int initialTimeout);
+  protected abstract ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length,
+    int initialTimeout);
 
   /// <summary>
   ///   读寄存器通用方法

@@ -4,7 +4,7 @@
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>12</LangVersion>
         <Nullable>enable</Nullable>
-        
+
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <AssemblyName>SbModbus.SourceGenerator</AssemblyName>
         <PackageId>SbModbus.SourceGeneratorr</PackageId>
@@ -37,8 +37,8 @@
 
     <ItemGroup>
         <None Include="..\icons\avatar.png">
-          <Pack>True</Pack>
-          <PackagePath>\</PackagePath>
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
         </None>
         <None Include="..\README.md">
             <Pack>True</Pack>
