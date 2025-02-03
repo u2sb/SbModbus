@@ -73,7 +73,7 @@ public class ModbusStructGenerator : ISourceGenerator
       sb.AppendLine("{");
     }
 
-    sb.AppendLine($"public partial struct {structName}");
+    sb.AppendLine($"partial struct {structName}");
     sb.AppendLine("{");
     sb.AppendLine($"public {structName}(ReadOnlySpan<byte> data, byte mode = {encodingMode})");
     sb.AppendLine("{");
