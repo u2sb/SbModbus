@@ -113,8 +113,9 @@ public class ModbusStructGenerator : ISourceGenerator
         $"this.{fieldInfo.Name} = new {fieldInfo.Type.ToDisplayString()}(data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);",
       1 or 2 or 4 or 8 =>
         $"this.{fieldInfo.Name} = data[{fieldInfo.Offset}..{fieldInfo.Offset + size}].ToT<{fieldInfo.Type.ToDisplayString()}>(mode);",
-      _ =>
-        $"this.{fieldInfo.Name} = data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()).ToT<{fieldInfo.Type.ToDisplayString()}>(mode);"
+      -1 =>
+        $"this.{fieldInfo.Name} = data.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()).ToT<{fieldInfo.Type.ToDisplayString()}>(mode);",
+      _ => string.Empty
     };
   }
 

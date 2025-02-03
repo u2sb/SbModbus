@@ -124,7 +124,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static ReadOnlySpan<byte> AsReadOnlyByteSpan(this ReadOnlySpan<ushort> data)
+  public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this ReadOnlySpan<T> data) where T : unmanaged
   {
     return MemoryMarshal.AsBytes(data);
   }
@@ -134,29 +134,31 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static Span<byte> AsByteSpan(this Span<ushort> data)
+  public static Span<byte> AsByteSpan<T>(this Span<T> data) where T : unmanaged
   {
     return MemoryMarshal.AsBytes(data);
   }
 
   /// <summary>
-  ///   解释为 ushort[]
+  ///   转换到类型 Span T
   /// </summary>
   /// <param name="data"></param>
+  /// <typeparam name="T"></typeparam>
   /// <returns></returns>
-  public static ReadOnlySpan<ushort> AsReadOnlyUShortSpan(this ReadOnlySpan<byte> data)
+  public static ReadOnlySpan<T> Cast<T>(this ReadOnlySpan<byte> data) where T : unmanaged
   {
-    return MemoryMarshal.Cast<byte, ushort>(data);
+    return MemoryMarshal.Cast<byte, T>(data);
   }
 
   /// <summary>
-  ///   解释为 ushort[]
+  ///   转换到类型 Span T
   /// </summary>
   /// <param name="data"></param>
+  /// <typeparam name="T"></typeparam>
   /// <returns></returns>
-  public static Span<ushort> AsUShortSpan(this Span<byte> data)
+  public static Span<T> Cast<T>(this Span<byte> data) where T : unmanaged
   {
-    return MemoryMarshal.Cast<byte, ushort>(data);
+    return MemoryMarshal.Cast<byte, T>(data);
   }
 
   /// <summary>
@@ -166,8 +168,7 @@ public static class BitConverter
   /// <returns></returns>
   public static Memory<byte> AsByteMemory<T>(this Memory<T> data) where T : unmanaged
   {
-    using var cmm = new CastMemoryManager<T, byte>(data);
-    return cmm.Memory;
+    return Cast<T, byte>(data);
   }
 
   /// <summary>
@@ -377,7 +378,7 @@ public static class BitConverter
       case BigAndSmallEndianEncodingMode.CDAB:
         // 二字节不翻转，前后翻转
         // 解释为ushort，然后整体翻转
-        var us = data.AsUShortSpan();
+        var us = data.Cast<ushort>();
         us.Reverse();
         break;
       default:
@@ -477,7 +478,7 @@ public static class BitConverter
           case BigAndSmallEndianEncodingMode.CDAB:
             // 二字节不翻转，前后翻转
             // 解释为ushort，然后整体翻转
-            var us = span.AsUShortSpan();
+            var us = span.Cast<ushort>();
             us.Reverse();
             break;
           default:
