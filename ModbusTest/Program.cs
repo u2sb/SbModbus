@@ -41,6 +41,4 @@ var c = a.ToBytes(BigAndSmallEndianEncodingMode.DCBA);
 var d = a.ToBytes(2);
 var e = a.ToBytes(3);
 
-var f = new MyStruct(b);
-
 Console.ReadKey();

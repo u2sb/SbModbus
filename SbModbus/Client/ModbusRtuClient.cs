@@ -100,7 +100,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
 
     // 返回数据
-    return result[3..^2].AsUShorts();
+    return result[3..^2].AsUShortSpan();
   }
 
   /// <inheritdoc />

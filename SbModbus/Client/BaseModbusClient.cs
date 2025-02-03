@@ -164,7 +164,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <returns></returns>
   protected Span<byte> WriteAndReadWithTimeout(ReadOnlySpan<byte> data, int length, int initialTimeout)
   {
-    return WriteAndReadWithTimeoutAsync(data.ToMemory<byte, byte>(), length, initialTimeout).Result.Span;
+    return WriteAndReadWithTimeoutAsync(data.AsMemory<byte, byte>(), length, initialTimeout).Result.Span;
   }
 
   /// <summary>
@@ -273,7 +273,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<ushort> data)
   {
-    WriteMultipleRegisters(unitIdentifier, startingAddress, data.AsBytes());
+    WriteMultipleRegisters(unitIdentifier, startingAddress, data.AsReadOnlyByteSpan());
   }
 
   /// <inheritdoc />
@@ -282,7 +282,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<ushort> data)
   {
-    await WriteMultipleRegistersAsync(unitIdentifier, startingAddress, data.AsBytes());
+    await WriteMultipleRegistersAsync(unitIdentifier, startingAddress, data.AsByteMemory());
   }
 
   /// <inheritdoc />

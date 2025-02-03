@@ -109,7 +109,7 @@ public static class BitConverter
   /// <typeparam name="T"></typeparam>
   /// <param name="value">数据</param>
   /// <returns></returns>
-  public static ReadOnlySpan<byte> AsBytes<T>(this T value) where T : unmanaged
+  public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this T value) where T : unmanaged
   {
     unsafe
     {
@@ -124,7 +124,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static ReadOnlySpan<byte> AsBytes(this ReadOnlySpan<ushort> data)
+  public static ReadOnlySpan<byte> AsReadOnlyByteSpan(this ReadOnlySpan<ushort> data)
   {
     return MemoryMarshal.AsBytes(data);
   }
@@ -134,7 +134,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static Span<byte> AsBytes(this Span<ushort> data)
+  public static Span<byte> AsByteSpan(this Span<ushort> data)
   {
     return MemoryMarshal.AsBytes(data);
   }
@@ -144,7 +144,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static ReadOnlySpan<ushort> AsUShorts(this ReadOnlySpan<byte> data)
+  public static ReadOnlySpan<ushort> AsReadOnlyUShortSpan(this ReadOnlySpan<byte> data)
   {
     return MemoryMarshal.Cast<byte, ushort>(data);
   }
@@ -154,7 +154,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static Span<ushort> AsUShorts(this Span<byte> data)
+  public static Span<ushort> AsUShortSpan(this Span<byte> data)
   {
     return MemoryMarshal.Cast<byte, ushort>(data);
   }
@@ -164,7 +164,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static Memory<byte> AsBytes<T>(this Memory<T> data) where T : unmanaged
+  public static Memory<byte> AsByteMemory<T>(this Memory<T> data) where T : unmanaged
   {
     using var cmm = new CastMemoryManager<T, byte>(data);
     return cmm.Memory;
@@ -190,7 +190,7 @@ public static class BitConverter
   /// <typeparam name="TFrom"></typeparam>
   /// <typeparam name="TTo"></typeparam>
   /// <returns></returns>
-  public static Memory<TTo> ToMemory<TFrom, TTo>(this ReadOnlySpan<TFrom> data)
+  public static Memory<TTo> AsMemory<TFrom, TTo>(this ReadOnlySpan<TFrom> data)
     where TFrom : unmanaged where TTo : unmanaged
   {
     unsafe
@@ -210,7 +210,7 @@ public static class BitConverter
   /// <typeparam name="TFrom"></typeparam>
   /// <typeparam name="TTo"></typeparam>
   /// <returns></returns>
-  public static Memory<TTo> ToMemory<TFrom, TTo>(this Span<TFrom> data)
+  public static Memory<TTo> AsMemory<TFrom, TTo>(this Span<TFrom> data)
     where TFrom : unmanaged where TTo : unmanaged
   {
     unsafe
@@ -319,7 +319,7 @@ public static class BitConverter
   {
     var size = Unsafe.SizeOf<T>();
     var result = new byte[size];
-    CopyTo(value, result.AsSpan(), mode);
+    WriteTo(value, result.AsSpan(), mode);
     return result;
   }
 
@@ -330,10 +330,10 @@ public static class BitConverter
   /// <param name="data"></param>
   /// <param name="mode"></param>
   /// <typeparam name="T"></typeparam>
-  public static void CopyTo<T>(this T value, Span<byte> data, byte mode)
+  public static void WriteTo<T>(this T value, Span<byte> data, byte mode)
     where T : unmanaged
   {
-    CopyTo(value, data, (BigAndSmallEndianEncodingMode)mode);
+    WriteTo(value, data, (BigAndSmallEndianEncodingMode)mode);
   }
 
   /// <summary>
@@ -344,12 +344,15 @@ public static class BitConverter
   /// <param name="mode"></param>
   /// <typeparam name="T"></typeparam>
   /// <exception cref="ArgumentOutOfRangeException"></exception>
-  public static void CopyTo<T>(this T value, Span<byte> data, BigAndSmallEndianEncodingMode mode)
+  public static void WriteTo<T>(this T value, Span<byte> data, BigAndSmallEndianEncodingMode mode)
     where T : unmanaged
   {
     var size = Unsafe.SizeOf<T>();
     CheckLength(data, size);
     Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(data)) = value;
+
+    // 如果是单字节，也就是 byte 类型，直接返回
+    if (size == 1) return;
 
     // 先按小端模式处理
     switch (mode)
@@ -374,7 +377,7 @@ public static class BitConverter
       case BigAndSmallEndianEncodingMode.CDAB:
         // 二字节不翻转，前后翻转
         // 解释为ushort，然后整体翻转
-        var us = data.AsUShorts();
+        var us = data.AsUShortSpan();
         us.Reverse();
         break;
       default:
@@ -426,7 +429,7 @@ public static class BitConverter
   }
 
   /// <summary>
-  ///   转换到T
+  ///   写入到 T
   /// </summary>
   /// <typeparam name="T"></typeparam>
   /// <param name="data"></param>
@@ -436,13 +439,10 @@ public static class BitConverter
   /// <exception cref="ArgumentException"></exception>
   /// <exception cref="ArgumentOutOfRangeException"></exception>
   public static void CopyTo<T>(this ReadOnlySpan<byte> data, ref T value,
-    BigAndSmallEndianEncodingMode mode = BigAndSmallEndianEncodingMode.DCBA)
+    BigAndSmallEndianEncodingMode mode)
     where T : unmanaged
   {
     var size = Unsafe.SizeOf<T>();
-    if (size % 2 != 0)
-      throw new ArgumentException(
-        $"The size of the {nameof(T)} type is not a multiple of 2. Actual size is {size} bytes.");
     CheckLength(data, size);
 
     unsafe
@@ -452,6 +452,8 @@ public static class BitConverter
         var span = new Span<byte>(ptr, size);
         data.CopyTo(span);
 
+        // 如果是单字节，也就是 byte 类型，直接返回
+        if (size == 1) return;
         // 先按小端模式处理
         switch (mode)
         {
@@ -475,7 +477,7 @@ public static class BitConverter
           case BigAndSmallEndianEncodingMode.CDAB:
             // 二字节不翻转，前后翻转
             // 解释为ushort，然后整体翻转
-            var us = span.AsUShorts();
+            var us = span.AsUShortSpan();
             us.Reverse();
             break;
           default:

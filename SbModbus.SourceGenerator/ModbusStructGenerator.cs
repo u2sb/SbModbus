@@ -82,7 +82,7 @@ public class ModbusStructGenerator : ISourceGenerator
     sb.AppendLine("}");
     sb.AppendLine($"public {structName}(ReadOnlySpan<ushort> data0, byte mode = {encodingMode})");
     sb.AppendLine("{");
-    sb.AppendLine("var data = data0.AsBytes();");
+    sb.AppendLine("var data = data0.AsReadOnlyByteSpan();");
     sb.AppendLine($"CheckLength(data, Unsafe.SizeOf<{structName}>());");
     sb.AppendLine($"{toTStringBuilder}");
     sb.AppendLine("}");
@@ -90,17 +90,13 @@ public class ModbusStructGenerator : ISourceGenerator
     sb.AppendLine("{");
     sb.AppendLine($"var data = new byte[Unsafe.SizeOf<{structName}>()];");
     sb.AppendLine("var span = data.AsSpan();");
-    sb.AppendLine("this.CopyTo(span, mode);");
+    sb.AppendLine("this.WriteTo(span, mode);");
     sb.AppendLine("return data;");
     sb.AppendLine("}");
-    sb.AppendLine($"public void CopyTo(Span<byte> span, byte mode = {encodingMode})");
+    sb.AppendLine($"public void WriteTo(Span<byte> span, byte mode = {encodingMode})");
     sb.AppendLine("{");
     sb.AppendLine($"CheckLength(span, Unsafe.SizeOf<{structName}>());");
     sb.AppendLine($"{toBytesStringBuilder}");
-    sb.AppendLine("}");
-    sb.AppendLine($"public static implicit operator {structName}(ReadOnlySpan<byte> data)");
-    sb.AppendLine("{");
-    sb.AppendLine($"return new {structName}(data);");
     sb.AppendLine("}");
     sb.AppendLine("}");
     if (!isGlobalNamespace) sb.AppendLine("}");
@@ -121,8 +117,8 @@ public class ModbusStructGenerator : ISourceGenerator
     var size = SizeOfType(fieldInfo.Type);
 
     return size != 0
-      ? $"this.{fieldInfo.Name}.CopyTo<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
-      : $"this.{fieldInfo.Name}.CopyTo(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
+      ? $"this.{fieldInfo.Name}.WriteTo<{fieldInfo.Type.ToDisplayString()}>(span[{fieldInfo.Offset}..{fieldInfo.Offset + size}], mode);"
+      : $"this.{fieldInfo.Name}.WriteTo(span.Slice({fieldInfo.Offset}, Unsafe.SizeOf<{fieldInfo.Type.ToDisplayString()}>()), mode);";
   }
 
   private static int SizeOfType(ITypeSymbol typeSymbol)
