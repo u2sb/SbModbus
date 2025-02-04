@@ -28,6 +28,21 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     // 返回数据
     return new BitArray(result[3..^2].ToArray());
   }
+  
+  /// <inheritdoc />
+  public override BitArray ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
+  {
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress);
+    buffer.Write(ConvertUshort(count).ToBytes(true));
+    buffer.WriteCrc16();
+
+    // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
+    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
+
+    // 返回数据
+    return new BitArray(result[3..^2].ToArray());
+  }
 
   /// <inheritdoc />
   public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)

@@ -219,16 +219,10 @@ public abstract class BaseModbusClient : IModbusClient
 
 
   /// <inheritdoc />
-  public Span<ushort> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
-  {
-    return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, count);
-  }
+  public abstract BitArray ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
 
   /// <inheritdoc />
-  public async ValueTask<Memory<ushort>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count)
-  {
-    return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, count);
-  }
+  public abstract ValueTask<BitArray> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
 
 
   /// <inheritdoc />

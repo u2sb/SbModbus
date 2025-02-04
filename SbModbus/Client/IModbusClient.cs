@@ -51,7 +51,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public Span<ushort> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
+  public BitArray ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取离散输入 FC02
@@ -60,7 +60,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public ValueTask<Memory<ushort>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<BitArray> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取保存寄存器 FC03
