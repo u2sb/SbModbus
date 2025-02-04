@@ -35,3 +35,8 @@ public enum MyEnum : ushort
   OK = 0,
   NoOK = 1
 }
+
+[SbModbusArray(typeof(ushort), 4, BigAndSmallEndianEncodingMode.DCBA)]
+public partial struct UShortArray4
+{
+}

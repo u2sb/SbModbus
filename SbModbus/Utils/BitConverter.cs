@@ -109,12 +109,28 @@ public static class BitConverter
   /// <typeparam name="T"></typeparam>
   /// <param name="value">数据</param>
   /// <returns></returns>
-  public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this T value) where T : unmanaged
+  public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this T value) where T : struct
   {
     unsafe
     {
-      var bytePtr = &value;
+      var bytePtr = Unsafe.AsPointer(ref value);
       var span = new ReadOnlySpan<byte>(bytePtr, Unsafe.SizeOf<T>());
+      return span;
+    }
+  }
+
+  /// <summary>
+  ///   解释为 byte[]
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <param name="value">数据</param>
+  /// <returns></returns>
+  public static Span<byte> AsByteSpan<T>(this T value) where T : struct
+  {
+    unsafe
+    {
+      var bytePtr = Unsafe.AsPointer(ref value);
+      var span = new Span<byte>(bytePtr, Unsafe.SizeOf<T>());
       return span;
     }
   }
@@ -124,7 +140,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this ReadOnlySpan<T> data) where T : unmanaged
+  public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this ReadOnlySpan<T> data) where T : struct
   {
     return MemoryMarshal.AsBytes(data);
   }
@@ -134,7 +150,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static Span<byte> AsByteSpan<T>(this Span<T> data) where T : unmanaged
+  public static Span<byte> AsByteSpan<T>(this Span<T> data) where T : struct
   {
     return MemoryMarshal.AsBytes(data);
   }
@@ -145,7 +161,7 @@ public static class BitConverter
   /// <param name="data"></param>
   /// <typeparam name="T"></typeparam>
   /// <returns></returns>
-  public static ReadOnlySpan<T> Cast<T>(this ReadOnlySpan<byte> data) where T : unmanaged
+  public static ReadOnlySpan<T> Cast<T>(this ReadOnlySpan<byte> data) where T : struct
   {
     return MemoryMarshal.Cast<byte, T>(data);
   }
@@ -156,9 +172,27 @@ public static class BitConverter
   /// <param name="data"></param>
   /// <typeparam name="T"></typeparam>
   /// <returns></returns>
-  public static Span<T> Cast<T>(this Span<byte> data) where T : unmanaged
+  public static Span<T> Cast<T>(this Span<byte> data) where T : struct
   {
     return MemoryMarshal.Cast<byte, T>(data);
+  }
+
+  /// <summary>
+  ///   转换到类型 Span T
+  /// </summary>
+  /// <param name="value"></param>
+  /// <typeparam name="TFrom"></typeparam>
+  /// <typeparam name="TTo"></typeparam>
+  /// <returns></returns>
+  public static Span<TTo> Cast<TFrom, TTo>(this TFrom value) where TFrom : struct where TTo : struct
+  {
+    unsafe
+    {
+      var size = Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>();
+      var bytePtr = Unsafe.AsPointer(ref value);
+      var span = new Span<TTo>(bytePtr, size);
+      return span;
+    }
   }
 
   /// <summary>
@@ -166,7 +200,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static Memory<byte> AsByteMemory<T>(this Memory<T> data) where T : unmanaged
+  public static Memory<byte> AsByteMemory<T>(this Memory<T> data) where T : struct
   {
     return Cast<T, byte>(data);
   }
@@ -178,7 +212,7 @@ public static class BitConverter
   /// <typeparam name="TFrom"></typeparam>
   /// <typeparam name="TTo"></typeparam>
   /// <returns></returns>
-  public static Memory<TTo> Cast<TFrom, TTo>(this Memory<TFrom> data) where TFrom : unmanaged where TTo : unmanaged
+  public static Memory<TTo> Cast<TFrom, TTo>(this Memory<TFrom> data) where TFrom : struct where TTo : struct
   {
     using var cmm = new CastMemoryManager<TFrom, TTo>(data);
     return cmm.Memory;
@@ -192,15 +226,13 @@ public static class BitConverter
   /// <typeparam name="TTo"></typeparam>
   /// <returns></returns>
   public static Memory<TTo> AsMemory<TFrom, TTo>(this ReadOnlySpan<TFrom> data)
-    where TFrom : unmanaged where TTo : unmanaged
+    where TFrom : struct where TTo : struct
   {
     unsafe
     {
-      fixed (void* ptr = data)
-      {
-        using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
-        return cmm.Memory;
-      }
+      var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
+      using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
+      return cmm.Memory;
     }
   }
 
@@ -212,15 +244,13 @@ public static class BitConverter
   /// <typeparam name="TTo"></typeparam>
   /// <returns></returns>
   public static Memory<TTo> AsMemory<TFrom, TTo>(this Span<TFrom> data)
-    where TFrom : unmanaged where TTo : unmanaged
+    where TFrom : struct where TTo : struct
   {
     unsafe
     {
-      fixed (void* ptr = data)
-      {
-        using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
-        return cmm.Memory;
-      }
+      var ptr = Unsafe.AsPointer(ref MemoryMarshal.GetReference(data));
+      using var cmm = new PointerMemoryManager<TTo>(ptr, data.Length * Unsafe.SizeOf<TFrom>());
+      return cmm.Memory;
     }
   }
 
@@ -229,8 +259,8 @@ public static class BitConverter
   #region MemoryManager类
 
   private sealed class CastMemoryManager<TFrom, TTo>(Memory<TFrom> from) : MemoryManager<TTo>
-    where TFrom : unmanaged
-    where TTo : unmanaged
+    where TFrom : struct
+    where TTo : struct
   {
     public override Span<TTo> GetSpan()
     {
