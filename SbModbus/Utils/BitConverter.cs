@@ -530,7 +530,17 @@ public static class BitConverter
   /// </summary>
   /// <param name="data"></param>
   /// <returns></returns>
-  public static BitArray ToBitArray(ReadOnlySpan<byte> data)
+  public static BitArray ToBitArray(this ReadOnlySpan<byte> data)
+  {
+    return new BitArray(data.ToArray());
+  }
+
+  /// <summary>
+  ///   转换到 BitArray
+  /// </summary>
+  /// <param name="data"></param>
+  /// <returns></returns>
+  public static BitArray ToBitArray(this Span<byte> data)
   {
     return new BitArray(data.ToArray());
   }
@@ -540,7 +550,7 @@ public static class BitConverter
   /// </summary>
   /// <param name="bitArray"></param>
   /// <returns></returns>
-  public static byte[] ConvertBitArrayToByteArray(BitArray bitArray)
+  public static byte[] ConvertBitArrayToByteArray(this BitArray bitArray)
   {
     unsafe
     {
@@ -567,6 +577,70 @@ public static class BitConverter
 
       return byteArray;
     }
+  }
+
+  /// <summary>
+  ///   截取新的 BitArray
+  /// </summary>
+  /// <param name="bitArray"></param>
+  /// <param name="offset"></param>
+  /// <param name="size"></param>
+  /// <returns></returns>
+  /// <exception cref="ArgumentOutOfRangeException"></exception>
+  public static BitArray Intercept(this BitArray bitArray, int offset, int size)
+  {
+    if (offset < 0 || size < 0 || offset + size > bitArray.Count)
+      throw new ArgumentOutOfRangeException();
+
+    var subArray = new BitArray(size);
+    for (var i = 0; i < size; i++) subArray[i] = bitArray[offset + i];
+    return subArray;
+  }
+
+  /// <summary>
+  ///   截取新的 BitArray
+  /// </summary>
+  /// <param name="bitArray"></param>
+  /// <param name="range"></param>
+  /// <returns></returns>
+  /// <exception cref="ArgumentOutOfRangeException"></exception>
+  public static BitArray Intercept(this BitArray bitArray, Range range)
+  {
+    var (offset, size) = range.GetOffsetAndLength(bitArray.Count);
+    return Intercept(bitArray, offset, size);
+  }
+
+  /// <summary>
+  ///   转换为 byte
+  /// </summary>
+  /// <param name="bitArray"></param>
+  /// <param name="offset"></param>
+  /// <param name="size"></param>
+  /// <returns></returns>
+  /// <exception cref="ArgumentOutOfRangeException"></exception>
+  public static byte AsByte(this BitArray bitArray, int offset = 0, int size = 8)
+  {
+    if (offset < 0 || size < 0 || offset + size > bitArray.Count)
+      throw new ArgumentOutOfRangeException();
+
+    byte result = 0;
+    for (var i = 0; i < size; i++)
+      if (bitArray[offset + i])
+        result |= (byte)(1 << i);
+
+    return result;
+  }
+
+  /// <summary>
+  ///   转换为 byte
+  /// </summary>
+  /// <param name="bitArray"></param>
+  /// <param name="range"></param>
+  /// <returns></returns>
+  public static byte AsByte(this BitArray bitArray, Range range)
+  {
+    var (offset, size) = range.GetOffsetAndLength(bitArray.Count);
+    return AsByte(bitArray, offset, size);
   }
 
   #endregion
