@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections;
 using System.IO;
 using SbModbus.Models;
 using SbModbus.Utils;
@@ -15,7 +14,7 @@ namespace SbModbus.Client;
 public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), IModbusClient
 {
   /// <inheritdoc />
-  public override BitArray ReadCoils(int unitIdentifier, int startingAddress, int count)
+  public override BitSpan ReadCoils(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress);
     buffer.Write(ConvertUshort(count).ToBytes(true));
@@ -26,11 +25,11 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
 
     // 返回数据
-    return new BitArray(result[3..^2].ToArray());
+    return new BitSpan(result[3..^2].ToArray(), count);
   }
-  
+
   /// <inheritdoc />
-  public override BitArray ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
+  public override BitSpan ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress);
     buffer.Write(ConvertUshort(count).ToBytes(true));
@@ -41,7 +40,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
 
     // 返回数据
-    return new BitArray(result[3..^2].ToArray());
+    return new BitSpan(result[3..^2].ToArray(), count);
   }
 
   /// <inheritdoc />

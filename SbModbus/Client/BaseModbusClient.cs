@@ -212,17 +212,17 @@ public abstract class BaseModbusClient : IModbusClient
   #region Modbus具体实现
 
   /// <inheritdoc />
-  public abstract BitArray ReadCoils(int unitIdentifier, int startingAddress, int count);
+  public abstract BitSpan ReadCoils(int unitIdentifier, int startingAddress, int count);
 
   /// <inheritdoc />
-  public abstract ValueTask<BitArray> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count);
+  public abstract ValueTask<BitMemory> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count);
 
 
   /// <inheritdoc />
-  public abstract BitArray ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
+  public abstract BitSpan ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
 
   /// <inheritdoc />
-  public abstract ValueTask<BitArray> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
+  public abstract ValueTask<BitMemory> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
 
 
   /// <inheritdoc />

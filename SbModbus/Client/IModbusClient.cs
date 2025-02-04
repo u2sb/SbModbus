@@ -33,7 +33,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public BitArray ReadCoils(int unitIdentifier, int startingAddress, int count);
+  public BitSpan ReadCoils(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取线圈 FC01
@@ -42,7 +42,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public ValueTask<BitArray> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<BitMemory> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取离散输入 FC02
@@ -51,7 +51,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public BitArray ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
+  public BitSpan ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取离散输入 FC02
@@ -60,7 +60,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public ValueTask<BitArray> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<BitMemory> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取保存寄存器 FC03

@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +11,7 @@ namespace SbModbus.Client;
 public partial class ModbusRtuClient
 {
   /// <inheritdoc />
-  public override async ValueTask<BitArray> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count)
+  public override async ValueTask<BitMemory> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress);
     buffer.Write(ConvertUshort(count).ToBytes(true));
@@ -23,11 +22,11 @@ public partial class ModbusRtuClient
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
 
     // 返回数据
-    return new BitArray(result[3..^2].ToArray());
+    return new BitMemory(result[3..^2].ToArray(), count);
   }
 
   /// <inheritdoc />
-  public override async ValueTask<BitArray> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count)
+  public override async ValueTask<BitMemory> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress);
     buffer.Write(ConvertUshort(count).ToBytes(true));
@@ -38,7 +37,7 @@ public partial class ModbusRtuClient
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
 
     // 返回数据
-    return new BitArray(result[3..^2].ToArray());
+    return new BitMemory(result[3..^2].ToArray(), count);
   }
 
   /// <inheritdoc />
