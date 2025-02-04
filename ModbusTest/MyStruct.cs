@@ -19,6 +19,8 @@ public partial struct MyStruct
   [field: FieldOffset(0)] public MyStruct2 MyStruct2 { get; set; }
 
   [field: FieldOffset(8)] public MyEnum MyEnum { get; set; }
+  
+  [field: FieldOffset(10)] public UInt16Array2 MyUInt16Array2 { get; set; }
 }
 
 [SbModbusStruct(BigAndSmallEndianEncodingMode.ABCD)]
