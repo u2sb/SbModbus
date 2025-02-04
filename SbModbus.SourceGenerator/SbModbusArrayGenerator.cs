@@ -95,7 +95,7 @@ public static class SbModbusArrayGenerator
     sb.AppendLine("{");
     sb.AppendLine($"var data = new byte[Unsafe.SizeOf<{structName}>()];");
     sb.AppendLine("var span = data.AsSpan();");
-    sb.AppendLine("this.WriteTo(span, mode);");
+    sb.AppendLine("WriteTo(span, mode);");
     sb.AppendLine("return data;");
     sb.AppendLine("}");
     sb.AppendLine($"public void WriteTo(Span<byte> span, byte mode = {arrayInfo.Mode})");
@@ -153,7 +153,7 @@ public static class SbModbusArrayGenerator
     sb.AppendLine("{");
     sb.AppendLine("get");
     sb.AppendLine("{");
-    sb.AppendLine("var span = this.AsSpan();");
+    sb.AppendLine("var span = AsSpan();");
     sb.AppendLine("return span[range].ToArray();");
     sb.AppendLine("}");
     sb.AppendLine("}");
