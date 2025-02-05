@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using SbModbus.Utils;
 
 #pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
@@ -24,6 +25,20 @@ public readonly struct BitMemory
     _memory = memory;
     Length = bitCount;
     _startBitOffset = startBitOffset;
+  }
+
+  public BitMemory(Memory<byte> memory)
+  {
+    _memory = memory;
+    Length = _memory.Length * 8;
+    _startBitOffset = 0;
+  }
+
+  public BitMemory(Memory<ushort> memory)
+  {
+    _memory = memory.AsByteMemory();
+    Length = _memory.Length * 8;
+    _startBitOffset = 0;
   }
 
   public int Length { get; }

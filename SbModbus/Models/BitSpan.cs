@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using SbModbus.Utils;
 
 #pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 
@@ -26,7 +27,23 @@ public readonly ref struct BitSpan
     _startBitOffset = startBitOffset;
   }
 
+  public BitSpan(Span<byte> buffer)
+  {
+    _span = buffer;
+    Length = _span.Length * 8;
+    _startBitOffset = 0;
+  }
+
+  public BitSpan(Span<ushort> buffer)
+  {
+    _span = buffer.AsByteSpan();
+    Length = _span.Length * 8;
+    _startBitOffset = 0;
+  }
+
   public int Length { get; }
+
+  public Span<byte> Span => _span;
 
   public bool this[int index]
   {
@@ -159,7 +176,7 @@ public readonly ref struct BitSpan
     // 反转所有完整字节
     for (var i = 0; i < totalBytes - 1; i++)
       _span[i] = (byte)~_span[i];
-
+    
     // 处理最后一个字节的部分位
     var lastByteMask = (byte)((1 << remainingBits) - 1);
     _span[totalBytes - 1] ^= lastByteMask;
