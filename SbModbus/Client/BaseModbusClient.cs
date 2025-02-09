@@ -2,8 +2,8 @@
 
 using System;
 using System.Buffers;
-using System.Collections;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using SbModbus.Models;
 using SbModbus.Utils;
@@ -15,6 +15,11 @@ namespace SbModbus.Client;
 /// </summary>
 public abstract class BaseModbusClient : IModbusClient
 {
+  /// <summary>
+  ///   清除读缓存
+  /// </summary>
+  public Func<Stream, CancellationToken, Task>? ClearReadBufferAsync;
+
   /// <summary>
   /// </summary>
   /// <param name="stream"></param>
@@ -153,7 +158,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="initialCapacity"></param>
   /// <returns></returns>
   protected abstract ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
-    int startingAddress, int initialCapacity = 8);
+    int startingAddress, int initialCapacity);
 
   /// <summary>
   ///   读取数据
@@ -186,7 +191,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  protected abstract Span<ushort> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode,
+  protected abstract Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress, int count);
 
   /// <summary>
@@ -197,7 +202,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  protected abstract ValueTask<Memory<ushort>> ReadRegistersAsync(int unitIdentifier, ModbusFunctionCode functionCode,
+  protected abstract ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress, int count);
 
 
@@ -226,26 +231,26 @@ public abstract class BaseModbusClient : IModbusClient
 
 
   /// <inheritdoc />
-  public Span<ushort> ReadHoldingRegisters(int unitIdentifier, int startingAddress, int count)
+  public Span<byte> ReadHoldingRegisters(int unitIdentifier, int startingAddress, int count)
   {
     return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count);
   }
 
   /// <inheritdoc />
-  public async ValueTask<Memory<ushort>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count)
+  public async ValueTask<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count);
   }
 
 
   /// <inheritdoc />
-  public Span<ushort> ReadInputRegisters(int unitIdentifier, int startingAddress, int count)
+  public Span<byte> ReadInputRegisters(int unitIdentifier, int startingAddress, int count)
   {
     return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count);
   }
 
   /// <inheritdoc />
-  public async ValueTask<Memory<ushort>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count)
+  public async ValueTask<Memory<byte>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count);
   }
@@ -263,21 +268,9 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public abstract ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value);
 
-
-  /// <inheritdoc />
-  public void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<ushort> data)
-  {
-    WriteMultipleRegisters(unitIdentifier, startingAddress, data.AsReadOnlyByteSpan());
-  }
-
   /// <inheritdoc />
   public abstract void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
-
-  /// <inheritdoc />
-  public async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<ushort> data)
-  {
-    await WriteMultipleRegistersAsync(unitIdentifier, startingAddress, data.AsByteMemory());
-  }
+  
 
   /// <inheritdoc />
   public abstract ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<byte> data);

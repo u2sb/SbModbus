@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.IO;
 using System.Threading;
@@ -8,70 +8,71 @@ using SbModbus.Utils;
 
 namespace SbModbus.Client;
 
-public partial class ModbusRtuClient
+public partial class ModbusTcpClient
 {
   /// <inheritdoc />
   public override async ValueTask<BitMemory> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, 8);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, 16);
     buffer.Write(ConvertUshort(count).ToBytes(true));
-    buffer.WriteCrc16();
 
-    // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
+    // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
+    var length = 7 + 1 + 1 + ((count + 7) >> 3);
+    var temp = new Span<byte>(buffer.WrittenSpan.ToArray());
+    ((ushort)buffer.WrittenCount).WriteTo(temp[4..6], BigAndSmallEndianEncodingMode.ABCD);
+    var result = await WriteAndReadWithTimeoutAsync(temp.AsMemory<byte, byte>(), length, ReadTimeout);
 
     // 返回数据
-    return new BitMemory(result[3..^2].ToArray(), count);
+    return new BitMemory(result[3..].ToArray(), count);
   }
 
   /// <inheritdoc />
   public override async ValueTask<BitMemory> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, 8);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, 16);
     buffer.Write(ConvertUshort(count).ToBytes(true));
-    buffer.WriteCrc16();
 
-    // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
+    // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
+    var length = 7 + 1 + 1 + ((count + 7) >> 3);
+    var temp = new Span<byte>(buffer.WrittenSpan.ToArray());
+    ((ushort)buffer.WrittenCount).WriteTo(temp[4..6], BigAndSmallEndianEncodingMode.ABCD);
+    var result = await WriteAndReadWithTimeoutAsync(temp.AsMemory<byte, byte>(), length, ReadTimeout);
 
     // 返回数据
-    return new BitMemory(result[3..^2].ToArray(), count);
+    return new BitMemory(result[3..].ToArray(), count);
   }
 
   /// <inheritdoc />
   public override async ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, 8);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, 16);
 
     var data = (ushort)(value ? 0x00FF : 0x0000);
 
     // 使用小端模式转换数据
     buffer.Write(data.ToBytes());
 
-    buffer.WriteCrc16();
-
-    // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
-    const int length = 1 + 1 + 2 + 2 + 2;
-    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
+    // 7MBAP 1功能码 2寄存器地址 2数据数量
+    const int length = 7 + 1 + 2 + 2;
+    var temp = new Span<byte>(buffer.WrittenSpan.ToArray());
+    ((ushort)buffer.WrittenCount).WriteTo(temp[4..6], BigAndSmallEndianEncodingMode.ABCD);
+    _ = await WriteAndReadWithTimeoutAsync(temp.AsMemory<byte, byte>(), length, ReadTimeout);
   }
 
   /// <inheritdoc />
   public override async ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, 8);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, 16);
 
     // 这里写入时不区分大小端 所以要提前调整好
     buffer.Write(value.ToBytes());
 
-    buffer.WriteCrc16();
-
-    // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
-    const int length = 1 + 1 + 2 + 2 + 2;
-    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
+    // 7MBAP 1功能码 2寄存器地址 2数据数量
+    const int length = 7 + 1 + 2 + 2;
+    var temp = new Span<byte>(buffer.WrittenSpan.ToArray());
+    ((ushort)buffer.WrittenCount).WriteTo(temp[4..6], BigAndSmallEndianEncodingMode.ABCD);
+    _ = await WriteAndReadWithTimeoutAsync(temp.AsMemory<byte, byte>(), length, ReadTimeout);
   }
-
 
   /// <inheritdoc />
   public override async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress,
@@ -89,33 +90,32 @@ public partial class ModbusRtuClient
     // 写数据
     buffer.Write(data.Span);
 
-    // 写校验
-    buffer.WriteCrc16();
+    // 7MBAP 1功能码 2寄存器地址 2数据数量
+    const int length = 7 + 1 + 2 + 2;
 
-    // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
-    const int length = 1 + 1 + 2 + 2 + 2;
-    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
+    var temp = new Span<byte>(buffer.WrittenSpan.ToArray());
+    ((ushort)buffer.WrittenCount).WriteTo(temp[4..6], BigAndSmallEndianEncodingMode.ABCD);
+
+    await WriteAndReadWithTimeoutAsync(temp.AsMemory<byte, byte>(), length, ReadTimeout);
   }
-
-  #region 通用方法
 
   /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier,
     ModbusFunctionCode functionCode,
     int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, 8);
+    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, 16);
     buffer.Write(ConvertUshort(count).ToBytes(true));
-    buffer.WriteCrc16();
 
-    // 1设备地址 1功能码 1数据长度 2n数据 2校验
-    var length = 1 + 1 + 1 + count * 2 + 2;
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout);
+    // 7MBAP 1功能码 1数据长度 2n数据
+    var length = 7 + 1 + 1 + count * 2;
+    var temp = new Span<byte>(buffer.WrittenSpan.ToArray());
+    ((ushort)buffer.WrittenCount).WriteTo(temp[4..6], BigAndSmallEndianEncodingMode.ABCD);
+    var result = await WriteAndReadWithTimeoutAsync(temp.AsMemory<byte, byte>(), length, ReadTimeout);
 
     // 返回数据
-    return result[3..^2];
+    return result[3..];
   }
-
 
   /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length,
@@ -166,10 +166,10 @@ public partial class ModbusRtuClient
           bytesRead += read;
 
           // 如果已经读到功能码和错误码
-          if (!verificationFunctionCode && bytesRead >= 2)
+          if (!verificationFunctionCode && bytesRead >= 9)
           {
             // 如果功能码不一致
-            if ((buffer[1] & 0x80) != 0) length = 5; // 相应不正常时返回值长度变为5
+            if ((buffer[7] & 0x80) != 0) length = 9; // 相应不正常时返回值长度变为5
             verificationFunctionCode = true;
           }
 
@@ -185,6 +185,4 @@ public partial class ModbusRtuClient
       }, ct);
     }
   }
-
-  #endregion
 }

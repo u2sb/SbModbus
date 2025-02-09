@@ -16,7 +16,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
   /// <inheritdoc />
   public override BitSpan ReadCoils(int unitIdentifier, int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, 8);
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
@@ -31,7 +31,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
   /// <inheritdoc />
   public override BitSpan ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress, 8);
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
@@ -46,7 +46,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
   /// <inheritdoc />
   public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, 8);
 
     var data = (ushort)(value ? 0x00FF : 0x0000);
 
@@ -63,7 +63,7 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
   /// <inheritdoc />
   public override void WriteSingleRegister(int unitIdentifier, int startingAddress, ushort value)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, 8);
 
     // 这里写入时不区分大小端 所以要提前调整好
     buffer.Write(value.ToBytes());
@@ -101,11 +101,11 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
   #region 通用方法
 
   /// <inheritdoc />
-  protected override Span<ushort> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode,
+  protected override Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress,
     int count)
   {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress);
+    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, 8);
     buffer.Write(ConvertUshort(count).ToBytes(true));
     buffer.WriteCrc16();
 
@@ -114,12 +114,12 @@ public partial class ModbusRtuClient(Stream stream) : BaseModbusClient(stream), 
     var result = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
 
     // 返回数据
-    return result[3..^2].Cast<ushort>();
+    return result[3..^2];
   }
 
   /// <inheritdoc />
   protected override ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
-    int startingAddress, int initialCapacity = 8)
+    int startingAddress, int initialCapacity)
   {
     var buffer = new ArrayBufferWriter<byte>(initialCapacity);
 
