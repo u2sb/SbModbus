@@ -149,12 +149,12 @@ public static class SbModbusArrayGenerator
     sb.AppendLine("}");
     sb.AppendLine("}");
 
-    sb.AppendLine($"public {elementTypeName}[] this[Range range]");
+    sb.AppendLine($"public Span<{elementTypeName}> this[Range range]");
     sb.AppendLine("{");
     sb.AppendLine("get");
     sb.AppendLine("{");
     sb.AppendLine("var span = AsSpan();");
-    sb.AppendLine("return span[range].ToArray();");
+    sb.AppendLine("return span[range];");
     sb.AppendLine("}");
     sb.AppendLine("}");
     sb.AppendLine("}");
