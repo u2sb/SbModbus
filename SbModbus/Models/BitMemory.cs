@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using SbModbus.Utils;
 
@@ -6,10 +7,15 @@ using SbModbus.Utils;
 
 namespace SbModbus.Models;
 
-public readonly struct BitMemory
+public readonly struct BitMemory : IEquatable<BitMemory>
 {
   private readonly Memory<byte> _memory;
   private readonly int _startBitOffset;
+
+  public MemoryHandle Pin()
+  {
+    return _memory.Pin();
+  }
 
   public BitMemory(Memory<byte> memory, int bitCount, int startBitOffset = 0)
   {
@@ -50,7 +56,7 @@ public readonly struct BitMemory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     get
     {
-      var (start, length) = GetRangeBounds(range);
+      var (start, length) = range.GetOffsetAndLength(Length);
       return Slice(start, length);
     }
   }
@@ -71,18 +77,34 @@ public readonly struct BitMemory
     return new BitMemory(newMemory, length, newBitOffset);
   }
 
-  #region Helper Methods
-
-  private (int Start, int Length) GetRangeBounds(Range range)
+  public bool Equals(BitMemory other)
   {
-    var start = range.Start.IsFromEnd ? Length - range.Start.Value : range.Start.Value;
-    var end = range.End.IsFromEnd ? Length - range.End.Value : range.End.Value;
-
-    if (start < 0 || end > Length || start > end)
-      ThrowInvalidRange();
-
-    return (start, end - start);
+    return _memory.Equals(other._memory) &&
+           _startBitOffset == other._startBitOffset &&
+           Length == other.Length;
   }
+
+  public override bool Equals(object? obj)
+  {
+    return obj is BitMemory other && Equals(other);
+  }
+
+  public override int GetHashCode()
+  {
+    return HashCode.Combine(_memory, _startBitOffset, Length);
+  }
+
+  public static bool operator ==(BitMemory left, BitMemory right)
+  {
+    return left.Equals(right);
+  }
+
+  public static bool operator !=(BitMemory left, BitMemory right)
+  {
+    return !left.Equals(right);
+  }
+
+  #region Helper Methods
 
   [MethodImpl(MethodImplOptions.NoInlining)]
   private static void ThrowInvalidSliceArguments()

@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SbModbus.Models;
@@ -385,38 +384,7 @@ public static class BitConverter
     // 如果是单字节，也就是 byte 类型，直接返回
     if (size == 1) return;
 
-    // 先按小端模式处理
-    switch (mode)
-    {
-      case BigAndSmallEndianEncodingMode.DCBA:
-        // 小端模式不做处理
-        break;
-      case BigAndSmallEndianEncodingMode.ABCD:
-        // 大端模式整体翻转
-        data.Reverse();
-        break;
-      case BigAndSmallEndianEncodingMode.BADC:
-        // 二字节翻转，前后不翻转
-        // 已经判断过，必须为 2 的倍数
-        for (var i = 0; i < size; i += 2)
-        {
-          var sp = data.Slice(i, 2);
-          sp.Reverse();
-        }
-
-        break;
-      case BigAndSmallEndianEncodingMode.CDAB:
-        // 二字节不翻转，前后翻转
-        // 解释为ushort，然后整体翻转
-        var us = data.Cast<ushort>();
-        us.Reverse();
-        break;
-      default:
-        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
-    }
-
-    // 如果不是小端模式，做一次整体翻转
-    if (!System.BitConverter.IsLittleEndian) data.Reverse();
+    ApplyEndianness(data, mode);
   }
 
   /// <summary>
@@ -485,162 +453,44 @@ public static class BitConverter
 
         // 如果是单字节，也就是 byte 类型，直接返回
         if (size == 1) return;
-        // 先按小端模式处理
-        switch (mode)
-        {
-          case BigAndSmallEndianEncodingMode.DCBA:
-            // 小端模式不做处理
-            break;
-          case BigAndSmallEndianEncodingMode.ABCD:
-            // 大端模式整体翻转
-            span.Reverse();
-            break;
-          case BigAndSmallEndianEncodingMode.BADC:
-            // 二字节翻转，前后不翻转
-            // 已经判断过，必须为 2 的倍数
-            for (var i = 0; i < size; i += 2)
-            {
-              var sp = span.Slice(i, 2);
-              sp.Reverse();
-            }
 
-            break;
-          case BigAndSmallEndianEncodingMode.CDAB:
-            // 二字节不翻转，前后翻转
-            // 解释为ushort，然后整体翻转
-            var us = span.Cast<ushort>();
-            us.Reverse();
-            break;
-          default:
-            throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
-        }
-
-        // 如果不是小端模式，做一次整体翻转
-        if (!System.BitConverter.IsLittleEndian) span.Reverse();
+        ApplyEndianness(span, mode);
       }
     }
   }
 
-  #endregion
-
-  #region BitArray操作
-
-  /// <summary>
-  ///   转换到 BitArray
-  /// </summary>
-  /// <param name="data"></param>
-  /// <returns></returns>
-  public static BitArray ToBitArray(this ReadOnlySpan<byte> data)
+  private static void ApplyEndianness(Span<byte> span, BigAndSmallEndianEncodingMode mode)
   {
-    return new BitArray(data.ToArray());
-  }
-
-  /// <summary>
-  ///   转换到 BitArray
-  /// </summary>
-  /// <param name="data"></param>
-  /// <returns></returns>
-  public static BitArray ToBitArray(this Span<byte> data)
-  {
-    return new BitArray(data.ToArray());
-  }
-
-  /// <summary>
-  ///   从 BitArray 转换到 byte[]
-  /// </summary>
-  /// <param name="bitArray"></param>
-  /// <returns></returns>
-  public static byte[] ConvertBitArrayToByteArray(this BitArray bitArray)
-  {
-    unsafe
+    switch (mode)
     {
-      var numBytes = (bitArray.Count + 7) >> 3; // 等价于 (bitArray.Count + 7) / 8
-      var byteArray = new byte[numBytes];
-
-      fixed (byte* bytePointer = byteArray)
-      {
-        var currentByte = bytePointer;
-        var bitIndex = 0;
-
-        for (var i = 0; i < bitArray.Count; i++)
+      case BigAndSmallEndianEncodingMode.DCBA:
+        if (!System.BitConverter.IsLittleEndian) span.Reverse();
+        break;
+      case BigAndSmallEndianEncodingMode.ABCD:
+        if (System.BitConverter.IsLittleEndian) span.Reverse();
+        break;
+      case BigAndSmallEndianEncodingMode.BADC:
+        // 二字节翻转，前后不翻转
+        // 已经判断过，必须为 2 的倍数
+        var size = span.Length;
+        for (var i = 0; i < size; i += 2)
         {
-          if (bitArray[i]) *currentByte |= (byte)(1 << bitIndex);
-
-          bitIndex++;
-
-          if (bitIndex != 8) continue;
-
-          bitIndex = 0;
-          currentByte++;
+          var sp = span.Slice(i, 2);
+          sp.Reverse();
         }
-      }
 
-      return byteArray;
+        if (!System.BitConverter.IsLittleEndian) span.Reverse();
+        break;
+      case BigAndSmallEndianEncodingMode.CDAB:
+        // 二字节不翻转，前后翻转
+        // 解释为ushort，然后整体翻转
+        var us = span.Cast<ushort>();
+        us.Reverse();
+        if (!System.BitConverter.IsLittleEndian) span.Reverse();
+        break;
+      default:
+        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
     }
-  }
-
-  /// <summary>
-  ///   截取新的 BitArray
-  /// </summary>
-  /// <param name="bitArray"></param>
-  /// <param name="offset"></param>
-  /// <param name="size"></param>
-  /// <returns></returns>
-  /// <exception cref="ArgumentOutOfRangeException"></exception>
-  public static BitArray Intercept(this BitArray bitArray, int offset, int size)
-  {
-    if (offset < 0 || size < 0 || offset + size > bitArray.Count)
-      throw new ArgumentOutOfRangeException();
-
-    var subArray = new BitArray(size);
-    for (var i = 0; i < size; i++) subArray[i] = bitArray[offset + i];
-    return subArray;
-  }
-
-  /// <summary>
-  ///   截取新的 BitArray
-  /// </summary>
-  /// <param name="bitArray"></param>
-  /// <param name="range"></param>
-  /// <returns></returns>
-  /// <exception cref="ArgumentOutOfRangeException"></exception>
-  public static BitArray Intercept(this BitArray bitArray, Range range)
-  {
-    var (offset, size) = range.GetOffsetAndLength(bitArray.Count);
-    return Intercept(bitArray, offset, size);
-  }
-
-  /// <summary>
-  ///   转换为 byte
-  /// </summary>
-  /// <param name="bitArray"></param>
-  /// <param name="offset"></param>
-  /// <param name="size"></param>
-  /// <returns></returns>
-  /// <exception cref="ArgumentOutOfRangeException"></exception>
-  public static byte AsByte(this BitArray bitArray, int offset = 0, int size = 8)
-  {
-    if (offset < 0 || size < 0 || offset + size > bitArray.Count)
-      throw new ArgumentOutOfRangeException();
-
-    byte result = 0;
-    for (var i = 0; i < size; i++)
-      if (bitArray[offset + i])
-        result |= (byte)(1 << i);
-
-    return result;
-  }
-
-  /// <summary>
-  ///   转换为 byte
-  /// </summary>
-  /// <param name="bitArray"></param>
-  /// <param name="range"></param>
-  /// <returns></returns>
-  public static byte AsByte(this BitArray bitArray, Range range)
-  {
-    var (offset, size) = range.GetOffsetAndLength(bitArray.Count);
-    return AsByte(bitArray, offset, size);
   }
 
   #endregion
