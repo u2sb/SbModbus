@@ -38,10 +38,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="Server\"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <None Include="..\icons\avatar.png">
             <Pack>True</Pack>
             <PackagePath>\</PackagePath>
