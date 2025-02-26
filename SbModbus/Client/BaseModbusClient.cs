@@ -28,6 +28,9 @@ public abstract class BaseModbusClient : IModbusClient
     Stream = stream;
     ReadTimeout = Stream.ReadTimeout;
     WriteTimeout = Stream.WriteTimeout;
+
+    CheckIsConnected = s => s.CanRead;
+    IsConnected = () => CheckIsConnected(Stream);
   }
 
   /// <summary>
@@ -40,11 +43,16 @@ public abstract class BaseModbusClient : IModbusClient
   /// </summary>
   public int WriteTimeout { get; set; }
 
+  /// <summary>
+  ///   检查是否已连接
+  /// </summary>
+  public Func<Stream, bool> CheckIsConnected { private get; set; }
+
   /// <inheritdoc />
   public Stream Stream { get; }
 
   /// <inheritdoc />
-  public bool IsConnected => Stream.CanRead;
+  public Func<bool> IsConnected { get; }
 
   /// <inheritdoc />
   public BigAndSmallEndianEncodingMode EncodingMode { get; set; } = BigAndSmallEndianEncodingMode.DCBA;
@@ -128,7 +136,7 @@ public abstract class BaseModbusClient : IModbusClient
       throw new Exception(
         "The unit identifier is invalid. Valid node addresses are in the range of 0 - 247. Use address '0' to broadcast write command to all available servers.");
 
-    return unchecked((byte)unitIdentifier);
+    return (byte)unitIdentifier;
   }
 
   /// <summary>
@@ -270,7 +278,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public abstract void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
-  
+
 
   /// <inheritdoc />
   public abstract ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<byte> data);

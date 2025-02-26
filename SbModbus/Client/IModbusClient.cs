@@ -18,7 +18,7 @@ public interface IModbusClient
   /// <summary>
   ///   是否连接
   /// </summary>
-  public bool IsConnected { get; }
+  public Func<bool> IsConnected { get; }
 
   /// <summary>
   ///   编码方式 未启用

@@ -1,10 +1,7 @@
 // See https://aka.ms/new-console-template for more information
 
-using ModbusTest;
 using RJCP.IO.Ports;
 using SbModbus.Client;
-using SbModbus.Models;
-using SbModbus.Utils;
 
 Console.WriteLine("Hello, World!");
 
@@ -30,7 +27,8 @@ var modbusClient = new ModbusRtuClient(sp)
         await serialPortStream.ReadExactlyAsync(temp.AsMemory(0, b), ct);
       }
     }
-  }
+  },
+  CheckIsConnected = s => s is SerialPortStream serialPortStream ? serialPortStream.IsOpen : s.CanRead
 };
 
 // await modbusClient.WriteMultipleRegistersAsync(1, 4,
