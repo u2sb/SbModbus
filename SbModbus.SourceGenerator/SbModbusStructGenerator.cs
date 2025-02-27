@@ -86,6 +86,27 @@ public static class SbModbusStructGenerator
     sb.AppendLine($"CheckLength(span, Unsafe.SizeOf<{structName}>());");
     sb.AppendLine($"{toBytesStringBuilder}");
     sb.AppendLine("}");
+    
+    sb.AppendLine($"public Span<byte> AsSpan()");
+    sb.AppendLine("{");
+    sb.AppendLine($"return this.AsByteSpan();");
+    sb.AppendLine("}");
+    
+    sb.AppendLine($"public Span<byte> Slice(int start, int length)");
+    sb.AppendLine("{");
+    sb.AppendLine("var span = AsSpan();");
+    sb.AppendLine("return span.Slice(start, length);");
+    sb.AppendLine("}");
+
+    sb.AppendLine($"public Span<byte> this[Range range]");
+    sb.AppendLine("{");
+    sb.AppendLine("get");
+    sb.AppendLine("{");
+    sb.AppendLine("var span = AsSpan();");
+    sb.AppendLine("return span[range];");
+    sb.AppendLine("}");
+    sb.AppendLine("}");
+    
     sb.AppendLine("}");
     if (!isGlobalNamespace) sb.AppendLine("}");
 

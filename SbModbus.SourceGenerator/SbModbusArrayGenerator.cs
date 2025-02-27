@@ -42,7 +42,7 @@ public static class SbModbusArrayGenerator
     }
 
     sb.AppendLine(
-      $"[StructLayout(LayoutKind.Explicit, Pack = {arrayInfo.ElementSize}, Size = {arrayInfo.ElementSize * arrayInfo.Length})]");
+      $"[StructLayout(LayoutKind.Explicit, Pack = {elementSize}, Size = {elementSize * arrayInfo.Length})]");
     sb.AppendLine($"partial struct {structName}");
     sb.AppendLine("{");
 
@@ -117,11 +117,6 @@ public static class SbModbusArrayGenerator
 
     sb.AppendLine("}");
 
-    sb.AppendLine($"public Span<{elementTypeName}> AsSpan()");
-    sb.AppendLine("{");
-    sb.AppendLine($"return this.Cast<{structName}, {elementTypeName}>();");
-    sb.AppendLine("}");
-
     sb.AppendLine($"public int Length => {arrayInfo.Length};");
     sb.AppendLine($"public {elementTypeName} this[int index]");
     sb.AppendLine("{");
@@ -147,6 +142,17 @@ public static class SbModbusArrayGenerator
     sb.AppendLine("throw new IndexOutOfRangeException();");
     sb.AppendLine("}");
     sb.AppendLine("}");
+    sb.AppendLine("}");
+
+    sb.AppendLine($"public Span<{elementTypeName}> AsSpan()");
+    sb.AppendLine("{");
+    sb.AppendLine($"return this.Cast<{structName}, {elementTypeName}>();");
+    sb.AppendLine("}");
+    
+    sb.AppendLine($"public Span<{elementTypeName}> Slice(int start, int length)");
+    sb.AppendLine("{");
+    sb.AppendLine("var span = AsSpan();");
+    sb.AppendLine("return span.Slice(start, length);");
     sb.AppendLine("}");
 
     sb.AppendLine($"public Span<{elementTypeName}> this[Range range]");
