@@ -110,12 +110,7 @@ public static class BitConverter
   /// <returns></returns>
   public static ReadOnlySpan<byte> AsReadOnlyByteSpan<T>(this T value) where T : struct
   {
-    unsafe
-    {
-      var bytePtr = Unsafe.AsPointer(ref value);
-      var span = new ReadOnlySpan<byte>(bytePtr, Unsafe.SizeOf<T>());
-      return span;
-    }
+    return AsReadOnlySpan<T, byte>(value);
   }
 
   /// <summary>
@@ -126,12 +121,35 @@ public static class BitConverter
   /// <returns></returns>
   public static Span<byte> AsByteSpan<T>(this T value) where T : struct
   {
-    unsafe
-    {
-      var bytePtr = Unsafe.AsPointer(ref value);
-      var span = new Span<byte>(bytePtr, Unsafe.SizeOf<T>());
-      return span;
-    }
+    return AsSpan<T, byte>(value);
+  }
+
+  /// <summary>
+  ///   转换到类型 Span T
+  /// </summary>
+  /// <param name="value"></param>
+  /// <typeparam name="TFrom"></typeparam>
+  /// <typeparam name="TTo"></typeparam>
+  /// <returns></returns>
+  public static Span<TTo> AsSpan<TFrom, TTo>(this TFrom value) where TFrom : struct where TTo : struct
+  {
+    var size = Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>();
+    ref var reference = ref Unsafe.As<TFrom, TTo>(ref value);
+    return MemoryMarshal.CreateSpan(ref reference, size);
+  }
+
+  /// <summary>
+  ///   转换到类型 Span T
+  /// </summary>
+  /// <param name="value"></param>
+  /// <typeparam name="TFrom"></typeparam>
+  /// <typeparam name="TTo"></typeparam>
+  /// <returns></returns>
+  public static ReadOnlySpan<TTo> AsReadOnlySpan<TFrom, TTo>(this TFrom value) where TFrom : struct where TTo : struct
+  {
+    var size = Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>();
+    ref var reference = ref Unsafe.As<TFrom, TTo>(ref value);
+    return MemoryMarshal.CreateReadOnlySpan(ref reference, size);
   }
 
   /// <summary>
@@ -174,24 +192,6 @@ public static class BitConverter
   public static Span<T> Cast<T>(this Span<byte> data) where T : struct
   {
     return MemoryMarshal.Cast<byte, T>(data);
-  }
-
-  /// <summary>
-  ///   转换到类型 Span T
-  /// </summary>
-  /// <param name="value"></param>
-  /// <typeparam name="TFrom"></typeparam>
-  /// <typeparam name="TTo"></typeparam>
-  /// <returns></returns>
-  public static Span<TTo> Cast<TFrom, TTo>(this TFrom value) where TFrom : struct where TTo : struct
-  {
-    unsafe
-    {
-      var size = Unsafe.SizeOf<TFrom>() / Unsafe.SizeOf<TTo>();
-      var bytePtr = Unsafe.AsPointer(ref value);
-      var span = new Span<TTo>(bytePtr, size);
-      return span;
-    }
   }
 
   /// <summary>
@@ -444,19 +444,13 @@ public static class BitConverter
     var size = Unsafe.SizeOf<T>();
     CheckLength(data, size);
 
-    unsafe
-    {
-      fixed (void* ptr = &value)
-      {
-        var span = new Span<byte>(ptr, size);
-        data.CopyTo(span);
+    var span = value.AsByteSpan();
+    data.CopyTo(span);
 
-        // 如果是单字节，也就是 byte 类型，直接返回
-        if (size == 1) return;
+    // 如果是单字节，也就是 byte 类型，直接返回
+    if (size == 1) return;
 
-        ApplyEndianness(span, mode);
-      }
-    }
+    ApplyEndianness(span, mode);
   }
 
   private static void ApplyEndianness(Span<byte> span, BigAndSmallEndianEncodingMode mode)
