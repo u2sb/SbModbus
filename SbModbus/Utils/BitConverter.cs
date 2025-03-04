@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SbModbus.Models;
@@ -13,50 +14,6 @@ namespace SbModbus.Utils;
 public static class BitConverter
 {
   /// <summary>
-  ///   转换为long类型
-  /// </summary>
-  /// <param name="data">数据</param>
-  /// <param name="useBigEndianMode">是否使用大端模式</param>
-  /// <returns></returns>
-  public static long ToInt64(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
-  {
-    return ToT<long>(data, useBigEndianMode);
-  }
-
-  /// <summary>
-  ///   转换为 ulong 类型
-  /// </summary>
-  /// <param name="data">数据</param>
-  /// <param name="useBigEndianMode">是否使用大端模式</param>
-  /// <returns></returns>
-  public static ulong ToUInt64(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
-  {
-    return ToT<ulong>(data, useBigEndianMode);
-  }
-
-  /// <summary>
-  ///   转换为 int 类型
-  /// </summary>
-  /// <param name="data">数据</param>
-  /// <param name="useBigEndianMode">是否使用大端模式</param>
-  /// <returns></returns>
-  public static int ToInt32(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
-  {
-    return ToT<int>(data, useBigEndianMode);
-  }
-
-  /// <summary>
-  ///   转换为 uint 类型
-  /// </summary>
-  /// <param name="data">数据</param>
-  /// <param name="useBigEndianMode">是否使用大端模式</param>
-  /// <returns></returns>
-  public static uint ToUInt32(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
-  {
-    return ToT<uint>(data, useBigEndianMode);
-  }
-
-  /// <summary>
   ///   转换为 short 类型
   /// </summary>
   /// <param name="data">数据</param>
@@ -64,7 +21,9 @@ public static class BitConverter
   /// <returns></returns>
   public static short ToInt16(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
   {
-    return ToT<short>(data, useBigEndianMode);
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadInt16BigEndian(data)
+      : BinaryPrimitives.ReadInt16LittleEndian(data);
   }
 
   /// <summary>
@@ -75,7 +34,61 @@ public static class BitConverter
   /// <returns></returns>
   public static ushort ToUInt16(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
   {
-    return ToT<ushort>(data, useBigEndianMode);
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadUInt16BigEndian(data)
+      : BinaryPrimitives.ReadUInt16LittleEndian(data);
+  }
+
+  /// <summary>
+  ///   转换为 int 类型
+  /// </summary>
+  /// <param name="data">数据</param>
+  /// <param name="useBigEndianMode">是否使用大端模式</param>
+  /// <returns></returns>
+  public static int ToInt32(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
+  {
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadInt32BigEndian(data)
+      : BinaryPrimitives.ReadInt32LittleEndian(data);
+  }
+
+  /// <summary>
+  ///   转换为 uint 类型
+  /// </summary>
+  /// <param name="data">数据</param>
+  /// <param name="useBigEndianMode">是否使用大端模式</param>
+  /// <returns></returns>
+  public static uint ToUInt32(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
+  {
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadUInt32BigEndian(data)
+      : BinaryPrimitives.ReadUInt32LittleEndian(data);
+  }
+
+  /// <summary>
+  ///   转换为long类型
+  /// </summary>
+  /// <param name="data">数据</param>
+  /// <param name="useBigEndianMode">是否使用大端模式</param>
+  /// <returns></returns>
+  public static long ToInt64(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
+  {
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadInt64BigEndian(data)
+      : BinaryPrimitives.ReadInt64LittleEndian(data);
+  }
+
+  /// <summary>
+  ///   转换为 ulong 类型
+  /// </summary>
+  /// <param name="data">数据</param>
+  /// <param name="useBigEndianMode">是否使用大端模式</param>
+  /// <returns></returns>
+  public static ulong ToUInt64(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
+  {
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadUInt64BigEndian(data)
+      : BinaryPrimitives.ReadUInt64LittleEndian(data);
   }
 
   /// <summary>
@@ -86,7 +99,13 @@ public static class BitConverter
   /// <returns></returns>
   public static float ToSingle(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
   {
+#if NETSTANDARD
     return ToT<float>(data, useBigEndianMode);
+#else
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadSingleBigEndian(data)
+      : BinaryPrimitives.ReadSingleLittleEndian(data);
+#endif
   }
 
   /// <summary>
@@ -97,7 +116,13 @@ public static class BitConverter
   /// <returns></returns>
   public static double ToDouble(ReadOnlySpan<byte> data, bool useBigEndianMode = false)
   {
+#if NETSTANDARD
     return ToT<double>(data, useBigEndianMode);
+#else
+    return useBigEndianMode
+      ? BinaryPrimitives.ReadDoubleBigEndian(data)
+      : BinaryPrimitives.ReadDoubleLittleEndian(data);
+#endif
   }
 
   #region 类型解释
