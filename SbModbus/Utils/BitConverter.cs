@@ -404,10 +404,10 @@ public static class BitConverter
   {
     var size = Unsafe.SizeOf<T>();
     CheckLength(data, size);
-    Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(data)) = value;
 
-    // 如果是单字节，也就是 byte 类型，直接返回
-    if (size == 1) return;
+    if (data.Length > size) data = data[..size];
+
+    Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(data)) = value;
 
     ApplyEndianness(data, mode);
   }
@@ -460,8 +460,6 @@ public static class BitConverter
   /// <param name="mode"></param>
   /// <param name="value"></param>
   /// <returns></returns>
-  /// <exception cref="ArgumentException"></exception>
-  /// <exception cref="ArgumentOutOfRangeException"></exception>
   public static void CopyTo<T>(this ReadOnlySpan<byte> data, ref T value,
     BigAndSmallEndianEncodingMode mode)
     where T : unmanaged
@@ -472,14 +470,36 @@ public static class BitConverter
     var span = value.AsByteSpan();
     data.CopyTo(span);
 
-    // 如果是单字节，也就是 byte 类型，直接返回
-    if (size == 1) return;
+    ApplyEndianness(span, mode);
+  }
+
+  /// <summary>
+  ///   写入到 T
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  /// <param name="data"></param>
+  /// <param name="mode"></param>
+  /// <param name="value"></param>
+  /// <returns></returns>
+  public static void CopyTo<T>(this Span<byte> data, ref T value,
+    BigAndSmallEndianEncodingMode mode)
+    where T : unmanaged
+  {
+    var size = Unsafe.SizeOf<T>();
+    CheckLength(data, size);
+
+    var span = value.AsByteSpan();
+    data.CopyTo(span);
 
     ApplyEndianness(span, mode);
   }
 
   private static void ApplyEndianness(Span<byte> span, BigAndSmallEndianEncodingMode mode)
   {
+    // 如果是单字节，也就是 byte 类型，直接返回
+    var size = span.Length;
+    if (size == 1) return;
+
     switch (mode)
     {
       case BigAndSmallEndianEncodingMode.DCBA:
@@ -491,7 +511,7 @@ public static class BitConverter
       case BigAndSmallEndianEncodingMode.BADC:
         // 二字节翻转，前后不翻转
         // 已经判断过，必须为 2 的倍数
-        var size = span.Length;
+
         for (var i = 0; i < size; i += 2)
         {
           var sp = span.Slice(i, 2);
