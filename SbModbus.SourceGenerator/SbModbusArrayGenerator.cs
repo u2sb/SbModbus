@@ -146,7 +146,7 @@ public static class SbModbusArrayGenerator
 
     sb.AppendLine($"public Span<{elementTypeName}> AsSpan()");
     sb.AppendLine("{");
-    sb.AppendLine($"return this.Cast<{structName}, {elementTypeName}>();");
+    sb.AppendLine($"return SbModbus.Utils.BitConverter.AsSpan<{structName}, {elementTypeName}>(this);");
     sb.AppendLine("}");
     
     sb.AppendLine($"public Span<{elementTypeName}> Slice(int start, int length)");
