@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<LangVersion>preview</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<AssemblyName>SbModbus.SerialPortStream</AssemblyName>
+		<PackageId>SbModbus.SerialPortStream</PackageId>
+		<PackageTags>Modbus,Iot</PackageTags>
+		<Description>Probably the best performing Modbus library</Description>
+		<PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<Title>SbModbus.SerialPortStream</Title>
+		<Authors>MonoLogueChi</Authors>
+		<Company>U2SB</Company>
+		<RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageIcon>avatar.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Copyright>U2SB</Copyright>
+		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="RJCP.SerialPortStream" Version="3.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\SbModbus\SbModbus.csproj" />
+	</ItemGroup>
+
+</Project>

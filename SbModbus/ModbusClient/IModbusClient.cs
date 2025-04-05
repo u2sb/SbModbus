@@ -1,9 +1,9 @@
 using System;
-using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
-using SbModbus.Models;
+using SbModbus.Services;
 
-namespace SbModbus.Client;
+namespace SbModbus.ModbusClient;
 
 /// <summary>
 ///   ModbusClient
@@ -13,17 +13,12 @@ public interface IModbusClient
   /// <summary>
   ///   流
   /// </summary>
-  public Stream Stream { get; }
+  public IModbusStream Stream { get; }
 
   /// <summary>
   ///   是否连接
   /// </summary>
-  public Func<bool> IsConnected { get; }
-
-  /// <summary>
-  ///   编码方式 未启用
-  /// </summary>
-  public BigAndSmallEndianEncodingMode EncodingMode { get; set; }
+  public bool IsConnected { get; }
 
   /// <summary>
   ///   读取线圈 FC01
@@ -32,7 +27,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public BitSpan ReadCoils(int unitIdentifier, int startingAddress, int count);
+  public Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取线圈 FC01
@@ -40,8 +35,10 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
+  /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask<BitMemory> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
+    CancellationToken ct);
 
   /// <summary>
   ///   读取离散输入 FC02
@@ -50,7 +47,7 @@ public interface IModbusClient
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
   /// <returns></returns>
-  public BitSpan ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
+  public Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
 
   /// <summary>
   ///   读取离散输入 FC02
@@ -58,8 +55,10 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
+  /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask<BitMemory> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count,
+    CancellationToken ct);
 
   /// <summary>
   ///   读取保存寄存器 FC03
@@ -76,8 +75,10 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
+  /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count,
+    CancellationToken ct);
 
   /// <summary>
   ///   读取输入寄存器 FC04
@@ -94,8 +95,10 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="count"></param>
+  /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask<Memory<byte>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count);
+  public ValueTask<Memory<byte>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count,
+    CancellationToken ct);
 
   /// <summary>
   ///   写入单个线圈 FC05
@@ -112,8 +115,9 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="value"></param>
+  /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value);
+  public ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value, CancellationToken ct);
 
   /// <summary>
   ///   写入单个寄存器 FC06
@@ -129,7 +133,9 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="value"></param>
-  public ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value);
+  /// <param name="ct"></param>
+  public ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value,
+    CancellationToken ct);
 
   /// <summary>
   ///   写入多个寄存器 FC16
@@ -145,5 +151,7 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="data"></param>
-  public ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, Memory<byte> data);
+  /// <param name="ct"></param>
+  public ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, ReadOnlyMemory<byte> data,
+    CancellationToken ct);
 }

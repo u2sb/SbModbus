@@ -15,8 +15,4 @@
         <ProjectReference Include="..\SbModbus\SbModbus.csproj"/>
     </ItemGroup>
 
-    <ItemGroup>
-        <Analyzer Include="..\SbModbus.SourceGenerator\bin\$(Configuration)\netstandard2.0\SbModbus.SourceGenerator.dll"/>
-    </ItemGroup>
-
 </Project>

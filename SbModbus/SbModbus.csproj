@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks>netstandard2.1;net8.0;net10.0</TargetFrameworks>
         <Nullable>enable</Nullable>
         <LangVersion>preview</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -24,19 +24,6 @@
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     </PropertyGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0"/>
-    </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\SbModbus.SourceGenerator\SbModbus.SourceGenerator.csproj"
-                          ReferenceOutputAssembly="false"/>
-        <None Include="..\SbModbus.SourceGenerator\bin\$(Configuration)\netstandard2.0\SbModbus.SourceGenerator.dll"
-              PackagePath="analyzers\dotnet\roslyn4.1\cs"
-              Pack="true"
-              Visible="false"/>
-        <Analyzer Include="..\SbModbus.SourceGenerator\bin\$(Configuration)\netstandard2.0\SbModbus.SourceGenerator.dll"/>
-    </ItemGroup>
-
     <ItemGroup>
         <None Include="..\icons\avatar.png">
             <Pack>True</Pack>
@@ -46,5 +33,24 @@
             <Pack>True</Pack>
             <PackagePath>\</PackagePath>
         </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="SbBitConverter" Version="0.0.6" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Properties\ErrorMessage.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>ErrorMessage.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Properties\ErrorMessage.resx">
+        <Generator>PublicResXFileCodeGenerator</Generator>
+        <LastGenOutput>ErrorMessage.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
     </ItemGroup>
 </Project>

@@ -1,7 +1,6 @@
 // See https://aka.ms/new-console-template for more information
 
 using RJCP.IO.Ports;
-using SbModbus.Client;
 
 Console.WriteLine("Hello, World!");
 
