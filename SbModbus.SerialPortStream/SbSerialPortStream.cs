@@ -34,7 +34,11 @@ public class SbSerialPortStream : RJCP.IO.Ports.SerialPortStream, IModbusStream
     {
       var temp = new byte[b];
 
+#if NET8_0_OR_GREATER
       await ReadExactlyAsync(temp.AsMemory(0, b), ct);
+#else
+      _ = await ReadAsync(temp.AsMemory(0, b), ct);
+#endif
     }
   }
 }
