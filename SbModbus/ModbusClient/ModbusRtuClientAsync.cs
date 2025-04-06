@@ -11,7 +11,7 @@ public partial class ModbusRtuClient
 {
   /// <inheritdoc />
   public override async ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, ReadOnlySpan<byte>.Empty,
       writer => { writer.Write(ConvertUshort(count).ToByteArray(true)); });
@@ -27,7 +27,7 @@ public partial class ModbusRtuClient
   /// <inheritdoc />
   public override async ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress,
     int count,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
       ReadOnlySpan<byte>.Empty,
@@ -43,7 +43,7 @@ public partial class ModbusRtuClient
 
   /// <inheritdoc />
   public override async ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
       ReadOnlySpan<byte>.Empty, writer =>
@@ -60,7 +60,7 @@ public partial class ModbusRtuClient
 
   /// <inheritdoc />
   public override async ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress,
       ReadOnlySpan<byte>.Empty,
@@ -78,7 +78,7 @@ public partial class ModbusRtuClient
   /// <inheritdoc />
   public override async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress,
     ReadOnlyMemory<byte> data,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     var l = data.Length;
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
@@ -101,17 +101,17 @@ public partial class ModbusRtuClient
   /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data,
     int length,
-    int readTimeout, CancellationToken ct)
+    int readTimeout, CancellationToken ct = default)
   {
     if (!Stream.IsConnected) throw new SbModbusException("Not Connected");
+
+    // 清除读缓存
+    await Stream.ClearReadBufferAsync(ct);
 
     // 写入数据 
     await Stream.WriteAsync(data, ct);
 
     // TODO 这里没实现写超时 后续实现
-
-    // 清除读缓存
-    await Stream.ClearReadBufferAsync(ct);
 
     using var cts = new CancellationTokenSource();
     cts.CancelAfter(readTimeout);
@@ -160,7 +160,7 @@ public partial class ModbusRtuClient
 
   /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier,
-    ModbusFunctionCode functionCode, int startingAddress, int count, CancellationToken ct)
+    ModbusFunctionCode functionCode, int startingAddress, int count, CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
     {

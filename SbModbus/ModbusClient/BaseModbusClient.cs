@@ -2,7 +2,6 @@
 
 using System;
 using System.Buffers;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SbModbus.Models;
@@ -16,11 +15,6 @@ namespace SbModbus.ModbusClient;
 /// </summary>
 public abstract class BaseModbusClient : IModbusClient
 {
-  /// <summary>
-  ///   清除读缓存
-  /// </summary>
-  public Func<Stream, CancellationToken, Task>? ClearReadBufferAsync;
-
   /// <summary>
   /// </summary>
   /// <param name="stream"></param>
@@ -169,7 +163,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <returns></returns>
   /// <exception cref="SbModbusException"></exception>
   protected abstract ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length,
-    int readTimeout, CancellationToken ct);
+    int readTimeout, CancellationToken ct = default);
 
   /// <summary>
   ///   读寄存器通用方法
@@ -192,7 +186,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="ct"></param>
   /// <returns></returns>
   protected abstract ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier, ModbusFunctionCode functionCode,
-    int startingAddress, int count, CancellationToken ct);
+    int startingAddress, int count, CancellationToken ct = default);
 
 
   /// <summary>
@@ -210,7 +204,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public abstract ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
-    CancellationToken ct);
+    CancellationToken ct = default);
 
 
   /// <inheritdoc />
@@ -218,7 +212,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public abstract ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count,
-    CancellationToken ct);
+    CancellationToken ct = default);
 
 
   /// <inheritdoc />
@@ -229,7 +223,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public async ValueTask<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count,
       ct);
@@ -244,7 +238,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public async ValueTask<Memory<byte>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count,
-    CancellationToken ct)
+    CancellationToken ct = default)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count, ct);
   }
@@ -254,7 +248,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public abstract ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
-    CancellationToken ct);
+    CancellationToken ct = default);
 
 
   /// <inheritdoc />
@@ -262,7 +256,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public abstract ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value,
-    CancellationToken ct);
+    CancellationToken ct = default);
 
   /// <inheritdoc />
   public abstract void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
@@ -270,7 +264,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public abstract ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress,
-    ReadOnlyMemory<byte> data, CancellationToken ct);
+    ReadOnlyMemory<byte> data, CancellationToken ct = default);
 
   #endregion
 }

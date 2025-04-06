@@ -8,11 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="RJCP.SerialPortStream" Version="3.0.1"/>
+        <PackageReference Include="RJCP.SerialPortStream" Version="3.0.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\SbModbus\SbModbus.csproj"/>
+        <ProjectReference Include="..\SbModbus.SerialPortStream\SbModbus.SerialPortStream.csproj" />
+        <ProjectReference Include="..\SbModbus.TcpStream\SbModbus.TcpStream.csproj" />
+        <ProjectReference Include="..\SbModbus\SbModbus.csproj" />
     </ItemGroup>
 
 </Project>

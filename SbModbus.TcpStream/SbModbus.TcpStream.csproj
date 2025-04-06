@@ -5,13 +5,13 @@
 		<Nullable>enable</Nullable>
 		<LangVersion>preview</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<AssemblyName>SbModbus.SerialPortStream</AssemblyName>
-		<PackageId>SbModbus.SerialPortStream</PackageId>
+		<AssemblyName>SbModbus.TcpStream</AssemblyName>
+		<PackageId>SbModbus.TcpStream</PackageId>
 		<PackageTags>Modbus,Iot</PackageTags>
 		<Description>Probably the best performing Modbus library</Description>
 		<PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<Title>SbModbus.SerialPortStream</Title>
+		<Title>SbModbus.TcpStream</Title>
 		<Authors>MonoLogueChi</Authors>
 		<Company>U2SB</Company>
 		<RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
@@ -36,11 +36,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="RJCP.SerialPortStream" Version="3.0.1" />
+	  <PackageReference Include="NetCoreServer" Version="8.0.7" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\SbModbus\SbModbus.csproj" />
+		<ProjectReference Include="..\SbModbus\SbModbus.csproj" />
 	</ItemGroup>
-
 </Project>

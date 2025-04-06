@@ -1,59 +1,25 @@
 // See https://aka.ms/new-console-template for more information
 
-using RJCP.IO.Ports;
+using System.Runtime.CompilerServices;
+using ModbusTest;
+using SbModbus.ModbusClient;
+using SbModbus.TcpStream;
 
-Console.WriteLine("Hello, World!");
-
-var sp = new SerialPortStream("COM3")
+var s = new SbTcpClientStream("192.168.20.200", 502)
 {
-  BaudRate = 115200,
-  ReadTimeout = 1000
+  ReadTimeout = 1000,
+  WriteTimeout = 1000
 };
+s.ConnectAsync();
 
-sp.Open();
+var modbusClient = new ModbusRtuClient(s);
 
-var modbusClient = new ModbusRtuClient(sp)
+while (true)
 {
-  ClearReadBufferAsync = async (s, ct) =>
-  {
-    if (s is SerialPortStream serialPortStream)
-    {
-      var b = serialPortStream.BytesToRead;
-      if (b > 0)
-      {
-        var temp = new byte[b];
+  var bs1 = await modbusClient.ReadHoldingRegistersAsync(1, 1, (ushort)(Unsafe.SizeOf<MyStruct>() / 2));
+  var setting = new MyStruct(bs1.Span);
 
-        await serialPortStream.ReadExactlyAsync(temp.AsMemory(0, b), ct);
-      }
-    }
-  },
-  CheckIsConnected = s => s is SerialPortStream serialPortStream ? serialPortStream.IsOpen : s.CanRead
-};
+  Console.WriteLine($@"{setting.OutputVoltage:F3}, {setting.OutputCurrent:F3}, {setting.OutputPower:F3}");
 
-// await modbusClient.WriteMultipleRegistersAsync(1, 4,
-//   new Memory<byte>([
-//     ..65538.ToBytes(BigAndSmallEndianEncodingMode.ABCD), ..((ushort)6550).ToBytes(BigAndSmallEndianEncodingMode.ABCD)
-//   ]));
-//
-// var b = await modbusClient.ReadHoldingRegistersAsync(1, 4, 3);
-//
-// var myStruct = new MyStruct(b.Span);
-//
-// Console.WriteLine(myStruct.MyStruct2.B);
-
-
-var a = await modbusClient.ReadInputRegistersAsync(1, 0x10, 2);
-
-sp.Close();
-sp.Dispose();
-
-
-// var a = new MyStruct
-// {
-//   B = 1234567890
-// };
-//
-// var b = a.ToBytes();
-// var c = a.ToBytes((byte)BigAndSmallEndianEncodingMode.DCBA);
-// var d = a.ToBytes(2);
-// var e = a.ToBytes(3);
+  await Task.Delay(20);
+}

@@ -1,44 +1,32 @@
 using System.Runtime.InteropServices;
-using SbModbus.Attributes;
-using SbModbus.Models;
+using SbBitConverter.Attributes;
 
 namespace ModbusTest;
 
-[SbModbusStruct(BigAndSmallEndianEncodingMode.ABCD)]
+[SbBitConverterStruct(BigAndSmallEndianEncodingMode.ABCD)]
 [StructLayout(LayoutKind.Explicit, Pack = 2)]
 public partial struct MyStruct
 {
-  public MyStruct()
-  {
-  }
+  [FieldOffset((0x01 - 1) * 2)] private readonly ushort _outputVoltage;
 
-  [FieldOffset(0)] private int _a;
+  /// <summary>
+  ///   输出电压
+  /// </summary>
+  public float OutputVoltage => _outputVoltage * 0.01f;
 
-  [field: FieldOffset(4)] public int B { get; set; }
 
-  [field: FieldOffset(0)] public MyStruct2 MyStruct2 { get; set; }
+  [FieldOffset((0x02 - 1) * 2)] private readonly ushort _outputCurrent;
 
-  [field: FieldOffset(8)] public MyEnum MyEnum { get; set; }
-  
-  [field: FieldOffset(10)] public UInt16Array2 MyUInt16Array2 { get; set; }
-}
+  /// <summary>
+  ///   输出电流
+  /// </summary>
+  public float OutputCurrent => _outputCurrent * 0.001f;
 
-[SbModbusStruct(BigAndSmallEndianEncodingMode.ABCD)]
-[StructLayout(LayoutKind.Explicit, Pack = 2)]
-public partial struct MyStruct2
-{
-  [FieldOffset(0)] private int _a;
 
-  [field: FieldOffset(4)] public int B { get; set; }
-}
+  [FieldOffset((0x03 - 1) * 2)] private readonly ushort _outputPower;
 
-public enum MyEnum : ushort
-{
-  OK = 0,
-  NoOK = 1
-}
-
-[SbModbusArray(typeof(ushort), 4, BigAndSmallEndianEncodingMode.DCBA)]
-public partial struct UShortArray4
-{
+  /// <summary>
+  ///   输出功率
+  /// </summary>
+  public float OutputPower => _outputPower * 0.01f;
 }

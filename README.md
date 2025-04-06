@@ -18,3 +18,7 @@
 
 This project is still under development and contains some known and unknown bugs. Future interfaces may undergo changes,
 so it is not recommended for use in production environments.
+
+## 感谢
+
+- [FluentModbus](https://github.com/Apollo3zehn/FluentModbus) - [MIT](https://github.com/Apollo3zehn/FluentModbus/blob/dev/LICENSE.md)

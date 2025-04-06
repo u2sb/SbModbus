@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="ModbusTest/ModbusTest.csproj" />
   <Project Path="SbModbus.SerialPortStream/SbModbus.SerialPortStream.csproj" Id="9bbcb32a-a008-4799-86cb-a86e0c058ced" />
+  <Project Path="SbModbus.TcpStream/SbModbus.TcpStream.csproj" Id="98aa5cd7-4bed-4edf-890c-8bec0aaa901f" />
   <Project Path="SbModbus/SbModbus.csproj" />
 </Solution>
