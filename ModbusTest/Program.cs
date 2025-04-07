@@ -21,5 +21,5 @@ while (true)
 
   Console.WriteLine($@"{setting.OutputVoltage:F3}, {setting.OutputCurrent:F3}, {setting.OutputPower:F3}");
 
-  await Task.Delay(20);
+  await Task.Delay(1);
 }

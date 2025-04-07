@@ -15,12 +15,8 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   /// <inheritdoc />
   public override Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, ReadOnlySpan<byte>.Empty,
-      writer =>
-      {
-        // 写长度
-        writer.Write(ConvertUshort(count).ToByteArray(true));
-      });
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
+      ConvertUshort(count).ToByteArray(true), null);
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
@@ -34,12 +30,8 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   /// <inheritdoc />
   public override Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, ReadOnlySpan<byte>.Empty,
-      writer =>
-      {
-        // 写长度
-        writer.Write(ConvertUshort(count).ToByteArray(true));
-      });
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
+      ConvertUshort(count).ToByteArray(true), null);
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
@@ -54,12 +46,7 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
-      ReadOnlySpan<byte>.Empty, writer =>
-      {
-        var data = (ushort)(value ? 0x00FF : 0x0000);
-        // 使用小端模式转换数据
-        writer.Write(data.ToByteArray());
-      });
+      ((ushort)(value ? 0x00FF : 0x0000)).ToByteArray(), null);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -71,18 +58,12 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   public override void WriteSingleRegister(int unitIdentifier, int startingAddress, ushort value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress,
-      ReadOnlySpan<byte>.Empty,
-      writer =>
-      {
-        // 这里写入时不区分大小端 所以要提前调整好
-        writer.Write(value.ToByteArray());
-      });
+      value.ToByteArray(), null);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
     _ = WriteAndReadWithTimeout(buffer.WrittenSpan, length, ReadTimeout);
   }
-
 
   /// <summary>
   /// </summary>
@@ -124,8 +105,10 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
     // 写寄存器地址
     buffer.Write(ConvertUshort(startingAddress).ToByteArray(true));
 
+    // 写拓展 寄存器数量 字节数等
     extendFrame?.Invoke(buffer);
 
+    // 写数据 寄存器数量等
     if (!data.IsEmpty) buffer.Write(data);
 
     buffer.WriteCrc16();

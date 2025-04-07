@@ -14,6 +14,8 @@ public class SbTcpClientStream : TcpClient, IModbusStream
 {
   private readonly Buffer _buffer = new(4096);
 
+  private readonly object _lock = new();
+
   /// <inheritdoc />
   public SbTcpClientStream(IPAddress address, int port) : base(address, port)
   {
@@ -44,7 +46,11 @@ public class SbTcpClientStream : TcpClient, IModbusStream
   /// <inheritdoc />
   public ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
-    _buffer.Clear();
+    lock (_lock)
+    {
+      _buffer.Clear();
+    }
+
     return ValueTask.CompletedTask;
   }
 
@@ -64,8 +70,11 @@ public class SbTcpClientStream : TcpClient, IModbusStream
   /// <inheritdoc />
   public int Read(Span<byte> buffer)
   {
-    _buffer.AsSpan()[..Math.Min((int)_buffer.Size, buffer.Length)].CopyTo(buffer);
-    return (int)_buffer.Size;
+    lock (_lock)
+    {
+      _buffer.AsSpan()[..Math.Min((int)_buffer.Size, buffer.Length)].CopyTo(buffer);
+      return (int)_buffer.Size;
+    }
   }
 
   /// <inheritdoc />
@@ -77,7 +86,10 @@ public class SbTcpClientStream : TcpClient, IModbusStream
   /// <inheritdoc />
   protected override void OnReceived(byte[] buffer, long offset, long size)
   {
-    _buffer.Clear();
-    _buffer.Append(buffer, offset, size);
+    lock (_lock)
+    {
+      _buffer.Clear();
+      _buffer.Append(buffer, offset, size);
+    }
   }
 }
