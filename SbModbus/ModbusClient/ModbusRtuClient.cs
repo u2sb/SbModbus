@@ -121,11 +121,8 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   protected override Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode, int startingAddress,
     int count)
   {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
-    {
-      // 写长度
-      writer.Write(ConvertUshort(count).ToByteArray(true));
-    });
+    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).ToByteArray(true),
+      null);
 
     // 1设备地址 1功能码 1数据长度 2n数据 2校验
     var length = 1 + 1 + 1 + count * 2 + 2;
