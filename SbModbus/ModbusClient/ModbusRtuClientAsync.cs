@@ -13,32 +13,30 @@ public partial class ModbusRtuClient
   public override async ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
     CancellationToken ct = default)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, ReadOnlySpan<byte>.Empty,
-      writer => { writer.Write(ConvertUshort(count).ToByteArray(true)); });
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
+      ConvertUshort(count).ToByteArray(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
 
     // 返回数据
-    return result;
+    return result[3..^2];
   }
 
   /// <inheritdoc />
   public override async ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress,
-    int count,
-    CancellationToken ct = default)
+    int count, CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
-      ReadOnlySpan<byte>.Empty,
-      writer => { writer.Write(ConvertUshort(count).ToByteArray(true)); });
+      ConvertUshort(count).ToByteArray(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
 
     // 返回数据
-    return result;
+    return result[3..^2];
   }
 
   /// <inheritdoc />
@@ -46,12 +44,7 @@ public partial class ModbusRtuClient
     CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
-      ReadOnlySpan<byte>.Empty, writer =>
-      {
-        var data = (ushort)(value ? 0x00FF : 0x0000);
-        // 使用小端模式转换数据
-        writer.Write(data.ToByteArray());
-      });
+      ((ushort)(value ? 0x00FF : 0x0000)).ToByteArray());
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -59,16 +52,10 @@ public partial class ModbusRtuClient
   }
 
   /// <inheritdoc />
-  public override async ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value,
-    CancellationToken ct = default)
+  public override async ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress,
+    ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress,
-      ReadOnlySpan<byte>.Empty,
-      writer =>
-      {
-        // 这里写入时不区分大小端 所以要提前调整好
-        writer.Write(value.ToByteArray());
-      });
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, data.Span);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -77,8 +64,7 @@ public partial class ModbusRtuClient
 
   /// <inheritdoc />
   public override async ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress,
-    ReadOnlyMemory<byte> data,
-    CancellationToken ct = default)
+    ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     var l = data.Length;
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
@@ -113,15 +99,16 @@ public partial class ModbusRtuClient
 
     // TODO 这里没实现写超时 后续实现
 
-    using var cts = new CancellationTokenSource();
+    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(readTimeout);
     try
     {
-      // 是否已验证功能码
       var buffer = new byte[length];
       var memory = buffer.AsMemory();
-      var verificationFunctionCode = false;
       var bytesRead = 0;
+
+      // 是否已验证功能码
+      var verificationFunctionCode = false;
 
       while (!cts.Token.IsCancellationRequested && bytesRead < length)
       {

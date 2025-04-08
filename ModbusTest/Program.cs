@@ -18,8 +18,6 @@ while (true)
 {
   var bs1 = await modbusClient.ReadHoldingRegistersAsync(1, 1, (ushort)(Unsafe.SizeOf<MyStruct>() / 2));
   var setting = new MyStruct(bs1.Span);
-
-  Console.WriteLine($@"{setting.OutputVoltage:F3}, {setting.OutputCurrent:F3}, {setting.OutputPower:F3}");
-
-  await Task.Delay(1);
+  
+  Console.WriteLine($@"{setting.OutputVoltage:F3}, {setting.OutputCurrent:F3}, {setting.OutputPower:F3}, {DateTime.Now.Millisecond}");
 }

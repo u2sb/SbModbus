@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using SbBitConverter.Attributes;
 using SbBitConverter.Models;
+using SbModbus.Services;
 
 namespace SbModbus.ModbusServer;
 
@@ -13,7 +14,7 @@ public interface IModbusServer : IDisposable
   /// <summary>
   ///   流
   /// </summary>
-  public Stream Stream { get; }
+  public IModbusStream Stream { get; }
 
   /// <summary>
   ///   是否连接

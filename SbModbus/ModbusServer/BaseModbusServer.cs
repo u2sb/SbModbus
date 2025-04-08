@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SbBitConverter.Attributes;
 using SbBitConverter.Models;
+using SbModbus.Services;
 
 namespace SbModbus.ModbusServer;
 
@@ -36,7 +37,7 @@ public class BaseModbusServer : IModbusServer
   /// </summary>
   /// <param name="stream"></param>
   /// <param name="unitIdentifier"></param>
-  public BaseModbusServer(Stream stream, byte unitIdentifier)
+  public BaseModbusServer(IModbusStream stream, byte unitIdentifier)
   {
     Stream = stream;
     UnitIdentifier = unitIdentifier;
@@ -45,7 +46,6 @@ public class BaseModbusServer : IModbusServer
     WriteTimeout = Stream.WriteTimeout;
 
     CheckIsConnected = s => s.CanRead;
-    IsConnected = () => CheckIsConnected(Stream);
 
 
     _looperTask = Task.Factory.StartNew(
@@ -73,7 +73,7 @@ public class BaseModbusServer : IModbusServer
   public Func<Stream, bool> CheckIsConnected { private get; set; }
 
   /// <inheritdoc />
-  public Stream Stream { get; }
+  public IModbusStream Stream { get; }
 
   /// <inheritdoc />
   public Func<bool> IsConnected { get; }

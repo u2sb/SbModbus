@@ -124,6 +124,14 @@ public interface IModbusClient
   /// </summary>
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
+  /// <param name="data"></param>
+  public void WriteSingleRegister(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
+
+  /// <summary>
+  ///   写入单个寄存器 FC06
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="startingAddress"></param>
   /// <param name="value"></param>
   public void WriteSingleRegister(int unitIdentifier, int startingAddress, ushort value);
 
@@ -133,8 +141,36 @@ public interface IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <param name="startingAddress"></param>
   /// <param name="value"></param>
+  public void WriteSingleRegister(int unitIdentifier, int startingAddress, short value);
+
+  /// <summary>
+  ///   写入单个寄存器 FC06
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="data"></param>
+  /// <param name="ct"></param>
+  public ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ReadOnlyMemory<byte> data,
+    CancellationToken ct = default);
+
+  /// <summary>
+  ///   写入单个寄存器 FC06
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="value"></param>
   /// <param name="ct"></param>
   public ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ushort value,
+    CancellationToken ct = default);
+
+  /// <summary>
+  ///   写入单个寄存器 FC06
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="value"></param>
+  /// <param name="ct"></param>
+  public ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, short value,
     CancellationToken ct = default);
 
   /// <summary>
