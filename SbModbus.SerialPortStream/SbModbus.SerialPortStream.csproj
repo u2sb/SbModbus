@@ -36,7 +36,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="RJCP.SerialPortStream" Version="3.0.1" />
+	  <PackageReference Include="RJCP.SerialPortStream" Version="3.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>
