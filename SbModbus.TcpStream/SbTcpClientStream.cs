@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using NetCoreServer;
-using SbModbus.Services;
+using SbModbus.Models;
 using Buffer = NetCoreServer.Buffer;
 
 namespace SbModbus.TcpStream;

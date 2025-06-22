@@ -2,7 +2,7 @@
 
 using System.Runtime.CompilerServices;
 using ModbusTest;
-using SbModbus.ModbusClient;
+using SbModbus.Services.ModbusClient;
 using SbModbus.TcpStream;
 
 var s = new SbTcpClientStream("192.168.20.200", 502)

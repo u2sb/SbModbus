@@ -2,10 +2,9 @@ using System;
 using System.Buffers;
 using SbBitConverter.Utils;
 using SbModbus.Models;
-using SbModbus.Services;
 using BitConverter = SbBitConverter.Utils.BitConverter;
 
-namespace SbModbus.ModbusClient;
+namespace SbModbus.Services.ModbusClient;
 
 /// <summary>
 ///   ModbusRTU Client

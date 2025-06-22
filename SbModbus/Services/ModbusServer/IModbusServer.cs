@@ -1,10 +1,9 @@
 using System;
-using System.IO;
 using SbBitConverter.Attributes;
 using SbBitConverter.Models;
-using SbModbus.Services;
+using SbModbus.Models;
 
-namespace SbModbus.ModbusServer;
+namespace SbModbus.Services.ModbusServer;
 
 /// <summary>
 ///   ModbusServer

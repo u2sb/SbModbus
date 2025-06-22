@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using SbBitConverter.Utils;
 using SbModbus.Models;
 
-namespace SbModbus.ModbusClient;
+namespace SbModbus.Services.ModbusClient;
 
 public partial class ModbusRtuClient
 {

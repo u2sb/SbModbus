@@ -4,10 +4,9 @@ using System.Runtime.InteropServices;
 using SbBitConverter.Attributes;
 using SbBitConverter.Utils;
 using SbModbus.Models;
-using SbModbus.Services;
 using BitConverter = SbBitConverter.Utils.BitConverter;
 
-namespace SbModbus.ModbusClient;
+namespace SbModbus.Services.ModbusClient;
 
 /// <summary>
 ///   ModbusTcp 类

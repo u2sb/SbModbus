@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SbModbus.Services;
+namespace SbModbus.Models;
 
 /// <summary>
 ///   串口

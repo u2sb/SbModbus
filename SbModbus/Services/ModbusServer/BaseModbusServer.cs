@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SbBitConverter.Attributes;
 using SbBitConverter.Models;
-using SbModbus.Services;
+using SbModbus.Models;
 
-namespace SbModbus.ModbusServer;
+namespace SbModbus.Services.ModbusServer;
 
 /// <inheritdoc />
 public class BaseModbusServer : IModbusServer

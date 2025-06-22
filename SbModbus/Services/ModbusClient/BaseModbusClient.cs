@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 using SbBitConverter.Utils;
 using SbModbus.Models;
 using SbModbus.Properties;
-using SbModbus.Services;
 
-namespace SbModbus.ModbusClient;
+namespace SbModbus.Services.ModbusClient;
 
 /// <summary>
 ///   ModbusClient基础类

@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using SbModbus.Services;
+using SbModbus.Models;
 
-namespace SbModbus.ModbusClient;
+namespace SbModbus.Services.ModbusClient;
 
 /// <summary>
 ///   ModbusClient

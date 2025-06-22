@@ -8,7 +8,7 @@ using SbBitConverter.Utils;
 using SbModbus.Models;
 using BitConverter = SbBitConverter.Utils.BitConverter;
 
-namespace SbModbus.ModbusClient;
+namespace SbModbus.Services.ModbusClient;
 
 public partial class ModbusTcpClient
 {
