@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using SbBitConverter.Attributes;
 using SbBitConverter.Utils;
 using SbModbus.Models;
+using SbModbus.Utils;
 using BitConverter = SbBitConverter.Utils.BitConverter;
 
 namespace SbModbus.Services.ModbusClient;

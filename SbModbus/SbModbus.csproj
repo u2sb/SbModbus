@@ -1,55 +1,58 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;net6.0;net8.0;net10.0</TargetFrameworks>
-        <Nullable>enable</Nullable>
-        <LangVersion>preview</LangVersion>
-        <AssemblyName>SbModbus</AssemblyName>
-        <PackageId>SbModbus</PackageId>
-        <PackageTags>Modbus,Iot</PackageTags>
-        <Description>Probably the best performing Modbus library</Description>
-        <PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
-        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-        <Title>SbModbus</Title>
-        <Authors>MonoLogueChi</Authors>
-        <Company>U2SB</Company>
-        <RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <PackageIcon>avatar.png</PackageIcon>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-        <Copyright>U2SB</Copyright>
-        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0;net10.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<LangVersion>preview</LangVersion>
+		<AssemblyName>SbModbus</AssemblyName>
+		<PackageId>SbModbus</PackageId>
+		<PackageTags>Modbus,Iot</PackageTags>
+		<Description>Probably the best performing Modbus library</Description>
+		<PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<Title>SbModbus</Title>
+		<Authors>MonoLogueChi</Authors>
+		<Company>U2SB</Company>
+		<RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageIcon>avatar.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Copyright>U2SB</Copyright>
+		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+	</PropertyGroup>
 
-    <ItemGroup>
-        <None Include="..\icons\avatar.png">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-        <None Include="..\README.md">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-    </ItemGroup>
+	<ItemGroup>
+		<None Include="..\icons\avatar.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="SbBitConverter" Version="0.1.2" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="SbBitConverter" Version="0.2.1" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <Compile Update="Properties\ErrorMessage.Designer.cs">
-        <DesignTime>True</DesignTime>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>ErrorMessage.resx</DependentUpon>
-      </Compile>
-    </ItemGroup>
+	<ItemGroup>
+		<Compile Update="Properties\ErrorMessage.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>ErrorMessage.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
 
-    <ItemGroup>
-      <EmbeddedResource Update="Properties\ErrorMessage.resx">
-        <Generator>PublicResXFileCodeGenerator</Generator>
-        <LastGenOutput>ErrorMessage.Designer.cs</LastGenOutput>
-      </EmbeddedResource>
-    </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Update="Properties\ErrorMessage.resx">
+			<Generator>PublicResXFileCodeGenerator</Generator>
+			<LastGenOutput>ErrorMessage.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
 </Project>
