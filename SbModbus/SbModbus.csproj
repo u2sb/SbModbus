@@ -21,6 +21,8 @@
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Copyright>U2SB</Copyright>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
 	<ItemGroup>
