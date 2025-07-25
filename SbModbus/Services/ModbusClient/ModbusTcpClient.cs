@@ -1,11 +1,7 @@
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
-using SbBitConverter.Attributes;
-using SbBitConverter.Utils;
 using SbModbus.Models;
-using SbModbus.Utils;
-using BitConverter = SbBitConverter.Utils.BitConverter;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -169,7 +165,7 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   {
     if (data.Length < 9) throw new SbModbusException("The response message length is invalid.");
 
-    if (BitConverter.ToUInt16(data[..2]) != tid) throw new SbModbusException("The response TransactionsId is invalid.");
+    if (data[..2].ToUInt16() != tid) throw new SbModbusException("The response TransactionsId is invalid.");
 
     // 检查错误码
     if ((data[7] & 0x80) != 0)

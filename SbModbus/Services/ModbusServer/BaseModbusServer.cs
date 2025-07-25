@@ -3,8 +3,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using SbBitConverter.Attributes;
-using SbBitConverter.Models;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusServer;

@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
-using SbBitConverter.Utils;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusClient;

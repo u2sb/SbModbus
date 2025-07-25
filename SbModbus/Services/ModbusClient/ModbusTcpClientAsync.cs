@@ -3,10 +3,8 @@ using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using SbBitConverter.Attributes;
-using SbBitConverter.Utils;
 using SbModbus.Models;
-using BitConverter = SbBitConverter.Utils.BitConverter;
+using BitConverter = System.SbBitConverter;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -122,7 +120,7 @@ public partial class ModbusTcpClient
   {
     if (!Stream.IsConnected) throw new SbModbusException("Not Connected");
 
-    var tid = BitConverter.ToUInt16(data[..2].Span);
+    var tid = data[..2].Span.ToUInt16();
 
     // 清除读缓存
     await Stream.ClearReadBufferAsync(ct);

@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using SbBitConverter.Utils;
 
 namespace SbModbus.Utils;
 

@@ -3,7 +3,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using SbBitConverter.Utils;
 using SbModbus.Models;
 using SbModbus.Properties;
 

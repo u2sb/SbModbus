@@ -1,6 +1,4 @@
 using System;
-using SbBitConverter.Attributes;
-using SbBitConverter.Models;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusServer;

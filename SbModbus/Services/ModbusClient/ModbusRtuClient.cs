@@ -1,9 +1,7 @@
 using System;
 using System.Buffers;
-using SbBitConverter.Utils;
 using SbModbus.Models;
 using SbModbus.Utils;
-using BitConverter = SbBitConverter.Utils.BitConverter;
 
 namespace SbModbus.Services.ModbusClient;
 
