@@ -1,95 +1,106 @@
 using System;
+using System.IO;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using NetCoreServer;
+using CavemanTcp;
+using CommunityToolkit.HighPerformance;
 using SbModbus.Models;
-using Buffer = NetCoreServer.Buffer;
 
 namespace SbModbus.TcpStream;
 
 /// <summary>
 /// </summary>
-public class SbTcpClientStream : TcpClient, IModbusStream
+public class SbTcpClientStream : CavemanTcpClient, IModbusStream
 {
-  private readonly Buffer _buffer = new(4096);
-
-  private readonly object _lock = new();
-
-  /// <inheritdoc />
-  public SbTcpClientStream(IPAddress address, int port) : base(address, port)
-  {
-  }
-
-  /// <inheritdoc />
-  public SbTcpClientStream(string address, int port) : base(address, port)
-  {
-  }
-
-  /// <inheritdoc />
-  public SbTcpClientStream(DnsEndPoint endpoint) : base(endpoint)
-  {
-  }
-
-  /// <inheritdoc />
-  public SbTcpClientStream(IPEndPoint endpoint) : base(endpoint)
-  {
-  }
-
   /// <inheritdoc />
   public int ReadTimeout { get; set; } = 1000;
 
   /// <inheritdoc />
   public int WriteTimeout { get; set; } = 1000;
 
+  /// <inheritdoc />
+  public bool Connect()
+  {
+    base.Connect(1000);
+    return IsConnected;
+  }
 
   /// <inheritdoc />
-  public ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  public new bool Disconnect()
   {
-    lock (_lock)
-    {
-      _buffer.Clear();
-    }
+    base.Disconnect();
+    return !IsConnected;
+  }
 
-    return ValueTask.CompletedTask;
+  /// <inheritdoc />
+  public async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  {
+    var stream = GetStream();
+    if(stream.CanSeek) stream.Seek(0, SeekOrigin.Begin);
+    await Task.CompletedTask;
   }
 
   /// <inheritdoc />
   public void Write(ReadOnlySpan<byte> buffer)
   {
-    Send(buffer);
+    SendWithTimeout(WriteTimeout, buffer.ToArray());
   }
 
   /// <inheritdoc />
-  public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  public async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    SendAsync(buffer.Span);
-    return ValueTask.CompletedTask;
+    await SendWithTimeoutAsync(WriteTimeout, buffer.ToArray(), ct);
   }
 
   /// <inheritdoc />
   public int Read(Span<byte> buffer)
   {
-    lock (_lock)
+    var result = ReadWithTimeout(ReadTimeout, buffer.Length);
+    if (result.Status == ReadResultStatus.Success)
     {
-      _buffer.AsSpan()[..Math.Min((int)_buffer.Size, buffer.Length)].CopyTo(buffer);
-      return (int)_buffer.Size;
+      result.DataStream.Read(buffer);
     }
+
+    return (int)result.BytesRead;
   }
 
   /// <inheritdoc />
   public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
-    return await Task.Run(() => Read(buffer.Span), ct);
+    var result = await ReadWithTimeoutAsync(ReadTimeout, buffer.Length, ct);
+    if (result.Status == ReadResultStatus.Success)
+    {
+      await result.DataStream.ReadAsync(buffer, cancellationToken: ct);
+    }
+
+    return (int)result.BytesRead;
+  }
+
+
+  /// <inheritdoc />
+  public SbTcpClientStream(string ipPort) : base(ipPort)
+  {
   }
 
   /// <inheritdoc />
-  protected override void OnReceived(byte[] buffer, long offset, long size)
+  public SbTcpClientStream(string serverIpOrHostname, int port, bool ssl) : base(serverIpOrHostname, port, ssl)
   {
-    lock (_lock)
-    {
-      _buffer.Clear();
-      _buffer.Append(buffer, offset, size);
-    }
+  }
+
+  /// <inheritdoc />
+  public SbTcpClientStream(string serverIpOrHostname, int port, X509Certificate2 certificate = null) : base(serverIpOrHostname, port, certificate)
+  {
+  }
+
+  /// <inheritdoc />
+  public SbTcpClientStream(string ipPort, bool ssl, string pfxCertFilename, string pfxPassword) : base(ipPort, ssl, pfxCertFilename, pfxPassword)
+  {
+  }
+
+  /// <inheritdoc />
+  public SbTcpClientStream(string serverIpOrHostname, int port, bool ssl, string pfxCertFilename, string pfxPassword) : base(serverIpOrHostname, port, ssl, pfxCertFilename, pfxPassword)
+  {
   }
 }
