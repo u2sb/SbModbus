@@ -90,7 +90,7 @@ public class SbTcpClientStream : CavemanTcpClient, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(string serverIpOrHostname, int port, X509Certificate2 certificate = null) : base(serverIpOrHostname, port, certificate)
+  public SbTcpClientStream(string serverIpOrHostname, int port, X509Certificate2? certificate = null) : base(serverIpOrHostname, port, certificate)
   {
   }
 
