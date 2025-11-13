@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Sb.Extensions.System;
 using SbBitConverter.Attributes;
 
 namespace ModbusTest;

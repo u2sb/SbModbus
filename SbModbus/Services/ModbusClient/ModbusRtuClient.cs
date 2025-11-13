@@ -1,5 +1,7 @@
 using System;
 using System.Buffers;
+using Sb.Extensions.System;
+using Sb.Extensions.System.Buffers;
 using SbModbus.Models;
 using SbModbus.Utils;
 
@@ -116,9 +118,9 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
 
     // 写数据 寄存器数量等
     if (!data.IsEmpty) buffer.Write(data);
-
+    
     buffer.WriteCrc16();
-
+    
     return buffer;
   }
 

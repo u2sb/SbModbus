@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Sb.Extensions.System;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusClient;

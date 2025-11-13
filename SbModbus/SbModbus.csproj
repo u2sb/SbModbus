@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="SbBitConverter" Version="0.4.0"/>
+    <PackageReference Include="SbBitConverter" Version="0.5.0" />
   </ItemGroup>
 
   <ItemGroup>

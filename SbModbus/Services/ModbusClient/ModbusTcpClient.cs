@@ -1,6 +1,8 @@
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
+using Sb.Extensions.System;
+using Sb.Extensions.System.Buffers;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusClient;

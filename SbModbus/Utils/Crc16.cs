@@ -1,5 +1,9 @@
 using System;
 using System.Buffers;
+using Sb.Extensions.System;
+#if NETSTANDARD2_0
+using Sb.Extensions.System.Buffers;
+#endif
 
 namespace SbModbus.Utils;
 
