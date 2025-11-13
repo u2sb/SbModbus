@@ -18,9 +18,9 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="stream"></param>
   protected BaseModbusClient(IModbusStream stream)
   {
-    Stream = stream;
-    ReadTimeout = Stream.ReadTimeout;
-    WriteTimeout = Stream.WriteTimeout;
+    ModbusStream = stream;
+    ReadTimeout = ModbusStream.ReadTimeout;
+    WriteTimeout = ModbusStream.WriteTimeout;
   }
 
   /// <summary>
@@ -34,10 +34,10 @@ public abstract class BaseModbusClient : IModbusClient
   public int WriteTimeout { get; set; }
 
   /// <inheritdoc />
-  public IModbusStream Stream { get; }
+  public IModbusStream ModbusStream { get; }
 
   /// <inheritdoc />
-  public bool IsConnected => Stream.IsConnected;
+  public bool IsConnected => ModbusStream.IsConnected;
 
 
   #region 通用公共方法
@@ -100,7 +100,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="unitIdentifier"></param>
   /// <returns></returns>
   /// <exception cref="Exception"></exception>
-  protected byte ConvertByte(int unitIdentifier)
+  protected static byte ConvertByte(int unitIdentifier)
   {
     if (unitIdentifier is < 0 or > byte.MaxValue)
       throw new Exception(ErrorMessage.ModbusClient_InvalidUnitIdentifier);
@@ -114,7 +114,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="value"></param>
   /// <returns></returns>
   /// <exception cref="Exception"></exception>
-  protected ushort ConvertUshort(int value)
+  protected static ushort ConvertUshort(int value)
   {
     if (value is < 0 or > ushort.MaxValue)
       throw new Exception(ErrorMessage.Modbus_InvalidValueUShort);

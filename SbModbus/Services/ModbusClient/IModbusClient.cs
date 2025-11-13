@@ -13,7 +13,7 @@ public interface IModbusClient
   /// <summary>
   ///   流
   /// </summary>
-  public IModbusStream Stream { get; }
+  public IModbusStream ModbusStream { get; }
 
   /// <summary>
   ///   是否连接
@@ -117,7 +117,8 @@ public interface IModbusClient
   /// <param name="value"></param>
   /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value, CancellationToken ct = default);
+  public ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
+    CancellationToken ct = default);
 
   /// <summary>
   ///   写入单个寄存器 FC06

@@ -16,7 +16,7 @@ public interface IModbusServer : IDisposable
   /// <summary>
   ///   是否连接
   /// </summary>
-  public Func<bool> IsConnected { get; }
+  public bool IsConnected { get; }
 
   /// <summary>
   ///   编码方式 未启用

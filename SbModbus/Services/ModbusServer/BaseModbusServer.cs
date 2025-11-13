@@ -74,7 +74,7 @@ public class BaseModbusServer : IModbusServer
   public IModbusStream Stream { get; }
 
   /// <inheritdoc />
-  public Func<bool> IsConnected { get; }
+  public bool IsConnected { get; }
 
   /// <inheritdoc />
   public BigAndSmallEndianEncodingMode EncodingMode { get; set; }

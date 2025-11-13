@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +10,11 @@ namespace SbModbus.Models;
 /// </summary>
 public interface IModbusStream : IDisposable
 {
+  /// <summary>
+  ///   基础流
+  /// </summary>
+  public Stream? BaseStream { get; }
+
   /// <summary>
   ///   是否连接
   /// </summary>

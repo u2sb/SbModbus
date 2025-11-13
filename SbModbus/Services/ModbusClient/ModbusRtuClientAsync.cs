@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SbModbus.Models;
@@ -83,18 +84,19 @@ public partial class ModbusRtuClient
 
   #region 通用方法
 
+  /// <exception cref="SbModbusException"></exception>
   /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data,
     int length,
     int readTimeout, CancellationToken ct = default)
   {
-    if (!Stream.IsConnected) throw new SbModbusException("Not Connected");
+    if (!ModbusStream.IsConnected) throw new SbModbusException("Not Connected");
 
     // 清除读缓存
-    await Stream.ClearReadBufferAsync(ct);
+    await ModbusStream.ClearReadBufferAsync(ct);
 
     // 写入数据 
-    await Stream.WriteAsync(data, ct);
+    await ModbusStream.WriteAsync(data, ct);
 
     // TODO 这里没实现写超时 后续实现
 
@@ -111,7 +113,7 @@ public partial class ModbusRtuClient
 
       while (!cts.Token.IsCancellationRequested && bytesRead < length)
       {
-        var read = await Stream.ReadAsync(memory[bytesRead..], cts.Token);
+        var read = await ModbusStream.ReadAsync(memory[bytesRead..], cts.Token);
 
         // 如果没读到数据就跳过
         if (read == 0) continue;
@@ -139,6 +141,10 @@ public partial class ModbusRtuClient
       return result;
     }
     catch (OperationCanceledException)
+    {
+      throw new SbModbusException($"Timeout occurred after {readTimeout} milliseconds");
+    }
+    catch (EndOfStreamException)
     {
       throw new SbModbusException($"Timeout occurred after {readTimeout} milliseconds");
     }

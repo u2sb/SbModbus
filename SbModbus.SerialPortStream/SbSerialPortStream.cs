@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
 using SbModbus.Models;
@@ -6,39 +8,84 @@ using SbModbus.Models;
 namespace SbModbus.SerialPortStream;
 
 /// <summary>
+///   串口流
 /// </summary>
-public class SbSerialPortStream : RJCP.IO.Ports.SerialPortStream, IModbusStream
+public class SbSerialPortStream : ModbusStream, IModbusStream
 {
   /// <inheritdoc />
-  public bool IsConnected => IsOpen;
+  public SbSerialPortStream()
+  {
+    SerialPort = new SerialPort();
+  }
 
   /// <inheritdoc />
-  public bool Connect()
+  public SbSerialPortStream(SerialPort serialPort)
   {
-    if (!IsConnected) Open();
+    SerialPort = serialPort;
+  }
+
+  /// <summary>
+  ///   串口
+  /// </summary>
+  public SerialPort SerialPort { get; }
+
+  /// <inheritdoc />
+  public override Stream? BaseStream { get; protected set; }
+
+  /// <inheritdoc />
+  public override bool IsConnected => SerialPort.IsOpen;
+
+  /// <inheritdoc />
+  public override int ReadTimeout
+  {
+    get => SerialPort.ReadTimeout;
+    set => SerialPort.ReadTimeout = value;
+  }
+
+  /// <inheritdoc />
+  public override int WriteTimeout
+  {
+    get => SerialPort.WriteTimeout;
+    set => SerialPort.WriteTimeout = value;
+  }
+
+  /// <inheritdoc />
+  public override bool Connect()
+  {
+    if (IsConnected) return IsConnected;
+
+    SerialPort.Open();
+    BaseStream = SerialPort.BaseStream;
+
     return IsConnected;
   }
 
   /// <inheritdoc />
-  public bool Disconnect()
+  public override bool Disconnect()
   {
-    if (IsConnected) Close();
+    if (!IsConnected) return !IsConnected;
+
+    SerialPort.Close();
+    BaseStream = null;
+
     return !IsConnected;
   }
 
   /// <inheritdoc />
-  public async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  public override async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
-    var b = BytesToRead;
+    var b = SerialPort.BytesToRead;
     if (b > 0)
     {
       var temp = new byte[b];
-
-#if NET8_0_OR_GREATER
-      await ReadExactlyAsync(temp.AsMemory(0, b), ct);
-#else
-      _ = await ReadAsync(temp.AsMemory(0, b), ct);
-#endif
+      await ReadAsync(temp, ct);
     }
+  }
+
+  /// <inheritdoc />
+  public override void Dispose()
+  {
+    Disconnect();
+    GC.SuppressFinalize(this);
   }
 }

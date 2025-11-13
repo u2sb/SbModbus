@@ -1,48 +1,48 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFrameworks>net6.0;net8.0;net10.0</TargetFrameworks>
-		<Nullable>enable</Nullable>
-		<LangVersion>preview</LangVersion>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<AssemblyName>SbModbus.SerialPortStream</AssemblyName>
-		<PackageId>SbModbus.SerialPortStream</PackageId>
-		<PackageTags>Modbus,Iot</PackageTags>
-		<Description>Probably the best performing Modbus library</Description>
-		<PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<Title>SbModbus.SerialPortStream</Title>
-		<Authors>MonoLogueChi</Authors>
-		<Company>U2SB</Company>
-		<RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-		<PackageIcon>avatar.png</PackageIcon>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<Copyright>U2SB</Copyright>
-		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net8.0;net10.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>SbModbus.SerialPortStream</AssemblyName>
+    <PackageId>SbModbus.SerialPortStream</PackageId>
+    <PackageTags>Modbus,Iot</PackageTags>
+    <Description>Probably the best performing Modbus library</Description>
+    <PackageProjectUrl>https://github.com/u2sb/SbModbus.git</PackageProjectUrl>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Title>SbModbus.SerialPortStream</Title>
+    <Authors>MonoLogueChi</Authors>
+    <Company>U2SB</Company>
+    <RepositoryUrl>https://github.com/u2sb/SbModbus.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>avatar.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Copyright>U2SB</Copyright>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-	</PropertyGroup>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<None Include="..\icons\avatar.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-		<None Include="..\README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
+  <ItemGroup>
+    <None Include="..\icons\avatar.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
-	<ItemGroup>
-	  <PackageReference Include="RJCP.SerialPortStream" Version="3.0.3" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SbModbus\SbModbus.csproj"/>
+  </ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\SbModbus\SbModbus.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
+  </ItemGroup>
 
 </Project>
