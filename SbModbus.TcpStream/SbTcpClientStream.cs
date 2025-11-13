@@ -124,7 +124,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public int Read(Span<byte> buffer)
+  public override int Read(Span<byte> buffer)
   {
     if (IsConnected)
     {
