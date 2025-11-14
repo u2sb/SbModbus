@@ -55,7 +55,9 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     if (IsConnected) return IsConnected;
 
     SerialPort.Open();
-    BaseStream = SerialPort.BaseStream;
+
+    if (IsConnected)
+      BaseStream = SerialPort.BaseStream;
 
     return IsConnected;
   }

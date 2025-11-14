@@ -84,7 +84,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     if (IsConnected) return IsConnected;
 
     TcpClient.Connect(ConnectTimeout);
-    BaseStream = TcpClient.GetStream();
+
+    if (IsConnected)
+    {
+      BaseStream = TcpClient.GetStream();
+    }
 
     return IsConnected;
   }
@@ -103,14 +107,26 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
-    if (BaseStream is { CanSeek: true }) BaseStream.Seek(0, SeekOrigin.Begin);
+    if (BaseStream is not null && BaseStream.CanRead)
+      while (BaseStream.ReadByte() >= 0)
+      {
+      }
+
     await Task.CompletedTask;
   }
 
   /// <inheritdoc />
   public override void Write(ReadOnlySpan<byte> buffer)
   {
-    if (IsConnected) TcpClient.SendWithTimeout(WriteTimeout, buffer.ToArray());
+    if (IsConnected)
+    {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+      OnWrite?.Invoke(buffer, this);
+#else
+      OnWrite?.Invoke(buffer.ToArray(), this);
+#endif
+      TcpClient.SendWithTimeout(WriteTimeout, buffer.ToArray());
+    }
   }
 
   /// <inheritdoc />
@@ -118,6 +134,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   {
     if (IsConnected)
     {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+      OnWrite?.Invoke(buffer.Span, this);
+#else
+      OnWrite?.Invoke(buffer.ToArray(), this);
+#endif
       using var ms = buffer.AsStream();
       await TcpClient.SendWithTimeoutAsync(WriteTimeout, buffer.Length, ms, ct);
     }
@@ -132,11 +153,17 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
       if (result.Status != ReadResultStatus.Success) return 0;
 
       if (result is not { BytesRead: > 0, DataStream.CanRead: true }) return 0;
-      
+
 #if NET8_0_OR_GREATER
         result.DataStream.ReadExactly(buffer);
 #else
       _ = result.DataStream.Read(buffer);
+#endif
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+      OnRead?.Invoke(buffer, this);
+#else
+      OnRead?.Invoke(buffer.ToArray(), this);
 #endif
       return (int)result.BytesRead;
     }
@@ -154,11 +181,17 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
       if (result.Status != ReadResultStatus.Success) return 0;
 
       if (result is not { BytesRead: > 0, DataStream.CanRead: true }) return 0;
-      
+
 #if NET8_0_OR_GREATER
         await result.DataStream.ReadExactlyAsync(buffer, ct);
 #else
       _ = await result.DataStream.ReadAsync(buffer, ct);
+#endif
+
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+      OnRead?.Invoke(buffer.Span, this);
+#else
+      OnRead?.Invoke(buffer.ToArray(), this);
 #endif
       return (int)result.BytesRead;
     }
