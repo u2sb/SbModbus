@@ -1,10 +1,10 @@
 using System;
 using System.IO;
-using System.Security.Cryptography.X509Certificates;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using CavemanTcp;
-using CommunityToolkit.HighPerformance;
+using CircularBuffer;
+using NetCoreServer;
 using SbModbus.Models;
 
 namespace SbModbus.TcpStream;
@@ -13,64 +13,42 @@ namespace SbModbus.TcpStream;
 /// </summary>
 public class SbTcpClientStream : ModbusStream, IModbusStream
 {
+  private readonly SbTcpClient _tcpClient;
+
   /// <inheritdoc />
-  public SbTcpClientStream(CavemanTcpClient tcpClient)
+  public SbTcpClientStream(IPAddress address, int port)
   {
-    TcpClient = tcpClient;
+    _tcpClient = new SbTcpClient(address, port);
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(string ipPort) : this(new CavemanTcpClient(ipPort))
+  public SbTcpClientStream(string address, int port)
   {
+    _tcpClient = new SbTcpClient(address, port);
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(string serverIpOrHostname, int port, bool ssl) : this(
-    new CavemanTcpClient(serverIpOrHostname, port, ssl))
+  public SbTcpClientStream(DnsEndPoint endpoint)
   {
+    _tcpClient = new SbTcpClient(endpoint);
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(string serverIpOrHostname, int port, X509Certificate2? certificate = null) : this(
-    new CavemanTcpClient(serverIpOrHostname, port, certificate))
+  public SbTcpClientStream(IPEndPoint endpoint)
   {
+    _tcpClient = new SbTcpClient(endpoint);
   }
 
-  /// <inheritdoc />
-  public SbTcpClientStream(string ipPort, bool ssl, string pfxCertFilename, string pfxPassword) : this(
-    new CavemanTcpClient(ipPort, ssl, pfxCertFilename, pfxPassword))
-  {
-  }
-
-  /// <inheritdoc />
-  public SbTcpClientStream(string serverIpOrHostname, int port, bool ssl, string pfxCertFilename, string pfxPassword) :
-    this(new CavemanTcpClient(serverIpOrHostname, port, ssl, pfxCertFilename, pfxPassword))
-  {
-  }
-
-  /// <summary>
-  ///   TcpClient
-  /// </summary>
-  public CavemanTcpClient TcpClient { get; }
-
-  /// <summary>
-  ///   连接超时 秒
-  /// </summary>
-  public int ConnectTimeout { get; set; } = 2;
-
-  /// <inheritdoc />
   public override void Dispose()
   {
-    Disconnect();
-    TcpClient.Dispose();
-    GC.SuppressFinalize(this);
+    _tcpClient.Dispose();
   }
 
   /// <inheritdoc />
-  public override Stream? BaseStream { get; protected set; }
+  public override Stream? BaseStream { get; protected set; } = null;
 
   /// <inheritdoc />
-  public override bool IsConnected => TcpClient.IsConnected;
+  public override bool IsConnected => _tcpClient.IsConnected;
 
   /// <inheritdoc />
   public override int ReadTimeout { get; set; } = 2000;
@@ -81,121 +59,113 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Connect()
   {
-    if (IsConnected) return IsConnected;
-
-    TcpClient.Connect(ConnectTimeout);
-
-    if (IsConnected)
-    {
-      BaseStream = TcpClient.GetStream();
-    }
-
-    return IsConnected;
+    return _tcpClient.ConnectAsync();
   }
 
   /// <inheritdoc />
   public override bool Disconnect()
   {
-    if (!TcpClient.IsConnected) return !IsConnected;
-
-    TcpClient.Disconnect();
-    BaseStream = null;
-
-    return !IsConnected;
+    return _tcpClient.Disconnect();
   }
 
   /// <inheritdoc />
-  public override async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  public override ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
-    if (BaseStream is not null && BaseStream.CanRead)
-      while (BaseStream.ReadByte() >= 0)
-      {
-      }
-
-    await Task.CompletedTask;
+    _tcpClient.CircularBuffer.Clear();
+    return ValueTask.CompletedTask;
   }
 
   /// <inheritdoc />
   public override void Write(ReadOnlySpan<byte> buffer)
   {
-    if (IsConnected)
-    {
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnWrite?.Invoke(buffer, this);
-#else
-      OnWrite?.Invoke(buffer.ToArray(), this);
-#endif
-      TcpClient.SendWithTimeout(WriteTimeout, buffer.ToArray());
-    }
+    _tcpClient.SendAsync(buffer);
+    OnWrite?.Invoke(buffer, this);
   }
 
   /// <inheritdoc />
-  public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    if (IsConnected)
-    {
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnWrite?.Invoke(buffer.Span, this);
-#else
-      OnWrite?.Invoke(buffer.ToArray(), this);
-#endif
-      using var ms = buffer.AsStream();
-      await TcpClient.SendWithTimeoutAsync(WriteTimeout, buffer.Length, ms, ct);
-    }
+    Write(buffer.Span);
+    return ValueTask.CompletedTask;
   }
 
   /// <inheritdoc />
   public override int Read(Span<byte> buffer)
   {
-    if (IsConnected)
-    {
-      var result = TcpClient.ReadWithTimeout(ReadTimeout, buffer.Length);
-      if (result.Status != ReadResultStatus.Success) return 0;
-
-      if (result is not { BytesRead: > 0, DataStream.CanRead: true }) return 0;
-
-#if NET8_0_OR_GREATER
-        result.DataStream.ReadExactly(buffer);
-#else
-      _ = result.DataStream.Read(buffer);
-#endif
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnRead?.Invoke(buffer, this);
-#else
-      OnRead?.Invoke(buffer.ToArray(), this);
-#endif
-      return (int)result.BytesRead;
-    }
-
-
-    return 0;
+    var bs = new byte[buffer.Length];
+    var l = ReadAsync(bs).AsTask().Result;
+    bs.CopyTo(buffer);
+    return l;
   }
 
   /// <inheritdoc />
   public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
-    if (IsConnected)
+    var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+    cts.CancelAfter(ReadTimeout);
+
+    var l = buffer.Length;
+    var circularBuffer = _tcpClient.CircularBuffer;
+
+    await Task.Run(async () =>
     {
-      var result = await TcpClient.ReadWithTimeoutAsync(ReadTimeout, buffer.Length, ct);
-      if (result.Status != ReadResultStatus.Success) return 0;
+      try
+      {
+        for (var i = 0; i < buffer.Length; i++)
+        {
+          while (circularBuffer.IsEmpty)
+          {
+            cts.Token.ThrowIfCancellationRequested();
+            await Task.Yield();
+          }
 
-      if (result is not { BytesRead: > 0, DataStream.CanRead: true }) return 0;
+          buffer.Span[i] = circularBuffer[0];
+          circularBuffer.PopFront();
+          l = i;
+        }
+      }
+      catch (OperationCanceledException)
+      {
+        // 忽略这个异常
+      }
+    }, cts.Token);
 
-#if NET8_0_OR_GREATER
-        await result.DataStream.ReadExactlyAsync(buffer, ct);
-#else
-      _ = await result.DataStream.ReadAsync(buffer, ct);
-#endif
+    OnRead?.Invoke(buffer.Span[..l], this);
+    return l;
+  }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnRead?.Invoke(buffer.Span, this);
-#else
-      OnRead?.Invoke(buffer.ToArray(), this);
-#endif
-      return (int)result.BytesRead;
+  private class SbTcpClient : TcpClient
+  {
+    public SbTcpClient(IPAddress address, int port) : base(address, port)
+    {
     }
 
-    return 0;
+    public SbTcpClient(string address, int port) : base(address, port)
+    {
+    }
+
+    public SbTcpClient(DnsEndPoint endpoint) : base(endpoint)
+    {
+    }
+
+    public SbTcpClient(IPEndPoint endpoint) : base(endpoint)
+    {
+    }
+
+    /// <summary>
+    ///   缓冲区
+    /// </summary>
+    public CircularBuffer<byte> CircularBuffer { get; } = new(4096);
+
+    /// <inheritdoc />
+    protected override void OnReceived(byte[] buffer, long offset, long size)
+    {
+      var end = offset + size;
+      for (var i = offset; i < end; i++)
+      {
+        if (i >= buffer.Length) return;
+        CircularBuffer.PushBack(buffer[i]);
+      }
+    }
   }
 }

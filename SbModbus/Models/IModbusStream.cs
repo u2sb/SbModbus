@@ -49,14 +49,14 @@ public interface IModbusStream : IDisposable
   public bool IsConnected { get; }
 
   /// <summary>
-  ///   读取超时时间
+  ///   读取超时时间 ms
   /// </summary>
-  public int ReadTimeout { get; }
+  public int ReadTimeout { get; set; }
 
   /// <summary>
-  ///   写入超时时间
+  ///   写入超时时间 ms
   /// </summary>
-  public int WriteTimeout { get; }
+  public int WriteTimeout { get; set; }
 
   /// <summary>
   ///   连接

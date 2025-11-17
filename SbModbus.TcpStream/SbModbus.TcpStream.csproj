@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net472;net48;net6.0;net8.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -24,6 +23,7 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,10 +38,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CavemanTcp" Version="2.0.11"/>
+    <PackageReference Include="CircularBuffer" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SbModbus\SbModbus.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="NetCoreServer" Version="8.0.7" />
   </ItemGroup>
 </Project>
