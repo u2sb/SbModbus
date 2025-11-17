@@ -129,8 +129,6 @@ public partial class ModbusTcpClient
     // 写入数据 
     await ModbusStream.WriteAsync(data, ct);
 
-    // TODO 这里没实现写超时 后续实现
-
     using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(readTimeout);
     try
@@ -142,8 +140,9 @@ public partial class ModbusTcpClient
       // 是否已验证功能码
       var verificationFunctionCode = false;
 
-      while (!cts.Token.IsCancellationRequested && bytesRead < length)
+      while (bytesRead < length)
       {
+        cts.Token.ThrowIfCancellationRequested();
         var read = await ModbusStream.ReadAsync(memory[bytesRead..], cts.Token);
 
         // 如果没读到数据就跳过
@@ -161,8 +160,6 @@ public partial class ModbusTcpClient
 
         await Task.Yield();
       }
-
-      if (cts.Token.IsCancellationRequested) throw new OperationCanceledException();
 
       var result = memory[..bytesRead];
 

@@ -39,9 +39,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     _tcpClient = new SbTcpClient(endpoint);
   }
 
+  /// <inheritdoc />
   public override void Dispose()
   {
     _tcpClient.Dispose();
+    GC.SuppressFinalize(this);
   }
 
   /// <inheritdoc />
@@ -121,7 +123,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
           buffer.Span[i] = circularBuffer[0];
           circularBuffer.PopFront();
-          l = i;
+          l = i + 1;
         }
       }
       catch (OperationCanceledException)

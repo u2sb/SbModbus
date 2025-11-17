@@ -112,8 +112,9 @@ public partial class ModbusRtuClient
       // 是否已验证功能码
       var verificationFunctionCode = false;
 
-      while (!cts.Token.IsCancellationRequested && bytesRead < length)
+      while (bytesRead < length)
       {
+        cts.Token.ThrowIfCancellationRequested();
         var read = await ModbusStream.ReadAsync(memory[bytesRead..], cts.Token);
 
         // 如果没读到数据就跳过
@@ -131,8 +132,6 @@ public partial class ModbusRtuClient
 
         await Task.Yield();
       }
-
-      if (cts.Token.IsCancellationRequested) throw new OperationCanceledException();
 
       var result = memory[..bytesRead];
 
