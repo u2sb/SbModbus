@@ -93,80 +93,8 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <inheritdoc />
-  public virtual int Read(Span<byte> buffer)
-  {
-    if (IsConnected && BaseStream is not null)
-    {
-#if NET8_0_OR_GREATER
-      BaseStream.ReadExactly(buffer);
-      OnRead?.Invoke(buffer, this);
-      return buffer.Length;
-#else
-      var tb = 0;
-
-      // 循环读取，直到填满整个buffer或遇到流结束
-      while (tb < buffer.Length)
-      {
-        // 读取剩余部分的数据
-        var len = BaseStream.Read(buffer[tb..]);
-
-        if (len == 0)
-          // 流提前结束，抛出异常
-          throw new EndOfStreamException(
-            $"Unexpected end of stream. Expected {buffer.Length} bytes, but only got {tb} bytes.");
-
-        tb += len;
-      }
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnRead?.Invoke(buffer, this);
-#else
-      OnRead?.Invoke(buffer.ToArray(), this);
-#endif
-
-      return tb;
-#endif
-    }
-
-    return 0;
-  }
+  public abstract int Read(Span<byte> buffer);
 
   /// <inheritdoc />
-  public virtual async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
-  {
-    if (IsConnected && BaseStream is not null)
-    {
-#if NET8_0_OR_GREATER
-      await BaseStream.ReadExactlyAsync(buffer, ct);
-      OnRead?.Invoke(buffer.Span, this);
-      return buffer.Length;
-#else
-      var tb = 0;
-
-      // 循环读取，直到填满整个buffer或遇到流结束
-      while (tb < buffer.Length)
-      {
-        // 读取剩余部分的数据
-        var len = await BaseStream.ReadAsync(buffer[tb..], ct);
-
-        if (len == 0)
-          // 流提前结束，抛出异常
-          throw new EndOfStreamException(
-            $"Unexpected end of stream. Expected {buffer.Length} bytes, but only got {tb} bytes.");
-
-        tb += len;
-      }
-
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnRead?.Invoke(buffer.Span, this);
-#else
-      OnRead?.Invoke(buffer.ToArray(), this);
-#endif
-
-      return tb;
-#endif
-    }
-
-    return 0;
-  }
+  public abstract ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default);
 }

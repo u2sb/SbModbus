@@ -85,6 +85,50 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
+  public override int Read(Span<byte> buffer)
+  {
+    var len = Math.Min(SerialPort.BytesToRead, buffer.Length);
+    if (BaseStream is not null && len > 0)
+    {
+      var b = buffer[..len];
+      
+#if NET8_0_OR_GREATER
+      BaseStream.ReadExactly(b);
+#elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+      _ = BaseStream.Read(b);
+#else
+      var temp = new byte[len];
+      SerialPort.Read(temp, 0, len);
+      temp.CopyTo(b);
+#endif
+    }
+    return len;
+  }
+
+  /// <inheritdoc />
+  public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  {
+    var cts =  CancellationTokenSource.CreateLinkedTokenSource(ct);
+    cts.CancelAfter(ReadTimeout);
+    var len = Math.Min(SerialPort.BytesToRead, buffer.Length);
+    if (BaseStream is not null && len > 0)
+    {
+      var b = buffer[..len];
+      
+#if NET8_0_OR_GREATER
+      await BaseStream.ReadExactlyAsync(b, ct);
+#elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+     _ = await BaseStream.ReadAsync(b, ct);
+#else
+      var temp = new byte[len];
+      SerialPort.Read(temp, 0, len);
+      temp.CopyTo(b);
+#endif
+    }
+    return len;
+  }
+
+  /// <inheritdoc />
   public override void Dispose()
   {
     Disconnect();
