@@ -116,7 +116,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
       var b = buffer[..len];
       
 #if NET8_0_OR_GREATER
-      await BaseStream.ReadExactlyAsync(b, ct);
+      await BaseStream.ReadExactlyAsync(b, cts.Token);
 #elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
      _ = await BaseStream.ReadAsync(b, ct);
 #else
