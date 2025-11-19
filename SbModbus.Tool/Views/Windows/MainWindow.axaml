@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
+        xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+        x:Class="SbModbus.Tool.Views.Windows.MainWindow"
+        x:DataType="wvm:MainWindowViewModel"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/icon.ico"
+        Title="{StaticResource lang.title}">
+
+  <Design.DataContext>
+    <wvm:MainWindowViewModel />
+  </Design.DataContext>
+  <Window.Styles>
+    <Style Selector="Border.tc">
+      <Setter Property="Margin" Value="5" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="BorderBrush" Value="Black" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+  </Window.Styles>
+  <Grid>
+    <TabControl>
+      <TabControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal" />
+        </ItemsPanelTemplate>
+      </TabControl.ItemsPanel>
+      <TabItem Header="{StaticResource lang.serialPortAssistant}">
+        <Border Classes="tc">
+          <pages:SerialPortAssistantPage Margin="1" />
+        </Border>
+      </TabItem>
+      <TabItem Header="{StaticResource lang.modbus}">
+        <pages:ModbusPage Margin="1" />
+      </TabItem>
+    </TabControl>
+    <Button Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="2"
+            Theme="{StaticResource MaterialFlatButton}" Width="100" Height="40"
+            Content="{StaticResource lang.btnDsLog}"
+            Command="{Binding OpenLogDirectoryCommand}" />
+  </Grid>
+</Window>

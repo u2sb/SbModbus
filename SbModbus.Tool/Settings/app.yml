@@ -1,0 +1,25 @@
+lang: zh-CN
+dsLogMaxShow: 100
+serialPortAssistant:
+  dataTransferType: serialPort
+  serialPortName: COM1
+  baudRate: 9600
+  dataBits: 8
+  stopBits: one
+  parity: none
+  handshake: none
+  targetIp: 127.0.0.1
+  localIp: 0.0.0.0
+  targetPort: 13567
+  localPort: 13567
+modbus:
+  modbusClientType: modbusRTU
+  serialPortName: COM1
+  baudRate: 9600
+  dataBits: 8
+  stopBits: one
+  parity: none
+  handshake: none
+  targetIp: null
+  targetPort: 502
+  stationId: 1

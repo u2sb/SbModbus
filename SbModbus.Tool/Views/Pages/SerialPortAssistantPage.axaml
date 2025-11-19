@@ -1,0 +1,277 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
+             x:Class="SbModbus.Tool.Views.Pages.SerialPortAssistantPage"
+             x:DataType="pvm:SerialPortAssistantPageViewModel"
+             x:Name="SerialPortAssistantPageControl">
+  <Design.DataContext>
+    <pvm:SerialPortAssistantPageViewModel />
+  </Design.DataContext>
+  <Grid ColumnDefinitions="230,*">
+    <!-- 左侧区域 -->
+    <Border Grid.Column="0" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+            BorderBrush="Black" BorderThickness="1">
+      <StackPanel Margin="5">
+        <StackPanel.Styles>
+          <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+          </Style>
+          <Style Selector="SelectableTextBlock">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+          </Style>
+          <Style Selector="TextBox">
+            <Setter Property="Theme" Value="{StaticResource OutlineTextBox}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Width" Value="120" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+          </Style>
+          <Style Selector="ComboBox">
+            <Setter Property="Theme" Value="{StaticResource MaterialOutlineComboBox}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Width" Value="120" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="FontSize" Value="14" />
+
+          </Style>
+          <Style Selector="ComboBox.dense TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="TextAlignment" Value="Left" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
+          </Style>
+        </StackPanel.Styles>
+        <Grid Height="50">
+          <TextBlock Text="{StaticResource lang.dataInterface}" />
+          <ComboBox Classes="dense" SelectedIndex="{Binding DataTransferType}">
+            <ComboBoxItem>
+              <Panel>
+                <TextBlock Text="{StaticResource lang.noneType}" />
+              </Panel>
+            </ComboBoxItem>
+            <ComboBoxItem>
+              <Panel>
+                <TextBlock Text="{StaticResource lang.serialPortType}" />
+              </Panel>
+            </ComboBoxItem>
+            <ComboBoxItem>
+              <Panel>
+                <TextBlock Text="{StaticResource lang.tcpClientType}" />
+              </Panel>
+            </ComboBoxItem>
+            <ComboBoxItem>
+              <Panel>
+                <TextBlock Text="{StaticResource lang.tcpServerType}" />
+              </Panel>
+            </ComboBoxItem>
+            <ComboBoxItem>
+              <Panel>
+                <TextBlock Text="{StaticResource lang.udpClientType}" />
+              </Panel>
+            </ComboBoxItem>
+            <ComboBoxItem>
+              <Panel>
+                <TextBlock Text="{StaticResource lang.udpServerType}" />
+              </Panel>
+            </ComboBoxItem>
+          </ComboBox>
+        </Grid>
+
+        <Grid Height="50">
+          <TextBlock Text="{StaticResource lang.connectionStatus}" />
+          <Rectangle Width="120" Height="15" HorizontalAlignment="Right"
+                     Fill="{Binding IsConnected, Converter={StaticResource BoolToColorBrushConverter}}" />
+        </Grid>
+
+        <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3" Fill="Gray" />
+
+        <Grid
+          IsVisible="{Binding DataTransferType, 
+                            Converter={StaticResource EnumToBoolConverter},
+                            ConverterParameter=SerialPort }">
+          <StackPanel>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.protName}" />
+              <ComboBox Classes="dense"
+                        ItemsSource="{Binding SerialPortNames}"
+                        SelectedValue="{Binding SerialPortName}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.baudRate}" />
+              <TextBox Classes="dense"
+                       Text="{Binding BaudRateString}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.dataBit}" />
+              <ComboBox Classes="dense"
+                        ItemsSource="{Binding DataBitsValues}"
+                        SelectedItem="{Binding DataBits}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.parityBit}" />
+              <ComboBox Classes="dense"
+                        ItemsSource="{Binding ParityValues}"
+                        SelectedIndex="{Binding Parity}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.stopBit}" />
+              <ComboBox Classes="dense"
+                        ItemsSource="{Binding StopBitsValues}"
+                        SelectedIndex="{Binding StopBits}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.flowControl}" />
+              <ComboBox Classes="dense"
+                        ItemsSource="{Binding HandshakeValues}"
+                        SelectedIndex="{Binding Handshake}" />
+            </Grid>
+            <UniformGrid Height="50" Columns="3">
+              <UniformGrid.Styles>
+                <Style Selector="Button">
+                  <Setter Property="Padding" Value="2" />
+                  <Setter Property="FontWeight" Value="Bold" />
+                  <Setter Property="FontStyle" Value="Italic" />
+                </Style>
+              </UniformGrid.Styles>
+              <Button Theme="{StaticResource MaterialFlatButton}" Content="DTR" />
+              <Button Theme="{StaticResource MaterialFlatButton}" Content="RTS" />
+              <Button Theme="{StaticResource MaterialFlatButton}" Content="Break" />
+            </UniformGrid>
+          </StackPanel>
+        </Grid>
+
+        <Grid
+          IsVisible="{Binding DataTransferType, 
+                            Converter={StaticResource EnumToBoolConverter},
+                            ConverterParameter=TcpClient;UdpClient }">
+
+          <StackPanel>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.targetIp}" />
+              <TextBox Classes="dense"
+                       Text="{Binding TargetIp}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.targetPort}" />
+              <TextBox Classes="dense"
+                       Text="{Binding TargetPort}" />
+            </Grid>
+          </StackPanel>
+        </Grid>
+
+        <Grid
+          IsVisible="{Binding DataTransferType, 
+                            Converter={StaticResource EnumToBoolConverter},
+                            ConverterParameter=TcpServer;UdpServer }">
+          <StackPanel>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.localIp}" />
+              <TextBox Classes="dense"
+                       Text="{Binding LocalIp}" />
+            </Grid>
+            <Grid Height="50">
+              <TextBlock Text="{StaticResource lang.localPort}" />
+              <TextBox Classes="dense"
+                       Text="{Binding LocalPort}" />
+            </Grid>
+
+            <Grid Height="100">
+              <TextBlock Margin="0,30" VerticalAlignment="Top" Text="{StaticResource lang.targetClient}" />
+              <ComboBox Classes="dense" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                        Width="210" FontSize="12"
+                        ItemsSource="{Binding Sessions}"
+                        SelectedIndex="{Binding SelectedSessionIndex}" />
+            </Grid>
+          </StackPanel>
+        </Grid>
+
+        <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
+          <Button Margin="10,0" Width="80" FontWeight="Bold" Content="{StaticResource lang.btnConnect}"
+                  Command="{Binding ConnectCommand}" />
+          <Button Margin="10,0" Width="80" FontWeight="Bold" Content="{StaticResource lang.btnDisConnect}"
+                  Command="{Binding DisconnectCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <Border Grid.Column="1" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+            BorderBrush="Black" BorderThickness="1">
+      <Grid RowDefinitions="*, 10, 180">
+        <Grid Row="0">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                        Theme="{StaticResource MaterialModernScrollViewer}"
+                        Offset="{Binding DsLogShowOffset, Mode=TwoWay}"
+                        Extent="{Binding DsLogShowExtentSize, Mode=OneWayToSource}"
+                        Viewport="{Binding DsLogShowViewPortSize, Mode=OneWayToSource}">
+            <ItemsControl ItemsSource="{Binding DsLogs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="2" ColumnDefinitions="Auto, 10, *">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left" FontSize="18"
+                               Foreground="CornflowerBlue"
+                               Text="{Binding DateTimeString}" />
+                    <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                         TextWrapping="Wrap" FontSize="18"
+                                         Foreground="{Binding TextColor}"
+                                         IsVisible="{Binding DataContext.UseHex, 
+                                          ElementName=SerialPortAssistantPageControl}"
+                                         Text="{Binding HexString}" />
+                    <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                         TextWrapping="Wrap" FontSize="18"
+                                         Foreground="{Binding TextColor}"
+                                         IsVisible="{Binding DataContext.UseHex,
+                                          ElementName=SerialPortAssistantPageControl,
+                                          Converter={StaticResource BoolInverseConverter}}"
+                                         Text="{Binding Utf8String}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+        <Rectangle Grid.Row="1" Margin="5,0" HorizontalAlignment="Stretch" Height="2" Fill="Gray" />
+        <Grid Grid.Row="2" ColumnDefinitions="*, 100">
+          <Grid Column="0" RowDefinitions="*, 110">
+            <Border Grid.Row="0" Margin="5,5,5,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    BorderBrush="Black" BorderThickness="1">
+              <TextBox Margin="5,0" Classes="solo" Theme="{StaticResource SoloTextBox}" FontSize="18"
+                       AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
+                       VerticalAlignment="Stretch"
+                       TextAlignment="Left" IsReadOnly="True"
+                       Text="{Binding OutputString}" />
+            </Border>
+            <Border Grid.Row="1" Margin="5,2,5,5" BorderBrush="Black" BorderThickness="1">
+              <TextBox Margin="5,0" Classes="solo" Theme="{StaticResource SoloTextBox}" FontSize="18"
+                       AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
+                       VerticalAlignment="Stretch"
+                       TextAlignment="Left"
+                       Text="{Binding InputString}" />
+            </Border>
+          </Grid>
+          <UniformGrid Grid.Column="1" Margin="2,2,5,5" Rows="3">
+            <Button Margin="0,1,0,5" FontWeight="Bold"
+                    Content="{StaticResource lang.btnClear}"
+                    Command="{Binding CleanOutputCommand}" />
+            <Button Margin="0,1,0,5" FontWeight="Bold"
+                    Content="{Binding InputMode}"
+                    Command="{Binding ChangeInputModeCommand}" />
+            <Button Margin="0,5,0,2" FontWeight="Bold"
+                    Content="{StaticResource lang.btnSend}"
+                    Command="{Binding SendCommand}" />
+          </UniformGrid>
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

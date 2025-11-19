@@ -1,0 +1,59 @@
+﻿# Basic Interface
+title: Handsome Modbus Assistant
+serialPortAssistant: Serial Port Assistant
+modbus: Modbus
+
+# Serial Port Assistant Interface
+noneType: None
+serialPortType: Serial Port
+tcpClientType: TCP Client
+tcpServerType: TCP Server
+udpClientType: UDP Client
+udpServerType: UDP Server
+connectionStatus: Connection Status
+dataInterface: Data Interface
+protName: Port Name
+baudRate: Baud Rate
+dataBit: Data Bits
+parityBit: Parity Bit
+stopBit: Stop Bits
+flowControl: Flow Control
+targetIp: Target IP
+localIp: Local IP
+targetPort: Target Port
+localPort: Local Port
+targetClient: Target Client
+
+# Modbus Interface
+modbusVirtualType: Virtual Interface
+modbusRtuType: Modbus RTU
+modbusTcpType: Modbus TCP
+modbusRtuOverTcpType: Modbus RTU over TCP
+modbusInterface: Connection Type
+modbusStationId: Station ID
+modbusEncodeMode: Encoding Mode
+modbusReadFunCode: Function Code (Read)
+modbusWriteFunCode: Function Code (Write)
+modbusAddress: Address
+modbusReadLength: Quantity
+modbusValueType: Data Type
+modbusValue: Value
+
+modbusFunCodeReadCoils: FC01 Read Coils
+modbusFunCodeReadDiscreteInputs: FC02 Read Discrete Inputs
+modbusFunCodeReadHoldingRegisters: FC03 Read Holding Registers
+modbusFunCodeReadInputRegisters: FC04 Read Input Registers
+modbusFunCodeWriteSingleCoil: FC05 Write Single Coil
+modbusFunCodeWriteSingleRegister: FC06 Write Single Register
+modbusFunCodeWriteMultipleRegisters: FC10 Write Multiple Registers
+
+# Basic Buttons
+btnConnect: Connect
+btnDisConnect: Disconnect
+btnEnter: OK
+btnCancel: Cancel
+btnClear: Clear
+btnSend: Send
+btnDsLog: Transmission Log
+btnRead: Read
+btnWrite: Write

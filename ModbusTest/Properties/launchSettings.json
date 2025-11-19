@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "ModbusTest": {
-      "commandName": "Project",
-      "hotReloadEnabled": false
-    }
-  }
-}

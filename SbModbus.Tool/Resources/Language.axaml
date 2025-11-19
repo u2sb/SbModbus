@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:s="clr-namespace:System;assembly=mscorlib">
+  <!-- ReSharper disable InconsistentNaming -->
+  <s:String x:Key="lang.title">帅比 Modbus 助手</s:String>
+  <s:String x:Key="lang.serialPortAssistant">串口助手</s:String>
+  <s:String x:Key="lang.modbus">Modbus</s:String>
+  <s:String x:Key="lang.noneType">无</s:String>
+  <s:String x:Key="lang.serialPortType">串口</s:String>
+  <s:String x:Key="lang.tcpClientType">TCP 客户端</s:String>
+  <s:String x:Key="lang.tcpServerType">TCP 服务端</s:String>
+  <s:String x:Key="lang.udpClientType">UDP 客户端</s:String>
+  <s:String x:Key="lang.udpServerType">UDP 服务端</s:String>
+  <s:String x:Key="lang.connectionStatus">连接状态</s:String>
+  <s:String x:Key="lang.dataInterface">数据接口</s:String>
+  <s:String x:Key="lang.protName">端口号</s:String>
+  <s:String x:Key="lang.baudRate">波特率</s:String>
+  <s:String x:Key="lang.dataBit">数据位</s:String>
+  <s:String x:Key="lang.parityBit">校验位</s:String>
+  <s:String x:Key="lang.stopBit">停止位</s:String>
+  <s:String x:Key="lang.flowControl">数据流控</s:String>
+  <s:String x:Key="lang.targetIp">目标IP</s:String>
+  <s:String x:Key="lang.localIp">本地IP</s:String>
+  <s:String x:Key="lang.targetPort">目标端口</s:String>
+  <s:String x:Key="lang.localPort">本地端口</s:String>
+  <s:String x:Key="lang.targetClient">目标客户端</s:String>
+  <s:String x:Key="lang.modbusVirtualType">虚拟接口</s:String>
+  <s:String x:Key="lang.modbusRtuType">ModbusRTU</s:String>
+  <s:String x:Key="lang.modbusTcpType">ModbusTCP</s:String>
+  <s:String x:Key="lang.modbusRtuOverTcpType">ModbusRtuOverTcp</s:String>
+  <s:String x:Key="lang.modbusInterface">连接方式</s:String>
+  <s:String x:Key="lang.modbusStationId">站号</s:String>
+  <s:String x:Key="lang.modbusEncodeMode">编码方式</s:String>
+  <s:String x:Key="lang.modbusReadFunCode">功能码（读）</s:String>
+  <s:String x:Key="lang.modbusWriteFunCode">功能码（写）</s:String>
+  <s:String x:Key="lang.modbusAddress">地址</s:String>
+  <s:String x:Key="lang.modbusReadLength">数量</s:String>
+  <s:String x:Key="lang.modbusValueType">数据类型</s:String>
+  <s:String x:Key="lang.modbusValue">值</s:String>
+  <s:String x:Key="lang.modbusFunCodeReadCoils">FC01 读线圈</s:String>
+  <s:String x:Key="lang.modbusFunCodeReadDiscreteInputs">FC02 读离散输入</s:String>
+  <s:String x:Key="lang.modbusFunCodeReadHoldingRegisters">FC03 读保持寄存器</s:String>
+  <s:String x:Key="lang.modbusFunCodeReadInputRegisters">FC04 读输入寄存器</s:String>
+  <s:String x:Key="lang.modbusFunCodeWriteSingleCoil">FC05 写线圈</s:String>
+  <s:String x:Key="lang.modbusFunCodeWriteSingleRegister">FC06 写寄存器</s:String>
+  <s:String x:Key="lang.modbusFunCodeWriteMultipleRegisters">FC10 写多个寄存器</s:String>
+  <s:String x:Key="lang.btnConnect">连接</s:String>
+  <s:String x:Key="lang.btnDisConnect">断开</s:String>
+  <s:String x:Key="lang.btnEnter">确定</s:String>
+  <s:String x:Key="lang.btnCancel">取消</s:String>
+  <s:String x:Key="lang.btnClear">清空</s:String>
+  <s:String x:Key="lang.btnSend">发送</s:String>
+  <s:String x:Key="lang.btnDsLog">传输日志</s:String>
+  <s:String x:Key="lang.btnRead">读取</s:String>
+  <s:String x:Key="lang.btnWrite">写入</s:String>
+  <!-- ReSharper restore InconsistentNaming -->
+</ResourceDictionary>

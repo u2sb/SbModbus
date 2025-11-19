@@ -1,0 +1,60 @@
+﻿# 基本界面
+title: 帅比 Modbus 助手
+serialPortAssistant: 串口助手
+modbus: Modbus
+
+
+# 串口助手界面
+noneType: 无
+serialPortType: 串口
+tcpClientType: TCP 客户端
+tcpServerType: TCP 服务端
+udpClientType: UDP 客户端
+udpServerType: UDP 服务端
+connectionStatus: 连接状态
+dataInterface: 数据接口
+protName: 端口号
+baudRate: 波特率
+dataBit: 数据位
+parityBit: 校验位
+stopBit: 停止位
+flowControl: 数据流控
+targetIp: 目标IP
+localIp: 本地IP
+targetPort: 目标端口
+localPort: 本地端口
+targetClient: 目标客户端
+
+#Modbus界面
+modbusVirtualType: 虚拟接口
+modbusRtuType: ModbusRTU
+modbusTcpType: ModbusTCP
+modbusRtuOverTcpType: ModbusRtuOverTcp
+modbusInterface: 连接方式
+modbusStationId: 站号
+modbusEncodeMode: 编码方式
+modbusReadFunCode: 功能码（读）
+modbusWriteFunCode: 功能码（写）
+modbusAddress: 地址
+modbusReadLength: 数量
+modbusValueType: 数据类型
+modbusValue: 值
+
+modbusFunCodeReadCoils: FC01 读线圈
+modbusFunCodeReadDiscreteInputs: FC02 读离散输入
+modbusFunCodeReadHoldingRegisters: FC03 读保持寄存器
+modbusFunCodeReadInputRegisters: FC04 读输入寄存器
+modbusFunCodeWriteSingleCoil: FC05 写线圈
+modbusFunCodeWriteSingleRegister: FC06 写寄存器
+modbusFunCodeWriteMultipleRegisters: FC10 写多个寄存器
+
+# 基本按钮
+btnConnect: 连接
+btnDisConnect: 断开
+btnEnter: 确定
+btnCancel: 取消
+btnClear: 清空
+btnSend: 发送
+btnDsLog: 传输日志
+btnRead: 读取
+btnWrite: 写入
