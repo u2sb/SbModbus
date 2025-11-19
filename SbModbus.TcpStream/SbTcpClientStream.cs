@@ -94,46 +94,25 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override int Read(Span<byte> buffer)
   {
-    var bs = new byte[buffer.Length];
-    var l = ReadAsync(bs).AsTask().Result;
-    bs.CopyTo(buffer);
+    var circularBuffer = _tcpClient.CircularBuffer;
+    var len = Math.Min(circularBuffer.Size, buffer.Length);
+    var l = buffer.Length;
+    for (var i = 0; i < len; i++)
+    {
+      buffer[i] = circularBuffer[0];
+      circularBuffer.PopFront();
+      l = i + 1;
+    }
+
+    OnRead?.Invoke(buffer[..l], this);
     return l;
   }
 
   /// <inheritdoc />
-  public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
-    var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-    cts.CancelAfter(ReadTimeout);
-
-    var l = buffer.Length;
-    var circularBuffer = _tcpClient.CircularBuffer;
-
-    await Task.Run(async () =>
-    {
-      try
-      {
-        for (var i = 0; i < buffer.Length; i++)
-        {
-          while (circularBuffer.IsEmpty)
-          {
-            cts.Token.ThrowIfCancellationRequested();
-            await Task.Yield();
-          }
-
-          buffer.Span[i] = circularBuffer[0];
-          circularBuffer.PopFront();
-          l = i + 1;
-        }
-      }
-      catch (OperationCanceledException)
-      {
-        // 忽略这个异常
-      }
-    }, cts.Token);
-
-    OnRead?.Invoke(buffer.Span[..l], this);
-    return l;
+    var len = Read(buffer.Span);
+    return ValueTask.FromResult(len);
   }
 
   private class SbTcpClient : TcpClient
