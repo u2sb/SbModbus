@@ -3,8 +3,8 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using CircularBuffer;
 using NetCoreServer;
+using ObservableCollections;
 using SbModbus.Models;
 
 namespace SbModbus.TcpStream;
@@ -73,7 +73,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
-    _tcpClient.CircularBuffer.Clear();
+    _tcpClient.ClearBuffer();
     return ValueTask.CompletedTask;
   }
 
@@ -94,18 +94,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override int Read(Span<byte> buffer)
   {
-    var circularBuffer = _tcpClient.CircularBuffer;
-    var len = Math.Min(circularBuffer.Size, buffer.Length);
-    var l = buffer.Length;
-    for (var i = 0; i < len; i++)
-    {
-      buffer[i] = circularBuffer[0];
-      circularBuffer.PopFront();
-      l = i + 1;
-    }
-
-    OnRead?.Invoke(buffer[..l], this);
-    return l;
+    var len = _tcpClient.GetBuffer(buffer);
+    OnRead?.Invoke(buffer[..len], this);
+    return len;
   }
 
   /// <inheritdoc />
@@ -117,6 +108,13 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
   private class SbTcpClient : TcpClient
   {
+    /// <summary>
+    ///   缓冲区
+    /// </summary>
+    private readonly RingBuffer<byte> _circularBuffer = new(4096);
+
+    private readonly object _locker = new();
+
     public SbTcpClient(IPAddress address, int port) : base(address, port)
     {
     }
@@ -133,19 +131,53 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     {
     }
 
-    /// <summary>
-    ///   缓冲区
-    /// </summary>
-    public CircularBuffer<byte> CircularBuffer { get; } = new(4096);
-
     /// <inheritdoc />
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
       var end = offset + size;
-      for (var i = offset; i < end; i++)
+      lock (_locker)
       {
-        if (i >= buffer.Length) return;
-        CircularBuffer.PushBack(buffer[i]);
+        for (var i = offset; i < end; i++)
+        {
+          if (i >= buffer.Length)
+          {
+            return;
+          }
+
+          _circularBuffer.AddLast(buffer[i]);
+        }
+      }
+    }
+
+    /// <summary>
+    ///   获取Buffer
+    /// </summary>
+    /// <param name="buffer"></param>
+    public int GetBuffer(Span<byte> buffer)
+    {
+      lock (_locker)
+      {
+        if (_circularBuffer.Count == 0)
+        {
+          return 0;
+        }
+
+        var len = Math.Min(_circularBuffer.Count, buffer.Length);
+
+        for (var i = 0; i < len; i++)
+        {
+          buffer[i] = _circularBuffer.RemoveFirst();
+        }
+
+        return len;
+      }
+    }
+
+    public void ClearBuffer()
+    {
+      lock (_locker)
+      {
+        _circularBuffer.Clear();
       }
     }
   }

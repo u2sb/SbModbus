@@ -44,7 +44,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.1.1" />
-    <PackageReference Include="CircularBuffer" Version="1.4.0"/>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
     <PackageReference Include="Material.Avalonia" Version="3.13.3"/>
     <PackageReference Include="Material.Avalonia.Dialogs" Version="3.13.3"/>
