@@ -260,7 +260,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   选择的方法
   /// </summary>
-  public ModbusFunctionCode SelectedModbusWriteFunctionCode => SelectedModbusWriteFunCodeIndex switch
+  private ModbusFunctionCode SelectedModbusWriteFunctionCode => SelectedModbusWriteFunCodeIndex switch
   {
     0 => ModbusFunctionCode.WriteSingleCoil,
     1 => ModbusFunctionCode.WriteSingleRegister,
@@ -276,7 +276,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   选择的方法
   /// </summary>
-  public ModbusFunctionCode SelectedModbusReadFunctionCode => SelectedModbusReadFunCodeIndex switch
+  private ModbusFunctionCode SelectedModbusReadFunctionCode => SelectedModbusReadFunCodeIndex switch
   {
     0 => ModbusFunctionCode.ReadCoils,
     1 => ModbusFunctionCode.ReadDiscreteInputs,
@@ -331,7 +331,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   要读取的寄存器数量
   /// </summary>
-  public byte ModbusReadCount => SelectedModbusValueType switch
+  private byte ModbusReadCount => SelectedModbusValueType switch
   {
     ModbusValueType.Bit or ModbusValueType.UShort or ModbusValueType.Short => (byte)(1 * ReadNumber),
     ModbusValueType.Int or ModbusValueType.UInt or ModbusValueType.Float => (byte)(2 * ReadNumber),

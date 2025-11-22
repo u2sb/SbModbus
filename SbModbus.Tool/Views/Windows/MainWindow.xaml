@@ -10,7 +10,6 @@
         WindowStartupLocation="CenterScreen"
         Title="{StaticResource lang.title}"
         Icon="pack://application:,,,/Assets/icon.ico">
-
   <Grid>
     <TabControl>
       <TabControl.ItemsPanel>
@@ -29,9 +28,15 @@
         </Border>
       </TabItem>
     </TabControl>
-    <Button Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="2"
-            Width="100" Height="25"
-            Content="{StaticResource lang.btnDsLog}"
-            Command="{Binding OpenLogDirectoryCommand}" />
+    <StackPanel Orientation="Horizontal" Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top">
+      <TextBlock VerticalAlignment="Center" Margin="10,0">
+        <Hyperlink Command="{Binding OpenSbModbusCommand}">
+          SbModbus
+        </Hyperlink>
+      </TextBlock>
+      <Button Margin="10,0" Width="100" Height="25"
+              Content="{StaticResource lang.btnDsLog}"
+              Command="{Binding OpenLogDirectoryCommand}" />
+    </StackPanel>
   </Grid>
 </Window>

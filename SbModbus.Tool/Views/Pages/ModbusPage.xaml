@@ -39,7 +39,7 @@
       <Setter Property="VerticalAlignment" Value="Stretch" />
     </Style>
   </UserControl.Resources>
-  <Grid ColumnDefinitions="490,*">
+  <Grid ColumnDefinitions="480,*">
     <Grid Column="0" Grid.ColumnDefinitions="*, *">
 
       <!-- 左侧区域 -->
@@ -61,7 +61,7 @@
 
           <Grid Height="50">
             <TextBlock Text="{StaticResource lang.connectionStatus}" />
-            <Rectangle Width="120" Height="15" HorizontalAlignment="Right"
+            <Rectangle Margin="5,0" Width="130" Height="15" HorizontalAlignment="Right"
                        Fill="{Binding IsConnected, Converter={StaticResource BoolToColorBrushConverter}}" />
           </Grid>
 
