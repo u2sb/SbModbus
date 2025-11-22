@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
+             xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
              d:DataContext="{d:DesignInstance pvm:SerialPortAssistantPageViewModel}"
@@ -82,7 +83,7 @@
             </Grid>
             <Grid Height="45">
               <TextBlock Text="{StaticResource lang.dataBit}" />
-              <ComboBox SelectedValuePath="Tag" 
+              <ComboBox SelectedValuePath="Tag"
                         SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
                 <ComboBoxItem Tag="8" Content="8" />
                 <ComboBoxItem Tag="7" Content="7" />
@@ -173,14 +174,15 @@
             BorderBrush="Black" BorderThickness="1">
       <Grid RowDefinitions="*, 10, 180">
         <Grid Row="0">
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                        bh:SmartScrollBehavior.IsEnabled="True">
             <ItemsControl ItemsSource="{Binding DsLogs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Grid Margin="2" ColumnDefinitions="Auto, 10, *">
                     <hc:SimpleText Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left" FontSize="18"
-                                Foreground="CornflowerBlue"
-                                Text="{Binding DateTimeString}" />
+                                   Foreground="CornflowerBlue"
+                                   Text="{Binding DateTimeString}" />
                     <hc:SimpleText Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
                                    TextWrapping="Wrap" FontSize="18"
                                    Foreground="{Binding TextColor}"

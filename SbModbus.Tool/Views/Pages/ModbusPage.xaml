@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
+             xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="SbModbus.Tool.Views.Pages.ModbusPage"
@@ -84,8 +85,8 @@
               </Grid>
               <Grid Height="50">
                 <TextBlock Text="{StaticResource lang.dataBit}" />
-                <ComboBox SelectedValuePath="Tag" 
-                  SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
+                <ComboBox SelectedValuePath="Tag"
+                          SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
                   <ComboBoxItem Tag="8" Content="8" />
                   <ComboBoxItem Tag="7" Content="7" />
                   <ComboBoxItem Tag="6" Content="6" />
@@ -227,7 +228,8 @@
             BorderBrush="Black" BorderThickness="1">
       <Grid RowDefinitions="*, 10, 2*">
         <Grid Row="0">
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                        bh:SmartScrollBehavior.IsEnabled="True">
             <ItemsControl ItemsSource="{Binding DsLogs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -249,7 +251,8 @@
         <Rectangle Grid.Row="1" Margin="5,0" HorizontalAlignment="Stretch" Height="2" Fill="Gray" />
 
         <Grid Row="2">
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                        bh:SmartScrollBehavior.IsEnabled="True">
             <ItemsControl ItemsSource="{Binding MsLogs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
