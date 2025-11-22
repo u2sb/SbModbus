@@ -11,6 +11,7 @@
 - 高性能 使用 Span 和 Memory 构建高性能 Modbus 库
 - 轻量级 不包含硬件接口部分
 - 高易用 使用源生成器，不局限于大小端，支持 DCBA ABCD BADC DCBA 四种编码方式
+- 具有 Demo 程序 SbModbus.Tool
 
 ## 注意事项
 
