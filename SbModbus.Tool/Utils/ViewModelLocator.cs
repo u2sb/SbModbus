@@ -1,6 +1,5 @@
-﻿using System;
-using Avalonia;
-using Avalonia.Controls;
+﻿using System.Windows;
+using SbModbus.Tool.ViewModels;
 using CommunityToolkit.Mvvm.DependencyInjection;
 
 namespace SbModbus.Tool.Utils;
@@ -10,22 +9,26 @@ namespace SbModbus.Tool.Utils;
 /// </summary>
 public static class ViewModelLocator
 {
-  private static bool IsInDesignMode => Design.IsDesignMode;
-
-  public static object? CreateViewModel(Type viewModelType)
+  public static object? CreateViewModel(Type viewModelType, bool isInDesignMode = false)
   {
 #if DEBUG
-    if (IsInDesignMode) return Activator.CreateInstance(viewModelType);
+    if (isInDesignMode)
+    {
+      return Activator.CreateInstance(viewModelType);
+    }
 #endif
 
     var t = Ioc.Default.GetService(viewModelType);
     return t ?? throw new NullReferenceException($"请先注入 {viewModelType.FullName}");
   }
 
-  public static T CreateViewModel<T>() where T : class
+  public static T CreateViewModel<T>(bool isInDesignMode = false) where T : class
   {
 #if DEBUG
-    if (IsInDesignMode) return Activator.CreateInstance<T>();
+    if (isInDesignMode)
+    {
+      return Activator.CreateInstance<T>();
+    }
 #endif
 
     var t = Ioc.Default.GetService<T>();
@@ -35,7 +38,7 @@ public static class ViewModelLocator
 
 public static class ViewModelLocatorExtensions
 {
-  extension(StyledElement view)
+  extension(FrameworkElement view)
   {
     public void AutoCreateViewModel()
     {
@@ -44,7 +47,10 @@ public static class ViewModelLocatorExtensions
       // 先替换路径
       var viewModelTypeName = viewType.FullName?.Replace(".Views.", ".ViewModels.");
 
-      if (viewModelTypeName is null) return;
+      if (viewModelTypeName is null)
+      {
+        return;
+      }
 
       // 再替换文件名
       viewModelTypeName = viewModelTypeName.EndsWith("View")
@@ -53,7 +59,27 @@ public static class ViewModelLocatorExtensions
 
       var viewModelType = Type.GetType(viewModelTypeName);
 
-      if (viewModelType is not null) view.DataContext = ViewModelLocator.CreateViewModel(viewModelType);
+      if (viewModelType is not null)
+      {
+#if DEBUG
+        var isInDesignMode = view.IsInDesignMode();
+        view.DataContext = ViewModelLocator.CreateViewModel(viewModelType, isInDesignMode);
+        if (view.DataContext is ViewModelBase vmb)
+        {
+          vmb.IsDesignMode = isInDesignMode;
+        }
+#else
+        view.DataContext = ViewModelLocator.CreateViewModel(viewModelType);
+#endif
+        if (view.DataContext is ViewModelBase viewModelBase)
+        {
+          viewModelBase.View = view;
+
+          view.Loaded += viewModelBase.OnLoaded;
+          view.Unloaded += viewModelBase.OnUnloaded;
+          view.IsVisibleChanged += viewModelBase.IsVisibleChanged;
+        }
+      }
     }
 
     public T? GetViewModel<T>() where T : class

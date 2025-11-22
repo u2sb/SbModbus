@@ -1,22 +1,18 @@
-using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
+using System.Windows.Threading;
+using SbModbus.Tool.Models.Settings;
 using SbModbus.Tool.Services.RecordServices;
 using SbModbus.Tool.Utils;
 using SbModbus.Tool.ViewModels.Pages;
+using SbModbus.Tool.ViewModels.Windows;
+using SbModbus.Tool.Views.Windows;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using R3;
 using ZeroMessenger.DependencyInjection;
-using AppSettings = SbModbus.Tool.Models.Settings.AppSettings;
-using MainWindow = SbModbus.Tool.Views.Windows.MainWindow;
-using MainWindowViewModel = SbModbus.Tool.ViewModels.Windows.MainWindowViewModel;
 
 namespace SbModbus.Tool;
 
@@ -48,13 +44,13 @@ public static class Startup
     services.AddSingleton<ModbusPageViewModel>(); //Modbus界面
   }
 
-  public static void OnStart(object? sender,
-    ControlledApplicationLifetimeStartupEventArgs controlledApplicationLifetimeStartupEventArgs)
+  public static void OnStart(params string[] args)
   {
-    var args = controlledApplicationLifetimeStartupEventArgs.Args;
-
+    App.Current.DispatcherUnhandledException += App_DispatcherUnhandledException;
     AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
     TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+
+    WpfProviderInitializer.SetDefaultObservableSystem(OnThrowExceptions);
 
     var builder = Host.CreateApplicationBuilder();
 
@@ -64,17 +60,19 @@ public static class Startup
     _host = builder.Build();
     Ioc.Default.ConfigureServices(_host.Services);
     AddLang();
-
     _host.Start();
-    if (sender is IClassicDesktopStyleApplicationLifetime desktop) desktop.MainWindow = new MainWindow();
+    App.Current.MainWindow = new MainWindow();
+    App.Current.MainWindow.Show();
   }
 
   private static void AddLang()
   {
-    var appSettings = Design.IsDesignMode ? AppSettings.Instance : Ioc.Default.GetRequiredService<AppSettings>();
+    var isDesignMode = WindowHelper.IsInDesignMode();
+
+    var appSettings = isDesignMode ? AppSettings.Instance : Ioc.Default.GetRequiredService<AppSettings>();
 
     var lang = appSettings.LanguageMap;
-    var resources = Application.Current?.Resources;
+    var resources = App.Current.Resources;
 
 #if DEBUG
     var assembly = Assembly.GetEntryAssembly();
@@ -83,22 +81,23 @@ public static class Startup
     var projectDir = attribute?.Value;
     if (Directory.Exists(projectDir))
     {
-      var langFile = Path.Combine(projectDir, "Resources/Language.axaml");
+      var langFile = Path.Combine(projectDir, "Resources/Language.xaml");
       ResourceDictionaryGenerator.GenerateResourceDictionary(lang, langFile);
     }
 #endif
-    if (resources is not null)
-      foreach (var (key, value) in lang)
-      {
-        var k = $"lang.{key}";
-        resources[k] = value;
-      }
+    foreach (var (key, value) in lang)
+    {
+      var k = $"lang.{key}";
+      resources[k] = value;
+    }
   }
 
-  public static void OnExit(object? sender,
-    ControlledApplicationLifetimeExitEventArgs controlledApplicationLifetimeExitEventArgs)
+  public static void OnExit(int exitCode)
   {
-    if (_host is null) return;
+    if (_host is null)
+    {
+      return;
+    }
 
     using (_host)
     {
@@ -112,7 +111,10 @@ public static class Startup
   {
     try
     {
-      if (e.Exception is Exception exception) OnThrowExceptions(exception);
+      if (e.Exception is Exception exception)
+      {
+        OnThrowExceptions(exception);
+      }
     }
     catch (Exception ex)
     {
@@ -128,11 +130,30 @@ public static class Startup
   {
     try
     {
-      if (e.ExceptionObject is Exception exception) OnThrowExceptions(exception);
+      if (e.ExceptionObject is Exception exception)
+      {
+        OnThrowExceptions(exception);
+      }
     }
     catch (Exception ex)
     {
       OnThrowExceptions(ex);
+    }
+  }
+
+  private static void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+  {
+    try
+    {
+      OnThrowExceptions(e.Exception);
+    }
+    catch (Exception ex)
+    {
+      OnThrowExceptions(ex);
+    }
+    finally
+    {
+      e.Handled = true;
     }
   }
 

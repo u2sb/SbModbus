@@ -1,7 +1,5 @@
-﻿using System;
-using System.Buffers;
+﻿using System.Buffers;
 using System.IO.Ports;
-using System.Threading.Tasks;
 
 namespace SbModbus.Tool.Services.DataTransferServices;
 
@@ -49,7 +47,11 @@ public class SerialPortDtStream : IDtStream
 
   public void Write(ReadOnlySpan<byte> data)
   {
-    if (!IsConnected) return;
+    if (!IsConnected)
+    {
+      return;
+    }
+
     SerialPort.BaseStream.Write(data);
     SerialPort.BaseStream.Flush();
     OnDataWrite?.Invoke(data, this);
@@ -57,7 +59,11 @@ public class SerialPortDtStream : IDtStream
 
   public async ValueTask WriteAsync(ReadOnlyMemory<byte> data)
   {
-    if (!IsConnected) return;
+    if (!IsConnected)
+    {
+      return;
+    }
+
     await SerialPort.BaseStream.WriteAsync(data);
     await SerialPort.BaseStream.FlushAsync();
     OnDataWrite?.Invoke(data.Span, this);
@@ -78,7 +84,10 @@ public class SerialPortDtStream : IDtStream
 
   private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e)
   {
-    if (sender is not SerialPort sp) return;
+    if (sender is not SerialPort sp)
+    {
+      return;
+    }
 
     var len = sp.BytesToRead;
     Span<byte> buf = stackalloc byte[len];

@@ -1,5 +1,4 @@
-﻿using System;
-using Sb.Extensions.System.Threading;
+﻿using Sb.Extensions.System.Threading;
 
 // ReSharper disable UnusedMember.Global
 

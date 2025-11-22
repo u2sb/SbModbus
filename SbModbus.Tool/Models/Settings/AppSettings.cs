@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.IO.Ports;
-using System.Threading.Tasks;
 using SbModbus.Tool.Services.DataTransferServices;
 using SbModbus.Tool.Services.ModbusServices;
 using VYaml.Annotations;
@@ -22,6 +20,8 @@ public partial class AppSettings
 
   [YamlMember] public ModbusPageSettings Modbus { get; set; } = new();
 
+  [YamlMember] public Motherboard660Settings Motherboard660 { get; set; } = new();
+
   [YamlIgnore] public Dictionary<string, string> LanguageMap { get; }
 
   #endregion
@@ -39,14 +39,20 @@ public partial class AppSettings
     {
       var lb = File.ReadAllBytes(LangBaseFilePath);
       var b0 = YamlSerializer.Deserialize<Dictionary<string, string>?>(lb) ?? new Dictionary<string, string>();
-      foreach (var (key, value) in b0) LanguageMap[key] = value;
+      foreach (var (key, value) in b0)
+      {
+        LanguageMap[key] = value;
+      }
     }
 
     if (File.Exists(LangFilePath(lang)))
     {
       var l = File.ReadAllBytes(LangFilePath(lang));
       var b1 = YamlSerializer.Deserialize<Dictionary<string, string>?>(l) ?? new Dictionary<string, string>();
-      foreach (var (key, value) in b1) LanguageMap[key] = value;
+      foreach (var (key, value) in b1)
+      {
+        LanguageMap[key] = value;
+      }
     }
   }
 
@@ -216,4 +222,18 @@ public partial class ModbusPageSettings
   ///   站号
   /// </summary>
   public byte StationId { get; set; } = 0;
+}
+
+[YamlObject]
+public partial class Motherboard660Settings
+{
+  /// <summary>
+  ///   目标IP
+  /// </summary>
+  public string TargetIp { get; set; } = "127.0.0.1";
+
+  /// <summary>
+  ///   目标端口
+  /// </summary>
+  public ushort TargetPort { get; set; } = 1000;
 }

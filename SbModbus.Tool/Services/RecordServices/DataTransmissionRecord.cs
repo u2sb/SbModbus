@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -35,7 +34,10 @@ public class DataTransmissionRecord : IDisposable
   /// </summary>
   public void Open()
   {
-    if (!Directory.Exists(LogDirPath)) Directory.CreateDirectory(LogDirPath);
+    if (!Directory.Exists(LogDirPath))
+    {
+      Directory.CreateDirectory(LogDirPath);
+    }
 
     Close();
 
@@ -70,9 +72,13 @@ public class DataTransmissionRecord : IDisposable
   public void WriteOutLog(ReadOnlySpan<byte> data, bool isAscii = false)
   {
     if (isAscii)
+    {
       _logger?.WriteAsciiLog(data);
+    }
     else
+    {
       _logger?.WriteHexLog(data);
+    }
   }
 
   /// <summary>
@@ -84,9 +90,13 @@ public class DataTransmissionRecord : IDisposable
   public void WriteInLog(ReadOnlySpan<byte> data, bool isAscii = false)
   {
     if (isAscii)
+    {
       _logger?.ReadAsciiLog(data);
+    }
     else
+    {
       _logger?.ReadHexLog(data);
+    }
   }
 }
 
@@ -102,14 +112,21 @@ public static class DataTransmissionRecordLogExtensions
 
   public static void WriteHexChar(ReadOnlySpan<byte> data, Span<char> hexChars)
   {
-    if (data.IsEmpty) return;
+    if (data.IsEmpty)
+    {
+      return;
+    }
+
     var requiredLength = data.Length * 3 - 1;
     if (requiredLength < 0)
     {
       return;
     }
+
     if (hexChars.Length < requiredLength)
+    {
       throw new ArgumentException($"输出缓冲区需要至少 {requiredLength} 字符，但只有 {hexChars.Length}");
+    }
 
     ReadOnlySpan<char> hexDigits = HexDigits;
 
@@ -128,7 +145,9 @@ public static class DataTransmissionRecordLogExtensions
       Unsafe.Add(ref charsRef, baseIndex + 1) = hexDigits[b & 0x0F];
 
       if (i < lastIndex)
+      {
         Unsafe.Add(ref charsRef, baseIndex + 2) = ' ';
+      }
     }
   }
 
@@ -142,7 +161,10 @@ public static class DataTransmissionRecordLogExtensions
     /// <param name="encoding"></param>
     public void WriteAsciiLog(ReadOnlySpan<byte> data, Encoding? encoding = null)
     {
-      if (data.IsEmpty) return;
+      if (data.IsEmpty)
+      {
+        return;
+      }
 
       encoding ??= Encoding.UTF8;
 
@@ -158,7 +180,10 @@ public static class DataTransmissionRecordLogExtensions
     /// <param name="data"></param>
     public void WriteHexLog(ReadOnlySpan<byte> data)
     {
-      if (data.IsEmpty) return;
+      if (data.IsEmpty)
+      {
+        return;
+      }
 
       Span<char> hexChars = stackalloc char[data.Length * 3 - 1];
 
@@ -176,7 +201,10 @@ public static class DataTransmissionRecordLogExtensions
     /// <param name="encoding"></param>
     public void ReadAsciiLog(ReadOnlySpan<byte> data, Encoding? encoding = null)
     {
-      if (data.IsEmpty) return;
+      if (data.IsEmpty)
+      {
+        return;
+      }
 
       encoding ??= Encoding.UTF8;
 
@@ -190,7 +218,10 @@ public static class DataTransmissionRecordLogExtensions
     /// <param name="data"></param>
     public void ReadHexLog(ReadOnlySpan<byte> data)
     {
-      if (data.IsEmpty) return;
+      if (data.IsEmpty)
+      {
+        return;
+      }
 
       Span<char> hexChars = stackalloc char[data.Length * 3 - 1];
 

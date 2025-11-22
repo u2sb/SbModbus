@@ -1,18 +1,11 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Media;
+using System.Windows;
+using System.Windows.Media;
 using SbModbus.Tool.Models.Settings;
-using SbModbus.Tool.Services.DataTransferServices;
 using SbModbus.Tool.Services.ModbusServices;
 using SbModbus.Tool.Services.RecordServices;
 using SbModbus.Tool.Utils;
@@ -55,10 +48,9 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   private IModbusStream? _modbusStream;
   private ModbusPageSettings? _settings;
 
-
   public ModbusPageViewModel()
   {
-    if (!Design.IsDesignMode)
+    if (!IsDesignMode)
     {
       _dtr = Ioc.Default.GetRequiredService<DataTransmissionRecord>();
       OnLoaded();
@@ -69,13 +61,13 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       _serialPortNames.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     SerialPortNames.AddTo(ref _disposableBag);
 
+    _dsLogs = new ObservableFixedSizeRingBuffer<DsLog>(DsLogMaxShow);
     DsLogs = _dsLogs.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     DsLogs.AddTo(ref _disposableBag);
-    _dsLogs.ObserveAdd().Subscribe(OnDsLogsAddItem).AddTo(ref _disposableBag);
 
+    _msLogs = new ObservableFixedSizeRingBuffer<ModbusReadLog>(DsLogMaxShow);
     MsLogs = _msLogs.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     MsLogs.AddTo(ref _disposableBag);
-    _msLogs.ObserveAdd().Subscribe(OnMsLogsAddItem).AddTo(ref _disposableBag);
   }
 
   public void Dispose()
@@ -149,11 +141,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   ///   串口名称列表
   /// </summary>
   public NotifyCollectionChangedSynchronizedViewList<string> SerialPortNames { get; }
-
-  /// <summary>
-  ///   数据位列表
-  /// </summary>
-  public int[] DataBitsValues { get; } = [8, 7, 9, 10];
 
   /// <summary>
   ///   校验位列表
@@ -253,16 +240,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     {
       StationId = sid;
     }
-  }
-  
-  /// <summary>
-  /// 编码方式
-  /// </summary>
-  [ObservableProperty] private int _encodingModeIndex = (int)BigAndSmallEndianEncodingMode.ABCD;
-  
-  partial void OnEncodingModeIndexChanged(int value)
-  {
-    EncodingMode = (BigAndSmallEndianEncodingMode)value;
   }
 
   /// <summary>
@@ -417,7 +394,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
       if (!result.IsEmpty)
       {
-        _msLogs.Enqueue(new ModbusReadLog(DateTime.Now, result.ToArray(), EncodingMode, ModbusAddress));
+        _msLogs.AddLast(new ModbusReadLog(DateTime.Now, result.ToArray(), EncodingMode, ModbusAddress));
       }
     }
     catch (Exception)
@@ -608,14 +585,16 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   private void OnDataWrite(ReadOnlySpan<byte> data, IModbusStream _)
   {
+    if (data.IsEmpty) return;
     _dtr?.WriteOutLog(data);
-    _dsLogs.Enqueue(new DsLog(DateTime.Now, data.ToArray(), true));
+    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), true));
   }
 
   private void OnDataReceived(ReadOnlySpan<byte> data, IModbusStream _)
   {
+    if (data.IsEmpty) return;
     _dtr?.WriteInLog(data);
-    _dsLogs.Enqueue(new DsLog(DateTime.Now, data.ToArray(), false));
+    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), false));
   }
 
   #endregion
@@ -687,20 +666,12 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   #region 日志显示框
 
-  private readonly ObservableQueue<DsLog> _dsLogs = new();
+  private readonly ObservableFixedSizeRingBuffer<DsLog> _dsLogs;
 
   /// <summary>
   ///   显示的日志
   /// </summary>
   public INotifyCollectionChangedSynchronizedViewList<DsLog> DsLogs { get; }
-
-  private void OnDsLogsAddItem(CollectionAddEvent<DsLog> _)
-  {
-    if (_dsLogs.Count > DsLogMaxShow)
-    {
-      _dsLogs.Dequeue();
-    }
-  }
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
@@ -708,25 +679,17 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   [ObservableProperty] private Size _dsLogShowExtentSize;
   [ObservableProperty] private Size _dsLogShowViewPortSize;
 
-  partial void OnDsLogShowExtentSizeChanged(Size oldValue, Size newValue)
-  {
-    if (DsLogShowOffset.Y + DsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
-    {
-      DsLogShowOffset = DsLogShowOffset.WithY(newValue.Height - DsLogShowViewPortSize.Height);
-    }
-  }
+  // partial void OnDsLogShowExtentSizeChanged(Size oldValue, Size newValue)
+  // {
+  //   if (DsLogShowOffset.Y + DsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
+  //   {
+  //     DsLogShowOffset = DsLogShowOffset.WithY(newValue.Height - DsLogShowViewPortSize.Height);
+  //   }
+  // }
 
-  private readonly ObservableQueue<ModbusReadLog> _msLogs = new();
+  private readonly ObservableFixedSizeRingBuffer<ModbusReadLog> _msLogs;
 
   public INotifyCollectionChangedSynchronizedViewList<ModbusReadLog> MsLogs { get; }
-
-  private void OnMsLogsAddItem(CollectionAddEvent<ModbusReadLog> _)
-  {
-    if (_msLogs.Count > DsLogMaxShow)
-    {
-      _msLogs.Dequeue();
-    }
-  }
 
   [ObservableProperty] private Vector _msLogShowOffset;
   [ObservableProperty] private Size _msLogShowExtentSize;
@@ -736,7 +699,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   {
     if (MsLogShowOffset.Y + MsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
     {
-      MsLogShowOffset = MsLogShowOffset.WithY(newValue.Height - MsLogShowViewPortSize.Height);
+      // MsLogShowOffset = MsLogShowOffset.WithY(newValue.Height - MsLogShowViewPortSize.Height);
     }
   }
 

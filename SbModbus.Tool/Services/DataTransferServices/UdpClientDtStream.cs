@@ -1,7 +1,5 @@
-﻿using System;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Net;
-using System.Threading.Tasks;
 using NetCoreServer;
 
 namespace SbModbus.Tool.Services.DataTransferServices;
@@ -38,9 +36,14 @@ public class UdpClientDtStream : UdpClient, IDtStream
   public void Write(ReadOnlySpan<byte> data)
   {
     if (_sendEndpoint is not null)
+    {
       SendAsync(_sendEndpoint, data);
+    }
     else
+    {
       SendAsync(data);
+    }
+
     OnDataWrite?.Invoke(data, this);
   }
 

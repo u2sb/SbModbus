@@ -1,14 +1,10 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
+﻿using System.Buffers;
 using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Media;
+using System.Windows;
+using System.Windows.Media;
 using SbModbus.Tool.Models.Settings;
 using SbModbus.Tool.Services.DataTransferServices;
 using SbModbus.Tool.Services.RecordServices;
@@ -52,10 +48,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   public SerialPortAssistantPageViewModel()
   {
-    if (!Design.IsDesignMode)
+    if (!IsDesignMode)
     {
       _dtr = Ioc.Default.GetRequiredService<DataTransmissionRecord>();
-      OnLoaded();
       LoadSettings();
     }
 
@@ -63,9 +58,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       _serialPortNames.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     SerialPortNames.AddTo(ref _disposableBag);
 
+    _dsLogs = new ObservableFixedSizeRingBuffer<DsLog>(DsLogMaxShow);
     DsLogs = _dsLogs.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     DsLogs.AddTo(ref _disposableBag);
-    _dsLogs.ObserveAdd().Subscribe(OnDsLogsAddItem).AddTo(ref _disposableBag);
 
     Sessions = _sessions.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     Sessions.AddTo(ref _disposableBag);
@@ -83,7 +78,10 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     Disconnect();
 
-    if (value == DataTransferType.SerialPort) RefreshSerialPortNames();
+    if (value == DataTransferType.SerialPort)
+    {
+      RefreshSerialPortNames();
+    }
   }
 
   #region 命令
@@ -135,9 +133,15 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   [RelayCommand]
   private void Disconnect()
   {
-    if (_dtStream is null) return;
+    if (_dtStream is null)
+    {
+      return;
+    }
 
-    if (_dtStream.IsConnected) _dtStream.Disconnect();
+    if (_dtStream.IsConnected)
+    {
+      _dtStream.Disconnect();
+    }
 
     _dtStream.OnConnectStateChanged -= OnConnectStateChanged;
     _dtStream.OnDataWrite -= OnDataWrite;
@@ -188,7 +192,10 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   partial void OnBaudRateStringChanged(string? value)
   {
-    if (value is not null && value.TryParseToInt32(out var baudRate)) BaudRate = baudRate;
+    if (value is not null && value.TryParseToInt32(out var baudRate))
+    {
+      BaudRate = baudRate;
+    }
   }
 
   /// <summary>
@@ -222,11 +229,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   public NotifyCollectionChangedSynchronizedViewList<string> SerialPortNames { get; }
 
   /// <summary>
-  ///   数据位列表
-  /// </summary>
-  public int[] DataBitsValues { get; } = [8, 7, 9, 10];
-
-  /// <summary>
   ///   校验位列表
   /// </summary>
   public string[] ParityValues { get; } = ["None", "Odd", "Even", "Mark", "Space"];
@@ -245,7 +247,10 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     Disconnect();
 
-    if (_dtStream is not null && _dtStream is not SerialPortDtStream) _dtStream.Dispose();
+    if (_dtStream is not null && _dtStream is not SerialPortDtStream)
+    {
+      _dtStream.Dispose();
+    }
 
     _dtStream ??= new SerialPortDtStream();
 
@@ -321,46 +326,65 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     Disconnect();
 
-    if (_dtStream is not null && _dtStream is not TcpClientDtStream) _dtStream.Dispose();
+    if (_dtStream is not null && _dtStream is not TcpClientDtStream)
+    {
+      _dtStream.Dispose();
+    }
 
     if (IPAddress.TryParse(TargetIp, out var targetIp) && TargetPort.TryParseToUInt16(out var targetPort))
+    {
       _dtStream ??= new TcpClientDtStream(targetIp, targetPort);
+    }
   }
 
   private void CreateTcpServer()
   {
     Disconnect();
 
-    if (_dtStream is not null && _dtStream is not TcpServerDtStream) _dtStream.Dispose();
+    if (_dtStream is not null && _dtStream is not TcpServerDtStream)
+    {
+      _dtStream.Dispose();
+    }
 
     if (IPAddress.TryParse(LocalIp, out var localIp) && LocalPort.TryParseToUInt16(out var localPort))
+    {
       _dtStream ??= new TcpServerDtStream(localIp, localPort);
+    }
   }
 
   private void CreateUdpClient()
   {
     Disconnect();
-    if (_dtStream is not null && _dtStream is not UdpClientDtStream) _dtStream.Dispose();
+    if (_dtStream is not null && _dtStream is not UdpClientDtStream)
+    {
+      _dtStream.Dispose();
+    }
 
     if (IPAddress.TryParse(TargetIp, out var targetIp) && TargetPort.TryParseToUInt16(out var targetPort))
+    {
       _dtStream ??= new UdpClientDtStream(targetIp, targetPort);
+    }
   }
 
   private void CreateUdpServer()
   {
     Disconnect();
-    if (_dtStream is not null && _dtStream is not UdpServerDtStream) _dtStream.Dispose();
+    if (_dtStream is not null && _dtStream is not UdpServerDtStream)
+    {
+      _dtStream.Dispose();
+    }
 
     if (IPAddress.TryParse(LocalIp, out var localIp) && LocalPort.TryParseToUInt16(out var localPort))
+    {
       _dtStream ??= new UdpServerDtStream(localIp, localPort);
+    }
   }
 
   #endregion
 
   #region 加载和保存配置文件
 
-  [RelayCommand]
-  private void OnLoaded()
+  public override void OnLoaded(object sender, RoutedEventArgs e)
   {
     RefreshSerialPortNames();
   }
@@ -369,7 +393,10 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     _serialPortNames.Clear();
     var ports = SerialPort.GetPortNames();
-    if (ports is { Length: > 0 }) _serialPortNames.AddRange(ports);
+    if (ports is { Length: > 0 })
+    {
+      _serialPortNames.AddRange(ports);
+    }
   }
 
   private void LoadSettings()
@@ -378,7 +405,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
     _settings = _appSettings?.SerialPortAssistant;
 
     if (_appSettings is not null &&
-        
         _settings is not null)
     {
       DsLogMaxShow = _appSettings.DsLogMaxShow;
@@ -409,9 +435,15 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       _settings.Handshake = Handshake;
       _settings.TargetIp = TargetIp;
       _settings.LocalIp = LocalIp;
-      if (TargetPort.TryParseToUInt16(out var targetPort)) _settings.TargetPort = targetPort;
+      if (TargetPort.TryParseToUInt16(out var targetPort))
+      {
+        _settings.TargetPort = targetPort;
+      }
 
-      if (LocalPort.TryParseToUInt16(out var localPort)) _settings.LocalPort = localPort;
+      if (LocalPort.TryParseToUInt16(out var localPort))
+      {
+        _settings.LocalPort = localPort;
+      }
 
       await _appSettings.SaveAsync();
     }
@@ -425,21 +457,25 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     IsConnected = isConnected;
     if (isConnected)
+    {
       _dtr?.Open();
+    }
     else
+    {
       _dtr?.Close();
+    }
   }
 
   private void OnDataWrite(ReadOnlySpan<byte> data, IDtStream dtStream)
   {
     _dtr?.WriteOutLog(data);
-    _dsLogs.Enqueue(new DsLog(DateTime.Now, data.ToArray(), true));
+    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), true));
   }
 
   private void OnDataReceived(ReadOnlySpan<byte> data, IDtStream dtStream)
   {
     _dtr?.WriteInLog(data);
-    _dsLogs.Enqueue(new DsLog(DateTime.Now, data.ToArray(), false));
+    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), false));
   }
 
   private void OnSessionStateChanged(IEnumerable<string> ids)
@@ -471,18 +507,13 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   ///   需要发送的Hex值
   /// </summary>
   private readonly ArrayBufferWriter<byte> _inputBuffer = new();
-
-  private readonly ObservableQueue<DsLog> _dsLogs = new();
+  
+  private readonly ObservableFixedSizeRingBuffer<DsLog> _dsLogs;
 
   /// <summary>
   ///   显示的日志
   /// </summary>
   public INotifyCollectionChangedSynchronizedViewList<DsLog> DsLogs { get; }
-
-  private void OnDsLogsAddItem(CollectionAddEvent<DsLog> _)
-  {
-    if (_dsLogs.Count > DsLogMaxShow) _dsLogs.Dequeue();
-  }
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
@@ -493,7 +524,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   partial void OnDsLogShowExtentSizeChanged(Size oldValue, Size newValue)
   {
     if (DsLogShowOffset.Y + DsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
-      DsLogShowOffset = DsLogShowOffset.WithY(newValue.Height - DsLogShowViewPortSize.Height);
+    {
+      // DsLogShowOffset = DsLogShowOffset.WithY(newValue.Height - DsLogShowViewPortSize.Height);
+    }
   }
 
   /// <summary>
@@ -510,7 +543,11 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       get
       {
         var len = Content.Length * 3 - 1;
-        if (len < 0) return string.Empty;
+        if (len < 0)
+        {
+          return string.Empty;
+        }
+
         var temp = len < 512 ? stackalloc char[len] : new char[len];
         DataTransmissionRecordLogExtensions.WriteHexChar(Content, temp);
         return temp.ToString();
@@ -551,9 +588,15 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   [RelayCommand]
   private async Task SendAsync()
   {
-    if (_inputBuffer.WrittenCount == 0) return;
+    if (_inputBuffer.WrittenCount == 0)
+    {
+      return;
+    }
 
-    if (_dtStream is { IsConnected: true }) await _dtStream.WriteAsync(_inputBuffer.WrittenMemory);
+    if (_dtStream is { IsConnected: true })
+    {
+      await _dtStream.WriteAsync(_inputBuffer.WrittenMemory);
+    }
   }
 
   [RelayCommand]
@@ -579,11 +622,13 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       var cp = 0;
 
       foreach (var c in source)
+      {
         if (c != ' ')
         {
           temp[cp] = c;
           cp++;
         }
+      }
 
       try
       {
@@ -607,6 +652,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
         OutputString = string.Empty;
         return;
       }
+
       var temp = len < 512 ? stackalloc char[len] : new char[len];
       DataTransmissionRecordLogExtensions.WriteHexChar(_inputBuffer.WrittenSpan, temp);
       OutputString = temp.ToString();

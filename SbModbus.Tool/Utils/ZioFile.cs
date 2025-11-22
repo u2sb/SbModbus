@@ -1,5 +1,4 @@
-﻿using System;
-using SbModbus.Tool.Utils.Singletons;
+﻿using SbModbus.Tool.Utils.Singletons;
 using Zio;
 using Zio.FileSystems;
 

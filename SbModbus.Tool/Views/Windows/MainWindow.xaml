@@ -1,0 +1,37 @@
+<Window x:Class="SbModbus.Tool.Views.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
+        xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+        d:DataContext="{d:DesignInstance wvm:MainWindowViewModel}"
+        WindowStartupLocation="CenterScreen"
+        Title="{StaticResource lang.title}"
+        Icon="pack://application:,,,/Assets/icon.ico">
+
+  <Grid>
+    <TabControl>
+      <TabControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal" />
+        </ItemsPanelTemplate>
+      </TabControl.ItemsPanel>
+      <TabItem Header="{StaticResource lang.serialPortAssistant}" FontSize="{StaticResource HeadFontSize}">
+        <Border>
+          <pages:SerialPortAssistantPage Margin="1" />
+        </Border>
+      </TabItem>
+      <TabItem Header="{StaticResource lang.modbus}" FontSize="{StaticResource HeadFontSize}">
+        <Border>
+          <pages:ModbusPage Margin="1" />
+        </Border>
+      </TabItem>
+    </TabControl>
+    <Button Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="2"
+            Width="100" Height="25"
+            Content="{StaticResource lang.btnDsLog}"
+            Command="{Binding OpenLogDirectoryCommand}" />
+  </Grid>
+</Window>

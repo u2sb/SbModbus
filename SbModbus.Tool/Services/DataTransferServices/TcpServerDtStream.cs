@@ -1,9 +1,5 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Buffers;
 using System.Net;
-using System.Threading.Tasks;
 using NetCoreServer;
 
 namespace SbModbus.Tool.Services.DataTransferServices;
@@ -102,7 +98,11 @@ public class TcpServerDtStream : TcpServer, IDtStream
     base.OnConnected(session);
     OnSessionStateChanged?.Invoke(Sessions.Values.Select(s =>
     {
-      if (s.Socket.RemoteEndPoint is IPEndPoint ipEndPoint) return $"{ipEndPoint!.Address}:{ipEndPoint!.Port}";
+      if (s.Socket.RemoteEndPoint is IPEndPoint ipEndPoint)
+      {
+        return $"{ipEndPoint!.Address}:{ipEndPoint!.Port}";
+      }
+
       return null;
     }).Where(s => s is not null)!);
   }
@@ -112,11 +112,17 @@ public class TcpServerDtStream : TcpServer, IDtStream
     base.OnDisconnected(session);
 
     if (Sessions.ContainsKey(session.Id))
+    {
       OnSessionStateChanged?.Invoke(Sessions.Values.Except([session]).Select(s =>
       {
-        if (s.Socket.RemoteEndPoint is IPEndPoint ipEndPoint) return $"{ipEndPoint!.Address}:{ipEndPoint!.Port}";
+        if (s.Socket.RemoteEndPoint is IPEndPoint ipEndPoint)
+        {
+          return $"{ipEndPoint!.Address}:{ipEndPoint!.Port}";
+        }
+
         return null;
       }).Where(s => s is not null)!);
+    }
   }
 }
 
