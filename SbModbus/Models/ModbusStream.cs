@@ -28,31 +28,6 @@ public abstract class ModbusStream : IModbusStream
   /// <inheritdoc />
   public abstract int WriteTimeout { get; set; }
 
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-
-  /// <summary>
-  ///   发送事件
-  /// </summary>
-  public ReadOnlySpanAction<byte, IModbusStream>? OnWrite { get; set; }
-
-  /// <summary>
-  ///   接收事件
-  /// </summary>
-  public ReadOnlySpanAction<byte, IModbusStream>? OnRead { get; set; }
-
-#else
-  /// <summary>
-  ///   发送事件
-  /// </summary>
-  public Action<byte[], IModbusStream>? OnWrite { get; set; }
-
-  /// <summary>
-  ///   接收事件
-  /// </summary>
-  public Action<byte[], IModbusStream>? OnRead { get; set; }
-
-#endif
-
   /// <inheritdoc />
   public abstract bool Connect();
 
@@ -68,11 +43,6 @@ public abstract class ModbusStream : IModbusStream
     if (IsConnected && BaseStream is not null)
     {
       BaseStream.Write(buffer);
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnWrite?.Invoke(buffer, this);
-#else
-      OnWrite?.Invoke(buffer.ToArray(), this);
-#endif
       BaseStream.Flush();
     }
   }
@@ -83,11 +53,6 @@ public abstract class ModbusStream : IModbusStream
     if (IsConnected && BaseStream is not null)
     {
       await BaseStream.WriteAsync(buffer, ct);
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      OnWrite?.Invoke(buffer.Span, this);
-#else
-      OnWrite?.Invoke(buffer.ToArray(), this);
-#endif
       await BaseStream.FlushAsync(ct);
     }
   }

@@ -19,6 +19,16 @@ public interface IModbusClient
   ///   是否连接
   /// </summary>
   public bool IsConnected { get; }
+  
+  /// <summary>
+  ///   发送事件
+  /// </summary>
+  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnWrite { get; set; }
+
+  /// <summary>
+  ///   接收事件
+  /// </summary>
+  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnRead { get; set; }
 
   /// <summary>
   ///   读取线圈 FC01

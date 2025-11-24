@@ -94,15 +94,12 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
       
 #if NET8_0_OR_GREATER
       BaseStream.ReadExactly(b);
-      OnRead?.Invoke(b, this);
 #elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
       _ = BaseStream.Read(b);
-      OnRead?.Invoke(b, this);
 #else
       var temp = new byte[len];
       SerialPort.Read(temp, 0, len);
       temp.CopyTo(b);
-      OnRead?.Invoke(temp, this);
 #endif
     }
     return len;
@@ -120,15 +117,12 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
       
 #if NET8_0_OR_GREATER
       await BaseStream.ReadExactlyAsync(b, cts.Token);
-      OnRead?.Invoke(b.Span, this);
 #elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
      _ = await BaseStream.ReadAsync(b, ct);
-     OnRead?.Invoke(b.Span, this);
 #else
       var temp = new byte[len];
       SerialPort.Read(temp, 0, len);
       temp.CopyTo(b);
-      OnRead?.Invoke(temp, this);
 #endif
     }
     return len;

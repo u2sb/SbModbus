@@ -128,6 +128,8 @@ public partial class ModbusTcpClient
 
     // 写入数据 
     await ModbusStream.WriteAsync(data, ct);
+    
+    OnWrite?.Invoke(data, this);
 
     using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(readTimeout);
@@ -162,6 +164,8 @@ public partial class ModbusTcpClient
       }
 
       var result = memory[..bytesRead];
+      
+      OnRead?.Invoke(result, this);
 
       VerifyFrame(result.Span, tid);
 

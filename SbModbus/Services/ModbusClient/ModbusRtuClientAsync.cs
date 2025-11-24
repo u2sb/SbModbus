@@ -99,6 +99,8 @@ public partial class ModbusRtuClient
     // 写入数据 
     await ModbusStream.WriteAsync(data, ct);
 
+    OnWrite?.Invoke(data, this);
+
     // TODO 这里没实现写超时 后续实现
 
     using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -134,6 +136,8 @@ public partial class ModbusRtuClient
       }
 
       var result = memory[..bytesRead];
+      
+      OnRead?.Invoke(result, this);
 
       // 验证数据帧
       VerifyFrame(result.Span);

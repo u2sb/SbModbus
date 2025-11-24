@@ -81,7 +81,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   public override void Write(ReadOnlySpan<byte> buffer)
   {
     _tcpClient.SendAsync(buffer);
-    OnWrite?.Invoke(buffer, this);
   }
 
   /// <inheritdoc />
@@ -95,7 +94,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   public override int Read(Span<byte> buffer)
   {
     var len = _tcpClient.GetBuffer(buffer);
-    OnRead?.Invoke(buffer[..len], this);
     return len;
   }
 

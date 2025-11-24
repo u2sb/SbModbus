@@ -34,7 +34,6 @@ public class VirtualModbusStream : ModbusStream
 
   public override void Write(ReadOnlySpan<byte> buffer)
   {
-    OnWrite?.Invoke(buffer, this);
   }
 
   public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)

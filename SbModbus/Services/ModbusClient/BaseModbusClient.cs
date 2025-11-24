@@ -40,6 +40,12 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public bool IsConnected => ModbusStream.IsConnected;
 
+  /// <inheritdoc />
+  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnWrite { get; set; }
+  
+  /// <inheritdoc />
+  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnRead { get; set; }
+
 
   #region 通用公共方法
 

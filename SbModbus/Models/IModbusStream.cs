@@ -15,33 +15,6 @@ public interface IModbusStream : IDisposable
   ///   基础流
   /// </summary>
   public Stream? BaseStream { get; }
-  
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-  
-  /// <summary>
-  ///   发送事件
-  /// </summary>
-  public ReadOnlySpanAction<byte, IModbusStream>? OnWrite { get; set; }
-
-  /// <summary>
-  ///   接收事件
-  /// </summary>
-  public ReadOnlySpanAction<byte, IModbusStream>? OnRead { get; set; }
-  
-  #else
-  
-  /// <summary>
-  ///   发送事件
-  /// </summary>
-  public Action<byte[], IModbusStream>? OnWrite { get; set; }
-
-  /// <summary>
-  ///   接收事件
-  /// </summary>
-  public Action<byte[], IModbusStream>? OnRead { get; set; }
-  
-#endif
-
 
   /// <summary>
   ///   是否连接
