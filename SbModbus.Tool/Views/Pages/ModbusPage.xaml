@@ -185,13 +185,23 @@
           </Grid>
           <Grid Height="50">
             <TextBlock Text="{StaticResource lang.modbusAddress}" />
-            <TextBox
-              Text="{Binding ModbusAddressString}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <TextBox Margin="10,5" Width="70" Text="{Binding ModbusAddressString}" />
+              <ComboBox Width="70" SelectedIndex="{Binding ModbusAddressType}">
+                <ComboBoxItem Content="DEC" />
+                <ComboBoxItem Content="HEX" />
+              </ComboBox>
+            </StackPanel>
           </Grid>
           <Grid Height="50">
             <TextBlock Text="{StaticResource lang.modbusReadLength}" />
-            <TextBox
-              Text="{Binding ReadNumberString}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <TextBox Margin="10,5" Width="70" Text="{Binding ReadNumberString}" />
+              <ComboBox Width="70" SelectedIndex="{Binding ReadNumberType}">
+                <ComboBoxItem Content="DEC" />
+                <ComboBoxItem Content="HEX" />
+              </ComboBox>
+            </StackPanel>
           </Grid>
           <Grid Height="50">
             <TextBlock Text="{StaticResource lang.modbusValueType}" />
@@ -200,11 +210,16 @@
               SelectedIndex="{Binding SelectedModbusValueType, 
                     Converter={StaticResource EnumToIntConverter}}" />
           </Grid>
-          <Grid Height="100">
+          <Grid Height="85">
             <TextBlock Margin="0,15" VerticalAlignment="Top" Text="{StaticResource lang.modbusValue}" />
-            <TextBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35" Width="Auto"
-                     Margin="0,0,0,15"
-                     Text="{Binding ModbusInputValueString}" />
+            <StackPanel Orientation="Horizontal" Height="50" Width="Auto" VerticalAlignment="Bottom">
+              <TextBox HorizontalAlignment="Stretch" Margin="0,5,10,5" Width="128"
+                       Text="{Binding ModbusInputValueString}" />
+              <ComboBox Width="70" SelectedIndex="{Binding ModbusInputValueType}">
+                <ComboBoxItem Content="DEC" />
+                <ComboBoxItem Content="HEX" />
+              </ComboBox>
+            </StackPanel>
           </Grid>
           <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
             <Button Margin="10,0" Width="80" FontWeight="Bold"

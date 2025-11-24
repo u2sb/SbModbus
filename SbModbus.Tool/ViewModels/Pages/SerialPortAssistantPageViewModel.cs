@@ -517,18 +517,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
-  [ObservableProperty] private Vector _dsLogShowOffset;
-  [ObservableProperty] private Size _dsLogShowExtentSize;
-  [ObservableProperty] private Size _dsLogShowViewPortSize;
-
-  partial void OnDsLogShowExtentSizeChanged(Size oldValue, Size newValue)
-  {
-    if (DsLogShowOffset.Y + DsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
-    {
-      // DsLogShowOffset = DsLogShowOffset.WithY(newValue.Height - DsLogShowViewPortSize.Height);
-    }
-  }
-
   /// <summary>
   ///   输出日志
   /// </summary>

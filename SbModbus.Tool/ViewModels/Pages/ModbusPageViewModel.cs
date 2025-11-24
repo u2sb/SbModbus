@@ -298,10 +298,22 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   partial void OnModbusAddressStringChanged(string? value)
   {
-    if (value is not null && value.TryParseToUInt16(out var address))
+    if (value is not null)
     {
-      ModbusAddress = address;
+      var number = Convert.ToByte(ModbusAddressString, ModbusAddressType == 0 ? 10 : 16);
+      ModbusAddress = number;
     }
+  }
+
+  /// <summary>
+  ///   Modbus地址类型 0 表示十进制 1表示十六进制
+  /// </summary>
+  [ObservableProperty] private int _modbusAddressType;
+
+  partial void OnModbusAddressTypeChanged(int value)
+  {
+    var number = Convert.ToByte(ModbusAddressString, ModbusAddressType == 0 ? 10 : 16);
+    ModbusAddress = number;
   }
 
   /// <summary>
@@ -317,10 +329,22 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   partial void OnReadNumberStringChanged(string? value)
   {
-    if (value is not null && value.TryParseToByte(out var number))
+    if (value is not null)
     {
+      var number = Convert.ToByte(ReadNumberString, ReadNumberType == 0 ? 10 : 16);
       ReadNumber = number;
     }
+  }
+
+  /// <summary>
+  ///   寄存器数量类型 0 表示十进制 1表示十六进制
+  /// </summary>
+  [ObservableProperty] private int _readNumberType;
+
+  partial void OnReadNumberTypeChanged(int value)
+  {
+    var number = Convert.ToByte(ReadNumberString, ReadNumberType == 0 ? 10 : 16);
+    ReadNumber = number;
   }
 
   /// <summary>
@@ -331,7 +355,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   要读取的寄存器数量
   /// </summary>
-  private byte ModbusReadCount => SelectedModbusValueType switch
+  public byte ModbusReadCount => SelectedModbusValueType switch
   {
     ModbusValueType.Bit or ModbusValueType.UShort or ModbusValueType.Short => (byte)(1 * ReadNumber),
     ModbusValueType.Int or ModbusValueType.UInt or ModbusValueType.Float => (byte)(2 * ReadNumber),
@@ -348,19 +372,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     "bit", "short", "ushort", "int", "uint", "long", "ulong", "float", "double"
   ];
 
-
-  [ObservableProperty] private double _modbusInputValue;
-
   [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsDouble))]
   private string? _modbusInputValueString = "0";
 
-  partial void OnModbusInputValueStringChanged(string? value)
-  {
-    if (value is not null && value.TryParseToDouble(out var inputValue))
-    {
-      ModbusInputValue = inputValue;
-    }
-  }
+
+  /// <summary>
+  ///   Modbus输入值类型 0 表示十进制 1表示十六进制
+  /// </summary>
+  [ObservableProperty] private int _modbusInputValueType;
 
   /// <summary>
   ///   读
@@ -421,10 +440,12 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
     try
     {
+      var fromBase = ModbusInputValueType == 0 ? 10 : 16;
+
       switch (SelectedModbusWriteFunctionCode)
       {
         case ModbusFunctionCode.WriteSingleCoil:
-          var bv = ModbusInputValue > 0;
+          var bv = ModbusAddressString != "0";
           await _modbusClient.WriteSingleCoilAsync(StationId, ModbusAddress, bv, cts.Token);
           break;
         case ModbusFunctionCode.WriteSingleRegister:
@@ -432,14 +453,17 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
           if (ModbusInputValueString is not null)
           {
-            srv = SelectedModbusValueType switch
+            switch (SelectedModbusValueType)
             {
-              ModbusValueType.Short when ModbusInputValueString.TryParseToInt16(out var sv) =>
-                sv.ToByteArray(EncodingMode),
-              ModbusValueType.UShort when ModbusInputValueString.TryParseToUInt16(out var usv) =>
-                usv.ToByteArray(EncodingMode),
-              _ => srv
-            };
+              case ModbusValueType.Short:
+                var sv = Convert.ToInt16(ModbusInputValueString, fromBase);
+                srv = sv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.UShort:
+                var usv = Convert.ToUInt16(ModbusInputValueString, fromBase);
+                srv = usv.ToByteArray(EncodingMode);
+                break;
+            }
           }
 
           if (srv.Length == 2)
@@ -453,34 +477,42 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
           if (ModbusInputValueString is not null)
           {
-            mrv = SelectedModbusValueType switch
+            switch (SelectedModbusValueType)
             {
-              ModbusValueType.Short when ModbusInputValueString.TryParseToInt16(out var sv) =>
-                sv.ToByteArray(EncodingMode),
-
-              ModbusValueType.UShort when ModbusInputValueString.TryParseToUInt16(out var usv) =>
-                usv.ToByteArray(EncodingMode),
-
-              ModbusValueType.Int when ModbusInputValueString.TryParseToInt32(out var iv) =>
-                iv.ToByteArray(EncodingMode),
-
-              ModbusValueType.UInt when ModbusInputValueString.TryParseToUInt32(out var uiv) =>
-                uiv.ToByteArray(EncodingMode),
-
-              ModbusValueType.Long when ModbusInputValueString.TryParseToInt64(out var lv) =>
-                lv.ToByteArray(EncodingMode),
-
-              ModbusValueType.ULong when ModbusInputValueString.TryParseToUInt64(out var ulv) =>
-                ulv.ToByteArray(EncodingMode),
-
-              ModbusValueType.Float when ModbusInputValueString.TryParseToFloat(out var fv) =>
-                fv.ToByteArray(EncodingMode),
-
-              ModbusValueType.Double when ModbusInputValueString.TryParseToDouble(out var dv) =>
-                dv.ToByteArray(EncodingMode),
-
-              _ => mrv
-            };
+              case ModbusValueType.Short:
+                var sv = Convert.ToInt16(ModbusInputValueString, fromBase);
+                mrv = sv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.UShort:
+                var usv = Convert.ToUInt16(ModbusInputValueString, fromBase);
+                mrv = usv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.Int:
+                var iv = Convert.ToInt32(ModbusInputValueString, fromBase);
+                mrv = iv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.UInt:
+                var uiv = Convert.ToUInt32(ModbusInputValueString, fromBase);
+                mrv = uiv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.Long:
+                var lv = Convert.ToInt64(ModbusInputValueString, fromBase);
+                mrv = lv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.ULong:
+                var ulv = Convert.ToUInt64(ModbusInputValueString, fromBase);
+                mrv = ulv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.Float when ModbusInputValueString.TryParseToFloat(out var fv):
+                mrv = fv.ToByteArray(EncodingMode);
+                break;
+              case ModbusValueType.Double when ModbusInputValueString.TryParseToDouble(out var dv):
+                mrv = dv.ToByteArray(EncodingMode);
+                break;
+              default:
+                mrv = mrv;
+                break;
+            }
           }
 
           if (mrv.Length > 0)
@@ -585,14 +617,22 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   private void OnDataWrite(ReadOnlySpan<byte> data, IModbusStream _)
   {
-    if (data.IsEmpty) return;
+    if (data.IsEmpty)
+    {
+      return;
+    }
+
     _dtr?.WriteOutLog(data);
     _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), true));
   }
 
   private void OnDataReceived(ReadOnlySpan<byte> data, IModbusStream _)
   {
-    if (data.IsEmpty) return;
+    if (data.IsEmpty)
+    {
+      return;
+    }
+
     _dtr?.WriteInLog(data);
     _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), false));
   }
@@ -675,33 +715,9 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
-  [ObservableProperty] private Vector _dsLogShowOffset;
-  [ObservableProperty] private Size _dsLogShowExtentSize;
-  [ObservableProperty] private Size _dsLogShowViewPortSize;
-
-  // partial void OnDsLogShowExtentSizeChanged(Size oldValue, Size newValue)
-  // {
-  //   if (DsLogShowOffset.Y + DsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
-  //   {
-  //     DsLogShowOffset = DsLogShowOffset.WithY(newValue.Height - DsLogShowViewPortSize.Height);
-  //   }
-  // }
-
   private readonly ObservableFixedSizeRingBuffer<ModbusReadLog> _msLogs;
 
   public INotifyCollectionChangedSynchronizedViewList<ModbusReadLog> MsLogs { get; }
-
-  [ObservableProperty] private Vector _msLogShowOffset;
-  [ObservableProperty] private Size _msLogShowExtentSize;
-  [ObservableProperty] private Size _msLogShowViewPortSize;
-
-  partial void OnMsLogShowExtentSizeChanged(Size oldValue, Size newValue)
-  {
-    if (MsLogShowOffset.Y + MsLogShowViewPortSize.Height >= oldValue.Height - 10.0)
-    {
-      // MsLogShowOffset = MsLogShowOffset.WithY(newValue.Height - MsLogShowViewPortSize.Height);
-    }
-  }
 
   [RelayCommand]
   private void CleanOutput()
