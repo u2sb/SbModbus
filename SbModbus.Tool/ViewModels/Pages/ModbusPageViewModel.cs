@@ -509,9 +509,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
               case ModbusValueType.Double when ModbusInputValueString.TryParseToDouble(out var dv):
                 mrv = dv.ToByteArray(EncodingMode);
                 break;
-              default:
-                mrv = mrv;
-                break;
             }
           }
 
@@ -568,8 +565,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
       if (IsConnected)
       {
-        _modbusClient.OnRead += OnDataReceived;
-        _modbusClient.OnWrite += OnDataWrite;
+        _modbusClient?.OnRead += OnDataReceived;
+        _modbusClient?.OnWrite += OnDataWrite;
       }
     }
 
@@ -589,8 +586,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       _modbusStream.Disconnect();
     }
 
-    _modbusClient.OnRead -= OnDataReceived;
-    _modbusClient.OnWrite -= OnDataWrite;
+    _modbusClient?.OnRead -= OnDataReceived;
+    _modbusClient?.OnWrite -= OnDataWrite;
 
     IsConnected = false;
 
