@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -60,14 +61,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     SerialPortNames =
       _serialPortNames.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     SerialPortNames.AddTo(ref _disposableBag);
-
-    _dsLogs = new ObservableFixedSizeRingBuffer<DsLog>(DsLogMaxShow);
-    DsLogs = _dsLogs.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
-    DsLogs.AddTo(ref _disposableBag);
-
-    _msLogs = new ObservableFixedSizeRingBuffer<ModbusReadLog>(DsLogMaxShow);
-    MsLogs = _msLogs.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
-    MsLogs.AddTo(ref _disposableBag);
   }
 
   public void Dispose()
@@ -413,7 +406,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
       if (!result.IsEmpty)
       {
-        _msLogs.AddLast(new ModbusReadLog(DateTime.Now, result.ToArray(), EncodingMode, ModbusAddress));
+        App.Current.Dispatcher.Invoke(() =>
+        {
+          MsLogs.Add(new ModbusReadLog(DateTime.Now, result.ToArray(), EncodingMode, ModbusAddress));
+          while (MsLogs.Count > DsLogMaxShow) MsLogs.RemoveAt(0);
+        });
       }
     }
     catch (Exception)
@@ -620,7 +617,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     }
 
     _dtr?.WriteOutLog(data.Span);
-    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), true));
+    App.Current.Dispatcher.Invoke(() =>
+    {
+      DsLogs.Add(new DsLog(DateTime.Now, data.ToArray(), true));
+      while (DsLogs.Count > DsLogMaxShow) DsLogs.RemoveAt(0);
+    });
   }
 
   private void OnDataReceived(ReadOnlyMemory<byte> data, IModbusClient _)
@@ -631,7 +632,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     }
 
     _dtr?.WriteInLog(data.Span);
-    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), false));
+    App.Current.Dispatcher.Invoke(() =>
+    {
+      DsLogs.Add(new DsLog(DateTime.Now, data.ToArray(), false));
+      while (DsLogs.Count > DsLogMaxShow) DsLogs.RemoveAt(0);
+    });
   }
 
   #endregion
@@ -703,24 +708,20 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   #region 日志显示框
 
-  private readonly ObservableFixedSizeRingBuffer<DsLog> _dsLogs;
-
   /// <summary>
   ///   显示的日志
   /// </summary>
-  public INotifyCollectionChangedSynchronizedViewList<DsLog> DsLogs { get; }
+  public ObservableCollection<DsLog> DsLogs { get; }
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
-  private readonly ObservableFixedSizeRingBuffer<ModbusReadLog> _msLogs;
-
-  public INotifyCollectionChangedSynchronizedViewList<ModbusReadLog> MsLogs { get; }
+  public ObservableCollection<ModbusReadLog> MsLogs { get; }
 
   [RelayCommand]
   private void CleanOutput()
   {
-    _dsLogs.Clear();
-    _msLogs.Clear();
+    DsLogs.Clear();
+    MsLogs.Clear();
   }
 
   /// <summary>

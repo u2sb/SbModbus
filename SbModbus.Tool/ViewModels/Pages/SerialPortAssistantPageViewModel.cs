@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
 using System.Net;
@@ -57,10 +58,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
     SerialPortNames =
       _serialPortNames.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     SerialPortNames.AddTo(ref _disposableBag);
-
-    _dsLogs = new ObservableFixedSizeRingBuffer<DsLog>(DsLogMaxShow);
-    DsLogs = _dsLogs.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
-    DsLogs.AddTo(ref _disposableBag);
 
     Sessions = _sessions.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
     Sessions.AddTo(ref _disposableBag);
@@ -469,13 +466,24 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   private void OnDataWrite(ReadOnlySpan<byte> data, IDtStream dtStream)
   {
     _dtr?.WriteOutLog(data);
-    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), true));
+    
+    var content = data.ToArray();
+    App.Current.Dispatcher.Invoke(() =>
+    {
+      DsLogs.Add(new DsLog(DateTime.Now, content, true));
+      while (DsLogs.Count > DsLogMaxShow) DsLogs.RemoveAt(0);
+    });
   }
 
   private void OnDataReceived(ReadOnlySpan<byte> data, IDtStream dtStream)
   {
     _dtr?.WriteInLog(data);
-    _dsLogs.AddLast(new DsLog(DateTime.Now, data.ToArray(), false));
+    var content = data.ToArray();
+    App.Current.Dispatcher.Invoke(() =>
+    {
+      DsLogs.Add(new DsLog(DateTime.Now, content, false));
+      while (DsLogs.Count > DsLogMaxShow) DsLogs.RemoveAt(0);
+    });
   }
 
   private void OnSessionStateChanged(IEnumerable<string> ids)
@@ -507,13 +515,11 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   ///   需要发送的Hex值
   /// </summary>
   private readonly ArrayBufferWriter<byte> _inputBuffer = new();
-  
-  private readonly ObservableFixedSizeRingBuffer<DsLog> _dsLogs;
 
   /// <summary>
   ///   显示的日志
   /// </summary>
-  public INotifyCollectionChangedSynchronizedViewList<DsLog> DsLogs { get; }
+  public ObservableCollection<DsLog> DsLogs { get; } = [];
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
@@ -590,7 +596,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   [RelayCommand]
   private void CleanOutput()
   {
-    _dsLogs.Clear();
+    DsLogs.Clear();
   }
 
   private void GetInputBytes()
