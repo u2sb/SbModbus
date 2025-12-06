@@ -711,11 +711,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   显示的日志
   /// </summary>
-  public ObservableCollection<DsLog> DsLogs { get; }
+  public ObservableCollection<DsLog> DsLogs { get; } = [];
 
   [ObservableProperty] private int _dsLogMaxShow = 50;
 
-  public ObservableCollection<ModbusReadLog> MsLogs { get; }
+  public ObservableCollection<ModbusReadLog> MsLogs { get; } = [];
 
   [RelayCommand]
   private void CleanOutput()
