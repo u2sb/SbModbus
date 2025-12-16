@@ -1,25 +1,23 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Windows;
 using System.Windows.Media;
-using SbModbus.Tool.Models.Settings;
-using SbModbus.Tool.Services.ModbusServices;
-using SbModbus.Tool.Services.RecordServices;
-using SbModbus.Tool.Utils;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
-using ObservableCollections;
 using R3;
 using Sb.Extensions.System;
 using SbModbus.Models;
 using SbModbus.SerialPortStream;
 using SbModbus.Services.ModbusClient;
 using SbModbus.TcpStream;
+using SbModbus.Tool.Models.Settings;
+using SbModbus.Tool.Services.ModbusServices;
+using SbModbus.Tool.Services.RecordServices;
+using SbModbus.Tool.Utils;
 
 namespace SbModbus.Tool.ViewModels.Pages;
 
@@ -57,10 +55,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       OnLoaded();
       LoadSettings();
     }
-
-    SerialPortNames =
-      _serialPortNames.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
-    SerialPortNames.AddTo(ref _disposableBag);
   }
 
   public void Dispose()
@@ -99,10 +93,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   partial void OnBaudRateStringChanged(string? value)
   {
-    if (value is not null && value.TryParseToInt32(out var baudRate))
-    {
-      BaudRate = baudRate;
-    }
+    if (value is not null && value.TryParseToInt32(out var baudRate)) BaudRate = baudRate;
   }
 
   /// <summary>
@@ -128,12 +119,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   串口名称列表
   /// </summary>
-  private readonly ObservableList<string> _serialPortNames = [];
-
-  /// <summary>
-  ///   串口名称列表
-  /// </summary>
-  public NotifyCollectionChangedSynchronizedViewList<string> SerialPortNames { get; }
+  public ObservableCollection<string> SerialPortNames { get; } = [];
 
   /// <summary>
   ///   校验位列表
@@ -229,10 +215,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   partial void OnStationIdStringChanged(string? value)
   {
-    if (value is not null && value.TryParseToByte(out var sid))
-    {
-      StationId = sid;
-    }
+    if (value is not null && value.TryParseToByte(out var sid)) StationId = sid;
   }
 
   /// <summary>
@@ -380,10 +363,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private async Task ReadAsync(CancellationToken ct)
   {
-    if (_modbusClient is not { IsConnected: true })
-    {
-      return;
-    }
+    if (_modbusClient is not { IsConnected: true }) return;
 
     var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(TimeSpan.FromSeconds(3));
@@ -405,13 +385,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       };
 
       if (!result.IsEmpty)
-      {
         App.Current.Dispatcher.Invoke(() =>
         {
           MsLogs.Add(new ModbusReadLog(DateTime.Now, result.ToArray(), EncodingMode, ModbusAddress));
           while (MsLogs.Count > DsLogMaxShow) MsLogs.RemoveAt(0);
         });
-      }
     }
     catch (Exception)
     {
@@ -427,10 +405,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private async Task WriteAsync(CancellationToken ct)
   {
-    if (_modbusClient is not { IsConnected: true })
-    {
-      return;
-    }
+    if (_modbusClient is not { IsConnected: true }) return;
 
     var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(TimeSpan.FromSeconds(3));
@@ -449,7 +424,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
           byte[] srv = [];
 
           if (ModbusInputValueString is not null)
-          {
             switch (SelectedModbusValueType)
             {
               case ModbusValueType.Short:
@@ -461,19 +435,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
                 srv = usv.ToByteArray(EncodingMode);
                 break;
             }
-          }
 
-          if (srv.Length == 2)
-          {
-            await _modbusClient.WriteSingleRegisterAsync(StationId, ModbusAddress, srv, cts.Token);
-          }
+          if (srv.Length == 2) await _modbusClient.WriteSingleRegisterAsync(StationId, ModbusAddress, srv, cts.Token);
 
           break;
         case ModbusFunctionCode.WriteMultipleRegisters:
           byte[] mrv = [];
 
           if (ModbusInputValueString is not null)
-          {
             switch (SelectedModbusValueType)
             {
               case ModbusValueType.Short:
@@ -507,12 +476,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
                 mrv = dv.ToByteArray(EncodingMode);
                 break;
             }
-          }
 
-          if (mrv.Length > 0)
-          {
-            await _modbusClient.WriteMultipleRegistersAsync(StationId, ModbusAddress, mrv, cts.Token);
-          }
+          if (mrv.Length > 0) await _modbusClient.WriteMultipleRegistersAsync(StationId, ModbusAddress, mrv, cts.Token);
 
           break;
       }
@@ -573,15 +538,9 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private void Disconnect()
   {
-    if (_modbusStream is null)
-    {
-      return;
-    }
+    if (_modbusStream is null) return;
 
-    if (_modbusStream.IsConnected)
-    {
-      _modbusStream.Disconnect();
-    }
+    if (_modbusStream.IsConnected) _modbusStream.Disconnect();
 
     _modbusClient?.OnRead -= OnDataReceived;
     _modbusClient?.OnWrite -= OnDataWrite;
@@ -600,21 +559,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   {
     IsConnected = isConnected;
     if (isConnected)
-    {
       _dtr?.Open();
-    }
     else
-    {
       _dtr?.Close();
-    }
   }
 
   private void OnDataWrite(ReadOnlyMemory<byte> data, IModbusClient _)
   {
-    if (data.IsEmpty)
-    {
-      return;
-    }
+    if (data.IsEmpty) return;
 
     _dtr?.WriteOutLog(data.Span);
     App.Current.Dispatcher.Invoke(() =>
@@ -626,10 +578,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   private void OnDataReceived(ReadOnlyMemory<byte> data, IModbusClient _)
   {
-    if (data.IsEmpty)
-    {
-      return;
-    }
+    if (data.IsEmpty) return;
 
     _dtr?.WriteInLog(data.Span);
     App.Current.Dispatcher.Invoke(() =>
@@ -651,12 +600,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   private void RefreshSerialPortNames()
   {
-    _serialPortNames.Clear();
+    SerialPortNames.Clear();
     var ports = SerialPort.GetPortNames();
     if (ports is { Length: > 0 })
-    {
-      _serialPortNames.AddRange(ports);
-    }
+      foreach (var port in ports)
+        SerialPortNames.Add(port);
   }
 
   private void LoadSettings()
@@ -693,10 +641,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       _settings.StopBits = StopBits;
       _settings.Handshake = Handshake;
       _settings.TargetIp = TargetIp;
-      if (TargetPort.TryParseToUInt16(out var targetPort))
-      {
-        _settings.TargetPort = targetPort;
-      }
+      if (TargetPort.TryParseToUInt16(out var targetPort)) _settings.TargetPort = targetPort;
 
       _settings.StationId = StationId;
 
@@ -738,10 +683,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       get
       {
         var len = Content.Length * 3 - 1;
-        if (len < 0)
-        {
-          return string.Empty;
-        }
+        if (len < 0) return string.Empty;
 
         var temp = len < 512 ? stackalloc char[len] : new char[len];
         DataTransmissionRecordLogExtensions.WriteHexChar(Content, temp);
@@ -796,10 +738,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
         for (var i = 0; i < ts.Length; i++)
         {
           var ci = size * i;
-          if (ci >= Content.Length)
-          {
-            break;
-          }
+          if (ci >= Content.Length) break;
 
           var ti = csp.Slice(ci, size);
 
@@ -810,10 +749,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
           {
             var b = bit[j];
             sb.Append(b ? '1' : '0');
-            if (j == 7)
-            {
-              sb.Append(' ');
-            }
+            if (j == 7) sb.Append(' ');
           }
 
           ts[i] = sb.ToString();
@@ -829,10 +765,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
         for (var i = 0; i < ts.Length; i++)
         {
           var ci = size * i;
-          if (ci >= Content.Length)
-          {
-            break;
-          }
+          if (ci >= Content.Length) break;
 
           var ti = csp.Slice(ci, size).ToT<T>(EncodingMode);
 
@@ -855,10 +788,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       for (var i = 0; i < ts.Length; i++)
       {
         var ci = 2 * i;
-        if (ci >= Content.Length)
-        {
-          break;
-        }
+        if (ci >= Content.Length) break;
 
         var address = StartAddress + i;
 

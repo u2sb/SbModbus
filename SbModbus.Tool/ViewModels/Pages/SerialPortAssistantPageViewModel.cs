@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
@@ -13,7 +13,6 @@ using SbModbus.Tool.Utils;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
-using ObservableCollections;
 using R3;
 using Sb.Extensions.System;
 
@@ -54,13 +53,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       _dtr = Ioc.Default.GetRequiredService<DataTransmissionRecord>();
       LoadSettings();
     }
-
-    SerialPortNames =
-      _serialPortNames.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
-    SerialPortNames.AddTo(ref _disposableBag);
-
-    Sessions = _sessions.ToNotifyCollectionChanged(SynchronizationContextCollectionEventDispatcher.Current);
-    Sessions.AddTo(ref _disposableBag);
   }
 
   public void Dispose()
@@ -146,14 +138,14 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
     if (_dtStream is TcpServerDtStream tsds)
     {
-      _sessions.Clear();
+      Sessions.Clear();
       SelectedSessionIndex = -1;
       tsds.OnSessionStateChanged -= OnSessionStateChanged;
     }
 
     if (_dtStream is UdpServerDtStream usds)
     {
-      _sessions.Clear();
+      Sessions.Clear();
       SelectedSessionIndex = -1;
       usds.OnSessionStateChanged -= OnSessionStateChanged;
     }
@@ -218,12 +210,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   串口名称列表
   /// </summary>
-  private readonly ObservableList<string> _serialPortNames = [];
-
-  /// <summary>
-  ///   串口名称列表
-  /// </summary>
-  public NotifyCollectionChangedSynchronizedViewList<string> SerialPortNames { get; }
+  public ObservableCollection<string> SerialPortNames { get; } = [];
 
   /// <summary>
   ///   校验位列表
@@ -294,12 +281,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   客户端列表
   /// </summary>
-  private ObservableList<string> _sessions { get; } = [];
-
-  /// <summary>
-  ///   客户端列表
-  /// </summary>
-  public INotifyCollectionChangedSynchronizedViewList<string> Sessions { get; }
+  public ObservableCollection<string> Sessions { get; } = [];
 
   /// <summary>
   ///   选中的客户端
@@ -388,11 +370,14 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   private void RefreshSerialPortNames()
   {
-    _serialPortNames.Clear();
+    SerialPortNames.Clear();
     var ports = SerialPort.GetPortNames();
     if (ports is { Length: > 0 })
     {
-      _serialPortNames.AddRange(ports);
+      foreach (var port in ports)
+      {
+        SerialPortNames.Add(port);
+      }
     }
   }
 
@@ -488,8 +473,11 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   private void OnSessionStateChanged(IEnumerable<string> ids)
   {
-    _sessions.Clear();
-    _sessions.AddRange(ids);
+    Sessions.Clear();
+    foreach (var id in ids)
+    {
+      Sessions.Add(id);
+    }
   }
 
   #endregion

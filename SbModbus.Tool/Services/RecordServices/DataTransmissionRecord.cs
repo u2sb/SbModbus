@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,12 +14,15 @@ namespace SbModbus.Tool.Services.RecordServices;
 /// </summary>
 public class DataTransmissionRecord : IDisposable
 {
+
+  private static string RootPath { get; } = Environment.CurrentDirectory;
+
   private ILogger<DataTransmissionRecord>? _logger;
 
   private ILoggerFactory? _loggerFactory;
 
   public static string LogDirPath =>
-    Path.Combine(ZioFile.Instance.RootPath.FullName, "Logs", "TransmissionRecord", $"{DateTime.Now:yyyy/MM/dd/}");
+    Path.Combine(RootPath, "Logs", "TransmissionRecord", $"{DateTime.Now:yyyy/MM/dd/}");
 
   private static string LogFilePath => Path.Combine(LogDirPath, $"{DateTime.Now:HH-mm-ss-fff}.ansi");
 

@@ -4,7 +4,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using NetCoreServer;
-using ObservableCollections;
+using Sb.Extensions.System.Buffers.RingBuffers;
 using SbModbus.Models;
 
 namespace SbModbus.TcpStream;
@@ -109,7 +109,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <summary>
     ///   缓冲区
     /// </summary>
-    private readonly RingBuffer<byte> _circularBuffer = new(4096);
+    private readonly FixedSizeRingBuffer<byte> _circularBuffer = new(4096);
 
     private readonly object _locker = new();
 
@@ -132,18 +132,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <inheritdoc />
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
-      var end = offset + size;
       lock (_locker)
       {
-        for (var i = offset; i < end; i++)
-        {
-          if (i >= buffer.Length)
-          {
-            return;
-          }
-
-          _circularBuffer.AddLast(buffer[i]);
-        }
+        var span = _circularBuffer.WritableSpan;
+        span.CopyFrom(buffer.AsSpan((int)offset, (int)size));
+        _circularBuffer.MoveEnd((int)size);
       }
     }
 
@@ -162,10 +155,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
         var len = Math.Min(_circularBuffer.Count, buffer.Length);
 
-        for (var i = 0; i < len; i++)
-        {
-          buffer[i] = _circularBuffer.RemoveFirst();
-        }
+        _circularBuffer.WrittenSpan[..len].CopyTo(buffer);
+
+        _circularBuffer.MoveHead(len);
 
         return len;
       }

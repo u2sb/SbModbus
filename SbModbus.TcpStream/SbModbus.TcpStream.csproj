@@ -38,14 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SbModbus\SbModbus.csproj"/>
+    <ProjectReference Include="..\SbModbus\SbModbus.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageReference Include="NetCoreServer" Version="8.0.7" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="ObservableCollections" Version="3.3.4" />
   </ItemGroup>
 </Project>
