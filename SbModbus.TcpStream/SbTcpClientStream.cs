@@ -134,9 +134,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     {
       lock (_locker)
       {
-        var span = _circularBuffer.WritableSpan;
-        span.CopyFrom(buffer.AsSpan((int)offset, (int)size));
-        _circularBuffer.MoveEnd((int)size);
+        _circularBuffer.AddLastRange(buffer.AsSpan((int)offset, (int)size));
       }
     }
 
@@ -157,7 +155,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
         _circularBuffer.WrittenSpan[..len].CopyTo(buffer);
 
-        _circularBuffer.MoveHead(len);
+        _circularBuffer.RemoveFirst(len);
 
         return len;
       }
