@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
@@ -91,41 +92,52 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     if (BaseStream is not null && len > 0)
     {
       var b = buffer[..len];
-      
+
 #if NET8_0_OR_GREATER
       BaseStream.ReadExactly(b);
 #elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-      _ = BaseStream.Read(b);
+      len = BaseStream.Read(b);
 #else
-      var temp = new byte[len];
+      var temp = ArrayPool<byte>.Shared.Rent(len);
       SerialPort.Read(temp, 0, len);
       temp.CopyTo(b);
+      ArrayPool<byte>.Shared.Return(temp);
 #endif
     }
+
     return len;
   }
 
   /// <inheritdoc />
-  public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  public override
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+    async
+#endif
+    ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
-    var cts =  CancellationTokenSource.CreateLinkedTokenSource(ct);
+    var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(ReadTimeout);
     var len = Math.Min(SerialPort.BytesToRead, buffer.Length);
     if (BaseStream is not null && len > 0)
     {
       var b = buffer[..len];
-      
+
 #if NET8_0_OR_GREATER
       await BaseStream.ReadExactlyAsync(b, cts.Token);
 #elif NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
-     _ = await BaseStream.ReadAsync(b, ct);
+      len = await BaseStream.ReadAsync(b, cts.Token);
 #else
-      var temp = new byte[len];
+      var temp = ArrayPool<byte>.Shared.Rent(len);
       SerialPort.Read(temp, 0, len);
       temp.CopyTo(b);
+      ArrayPool<byte>.Shared.Return(temp);
 #endif
     }
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
     return len;
+#else
+    return new ValueTask<int>(len);
+#endif
   }
 
   /// <inheritdoc />
