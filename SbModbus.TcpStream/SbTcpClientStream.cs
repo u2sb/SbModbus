@@ -111,7 +111,12 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// </summary>
     private readonly FixedSizeRingBuffer<byte> _circularBuffer = new(4096);
 
+
+#if NET10_0_OR_GREATER
+    private readonly Lock _locker = new();
+#else
     private readonly object _locker = new();
+#endif
 
     public SbTcpClient(IPAddress address, int port) : base(address, port)
     {
@@ -132,7 +137,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <inheritdoc />
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
+#if NET10_0_OR_GREATER
+      using(_locker.EnterScope())
+#else
       lock (_locker)
+#endif
       {
         _circularBuffer.AddLastRange(buffer.AsSpan((int)offset, (int)size));
       }
@@ -144,7 +153,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <param name="buffer"></param>
     public int GetBuffer(Span<byte> buffer)
     {
+#if NET10_0_OR_GREATER
+      using (_locker.EnterScope())
+#else
       lock (_locker)
+#endif
       {
         if (_circularBuffer.Count == 0)
         {
@@ -163,7 +176,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
     public void ClearBuffer()
     {
+#if NET10_0_OR_GREATER
+      using (_locker.EnterScope())
+#else
       lock (_locker)
+#endif
       {
         _circularBuffer.Clear();
       }
