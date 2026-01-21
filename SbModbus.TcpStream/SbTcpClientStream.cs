@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NetCoreServer;
 using Sb.Extensions.System.Buffers.RingBuffers;
+using Sb.Extensions.System.Threading;
 using SbModbus.Models;
 
 namespace SbModbus.TcpStream;
@@ -110,13 +111,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     ///   缓冲区
     /// </summary>
     private readonly FixedSizeRingBuffer<byte> _circularBuffer = new(4096);
+    
+    private readonly AsyncLock _locker = new();
 
-
-#if NET10_0_OR_GREATER
-    private readonly Lock _locker = new();
-#else
-    private readonly object _locker = new();
-#endif
 
     public SbTcpClient(IPAddress address, int port) : base(address, port)
     {
@@ -137,11 +134,8 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <inheritdoc />
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
-#if NET10_0_OR_GREATER
-      using(_locker.EnterScope())
-#else
-      lock (_locker)
-#endif
+
+      using(_locker.Lock())
       {
         _circularBuffer.AddLastRange(buffer.AsSpan((int)offset, (int)size));
       }
@@ -153,11 +147,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <param name="buffer"></param>
     public int GetBuffer(Span<byte> buffer)
     {
-#if NET10_0_OR_GREATER
-      using (_locker.EnterScope())
-#else
-      lock (_locker)
-#endif
+      using(_locker.Lock())
       {
         if (_circularBuffer.Count == 0)
         {
@@ -176,11 +166,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
     public void ClearBuffer()
     {
-#if NET10_0_OR_GREATER
-      using (_locker.EnterScope())
-#else
-      lock (_locker)
-#endif
+      using(_locker.Lock())
       {
         _circularBuffer.Clear();
       }
