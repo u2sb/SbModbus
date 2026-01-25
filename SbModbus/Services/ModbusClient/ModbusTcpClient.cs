@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
+using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using Sb.Extensions.System.Buffers;
 using SbModbus.Models;
@@ -22,7 +23,7 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   public override Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
     var length = 7 + 1 + 1 + ((count + 7) >> 3);
@@ -40,7 +41,7 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort((ushort)(value ? 0x00FF : 0x0000)).ToByteArray(true));
+      value ? [0xFF, 0x00] : "\0\0"u8);
 
     // 7MBAP 1功能码 2寄存器地址 2数据数量
     const int length = 7 + 1 + 2 + 2;
@@ -54,7 +55,7 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   public override Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
     var length = 7 + 1 + 1 + ((count + 7) >> 3);
@@ -86,10 +87,10 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data, writer =>
     {
       // 写寄存器数量
-      writer.Write(ConvertUshort(l / 2).ToByteArray(true));
+      writer.Write(ConvertUshort(l / 2).WithEndianness(true));
 
       // 写字节数
-      writer.Write(ConvertByte(l).ToByteArray());
+      writer.Write(ConvertByte(l));
     });
 
 
@@ -105,7 +106,7 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   protected override Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode, int startingAddress,
     int count)
   {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).ToByteArray(true));
+    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 2n数据
     var length = 7 + 1 + 1 + count * 2;
@@ -133,7 +134,7 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
 
     // 事务处理标识
     TransactionsId++;
-    buffer.Write(TransactionsId.ToByteArray());
+    buffer.Write(TransactionsId);
 
     // 协议标识符号
     buffer.Write("\0\0"u8);
@@ -142,17 +143,57 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
     buffer.Write("\0\0"u8);
 
     // 设备地址
-    buffer.Write(ConvertByte(unitIdentifier).ToByteArray());
+    buffer.Write(ConvertByte(unitIdentifier));
 
     // 写功能码
-    buffer.Write(functionCode.ToByteArray());
+    buffer.Write(functionCode);
 
     // 写寄存器地址
-    buffer.Write(ConvertUshort(startingAddress).ToByteArray(true));
+    buffer.Write(ConvertUshort(startingAddress).WithEndianness(true));
 
     extendFrame?.Invoke(buffer);
 
     if (!data.IsEmpty) buffer.Write(data);
+
+    return buffer;
+  }
+
+  /// <summary>
+  ///   创建数据帧
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="functionCode"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="data"></param>
+  /// <param name="extendFrame"></param>
+  /// <returns></returns>
+  protected ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
+    int startingAddress, ushort data, Action<ArrayBufferWriter<byte>>? extendFrame = null)
+  {
+    var buffer = new ArrayBufferWriter<byte>(256);
+
+    // 事务处理标识
+    TransactionsId++;
+    buffer.Write(TransactionsId);
+
+    // 协议标识符号
+    buffer.Write("\0\0"u8);
+
+    // 长度 0占位
+    buffer.Write("\0\0"u8);
+
+    // 设备地址
+    buffer.Write(ConvertByte(unitIdentifier));
+
+    // 写功能码
+    buffer.Write(functionCode);
+
+    // 写寄存器地址
+    buffer.Write(ConvertUshort(startingAddress).WithEndianness(true));
+
+    extendFrame?.Invoke(buffer);
+
+    buffer.Write(data);
 
     return buffer;
   }

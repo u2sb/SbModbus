@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using Sb.Extensions.System.Buffers;
 using SbModbus.Models;
@@ -17,7 +18,7 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   public override Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
@@ -27,12 +28,11 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
     return result[3..^2];
   }
 
-
   /// <inheritdoc />
   public override Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
@@ -47,7 +47,7 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
-      ((ushort)(value ? 0x00FF : 0x0000)).ToByteArray());
+      value ? [0xFF, 0x00] : "\0\0"u8);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -77,10 +77,10 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
       writer =>
       {
         // 写寄存器数量
-        writer.Write(ConvertUshort(l / 2).ToByteArray(true));
+        writer.Write(ConvertUshort(l / 2).WithEndianness(true));
 
         // 写字节数
-        writer.Write(ConvertByte(l).ToByteArray());
+        writer.Write(ConvertByte(l).WithEndianness());
       });
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
@@ -105,22 +105,56 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
     var buffer = new ArrayBufferWriter<byte>(256);
 
     // 设备地址
-    buffer.Write(ConvertByte(unitIdentifier).ToByteArray());
+    buffer.Write(ConvertByte(unitIdentifier).WithEndianness());
 
     // 写功能码
-    buffer.Write(functionCode.ToByteArray(true));
+    buffer.Write(functionCode);
 
     // 写寄存器地址
-    buffer.Write(ConvertUshort(startingAddress).ToByteArray(true));
+    buffer.Write(ConvertUshort(startingAddress).WithEndianness(true));
 
     // 写拓展 寄存器数量 字节数等
     extendFrame?.Invoke(buffer);
 
     // 写数据 寄存器数量等
     if (!data.IsEmpty) buffer.Write(data);
-    
+
     buffer.WriteCrc16();
-    
+
+    return buffer;
+  }
+
+  /// <summary>
+  ///   创建数据帧
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="functionCode"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="data"></param>
+  /// <param name="extendFrame"></param>
+  /// <returns></returns>
+  protected ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
+    int startingAddress, ushort data, Action<ArrayBufferWriter<byte>>? extendFrame = null)
+  {
+    var buffer = new ArrayBufferWriter<byte>(256);
+
+    // 设备地址
+    buffer.Write(ConvertByte(unitIdentifier).WithEndianness());
+
+    // 写功能码
+    buffer.Write(functionCode);
+
+    // 写寄存器地址
+    buffer.Write(ConvertUshort(startingAddress).WithEndianness(true));
+
+    // 写拓展 寄存器数量 字节数等
+    extendFrame?.Invoke(buffer);
+
+    // 写数据 寄存器数量等
+    buffer.Write(data);
+
+    buffer.WriteCrc16();
+
     return buffer;
   }
 
@@ -129,7 +163,7 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   protected override Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode, int startingAddress,
     int count)
   {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).ToByteArray(true));
+    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
 
     // 1设备地址 1功能码 1数据长度 2n数据 2校验
     var length = 1 + 1 + 1 + count * 2 + 2;

@@ -27,29 +27,29 @@ public class VirtualModbusStream : ModbusStream
     return true;
   }
 
-  public override ValueTask ClearReadBufferAsync(CancellationToken ct = new())
+  protected override ValueTask ClearReadBufferAsync(CancellationToken ct = new())
   {
     return ValueTask.CompletedTask;
   }
 
-  public override void Write(ReadOnlySpan<byte> buffer)
+  protected override void Write(ReadOnlySpan<byte> buffer)
   {
   }
 
-  public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
     Write(buffer.Span);
     return ValueTask.CompletedTask;
   }
 
   /// <inheritdoc />
-  public override int Read(Span<byte> buffer)
+  protected override int Read(Span<byte> buffer)
   {
     return 0;
   }
 
   /// <inheritdoc />
-  public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  protected override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
     return ValueTask.FromResult(Read(buffer.Span));
   }

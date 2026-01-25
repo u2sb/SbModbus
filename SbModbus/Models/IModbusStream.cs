@@ -1,8 +1,8 @@
 using System;
-using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Sb.Extensions.System.Threading;
 
 namespace SbModbus.Models;
 
@@ -32,6 +32,11 @@ public interface IModbusStream : IDisposable
   public int WriteTimeout { get; set; }
 
   /// <summary>
+  ///   异步锁
+  /// </summary>
+  public AsyncLock StreamLock { get; }
+
+  /// <summary>
   ///   连接
   /// </summary>
   public bool Connect();
@@ -42,39 +47,15 @@ public interface IModbusStream : IDisposable
   public bool Disconnect();
 
   /// <summary>
-  ///   清除读缓存
+  ///   锁
+  /// </summary>
+  /// <returns></returns>
+  public ModbusStream.LockedModbusStream Lock();
+
+  /// <summary>
+  ///   异步锁
   /// </summary>
   /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask ClearReadBufferAsync(CancellationToken ct = default);
-
-  /// <summary>
-  ///   写入数据
-  /// </summary>
-  /// <param name="buffer"></param>
-  public void Write(ReadOnlySpan<byte> buffer);
-
-  /// <summary>
-  ///   异步写入数据
-  /// </summary>
-  /// <param name="buffer"></param>
-  /// <param name="ct"></param>
-  /// <returns></returns>
-  public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default);
-
-  /// <summary>
-  ///   读取数据
-  /// </summary>
-  /// <param name="buffer"></param>
-  /// <returns></returns>
-  public int Read(Span<byte> buffer);
-
-
-  /// <summary>
-  ///   异步读取数据
-  /// </summary>
-  /// <param name="buffer"></param>
-  /// <param name="ct"></param>
-  /// <returns></returns>
-  public ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default);
+  public ValueTask<ModbusStream.LockedModbusStream> LockAsync(CancellationToken ct = default);
 }

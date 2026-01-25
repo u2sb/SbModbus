@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -15,7 +16,7 @@ public partial class ModbusRtuClient
     CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
@@ -30,7 +31,7 @@ public partial class ModbusRtuClient
     int count, CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
     var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
@@ -45,7 +46,7 @@ public partial class ModbusRtuClient
     CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
-      ((ushort)(value ? 0x00FF : 0x0000)).ToByteArray());
+      value ? [0xFF, 0x00] : "\0\0"u8);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -72,10 +73,10 @@ public partial class ModbusRtuClient
       writer =>
       {
         // 写寄存器数量
-        writer.Write(ConvertUshort(l / 2).ToByteArray(true));
+        writer.Write(ConvertUshort(l / 2).WithEndianness(true));
 
         // 写字节数
-        writer.Write(ConvertByte(l).ToByteArray());
+        writer.Write(ConvertByte(l));
       });
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
@@ -93,11 +94,13 @@ public partial class ModbusRtuClient
   {
     if (!ModbusStream.IsConnected) throw new SbModbusException("Not Connected");
 
+    using var mt = await ModbusStream.LockAsync(ct);
+
     // 清除读缓存
-    await ModbusStream.ClearReadBufferAsync(ct);
+    await mt.ClearReadBufferAsync(ct);
 
     // 写入数据 
-    await ModbusStream.WriteAsync(data, ct);
+    await mt.WriteAsync(data, ct);
 
     OnWrite?.Invoke(data, this);
 
@@ -117,7 +120,7 @@ public partial class ModbusRtuClient
       while (bytesRead < length)
       {
         cts.Token.ThrowIfCancellationRequested();
-        var read = await ModbusStream.ReadAsync(memory[bytesRead..], cts.Token);
+        var read = await mt.ReadAsync(memory[bytesRead..], cts.Token);
 
         // 如果没读到数据就跳过
         if (read == 0) continue;
@@ -136,7 +139,7 @@ public partial class ModbusRtuClient
       }
 
       var result = memory[..bytesRead];
-      
+
       OnRead?.Invoke(result, this);
 
       // 验证数据帧
@@ -161,7 +164,7 @@ public partial class ModbusRtuClient
     var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
     {
       // 写长度
-      writer.Write(ConvertUshort(count).ToByteArray(true));
+      writer.Write(ConvertUshort(count).WithEndianness(true));
     });
 
 

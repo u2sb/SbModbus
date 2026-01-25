@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -16,7 +17,7 @@ public partial class ModbusTcpClient
     CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
     var length = 7 + 1 + 1 + ((count + 7) >> 3);
@@ -34,7 +35,7 @@ public partial class ModbusTcpClient
     int count, CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
-      ConvertUshort(count).ToByteArray(true));
+      ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
     var length = 7 + 1 + 1 + ((count + 7) >> 3);
@@ -51,7 +52,7 @@ public partial class ModbusTcpClient
     CancellationToken ct = default)
   {
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort((ushort)(value ? 0x00FF : 0x0000)).ToByteArray(true));
+      value ? [0xFF, 0x00] : "\0\0"u8);
 
     // 7MBAP 1功能码 2寄存器地址 2数据数量
     const int length = 7 + 1 + 2 + 2;
@@ -83,10 +84,10 @@ public partial class ModbusTcpClient
       writer =>
       {
         // 写寄存器数量
-        writer.Write(ConvertUshort(l / 2).ToByteArray(true));
+        writer.Write(ConvertUshort(l / 2).WithEndianness(true));
 
         // 写字节数
-        writer.Write(ConvertByte(l).ToByteArray());
+        writer.Write(ConvertByte(l));
       });
 
 
@@ -103,7 +104,7 @@ public partial class ModbusTcpClient
     ModbusFunctionCode functionCode,
     int startingAddress, int count, CancellationToken ct = default)
   {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).ToByteArray(true));
+    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 2n数据
     var length = 7 + 1 + 1 + count * 2;
@@ -123,12 +124,13 @@ public partial class ModbusTcpClient
 
     var tid = data[..2].Span.ToUInt16();
 
+    using var mt = await ModbusStream.LockAsync(ct);
     // 清除读缓存
-    await ModbusStream.ClearReadBufferAsync(ct);
+    await mt.ClearReadBufferAsync(ct);
 
     // 写入数据 
-    await ModbusStream.WriteAsync(data, ct);
-    
+    await mt.WriteAsync(data, ct);
+
     OnWrite?.Invoke(data, this);
 
     using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -145,7 +147,7 @@ public partial class ModbusTcpClient
       while (bytesRead < length)
       {
         cts.Token.ThrowIfCancellationRequested();
-        var read = await ModbusStream.ReadAsync(memory[bytesRead..], cts.Token);
+        var read = await mt.ReadAsync(memory[bytesRead..], cts.Token);
 
         // 如果没读到数据就跳过
         if (read == 0) continue;
@@ -164,7 +166,7 @@ public partial class ModbusTcpClient
       }
 
       var result = memory[..bytesRead];
-      
+
       OnRead?.Invoke(result, this);
 
       VerifyFrame(result.Span, tid);

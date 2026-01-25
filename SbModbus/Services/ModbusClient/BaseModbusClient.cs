@@ -42,7 +42,7 @@ public abstract class BaseModbusClient : IModbusClient
 
   /// <inheritdoc />
   public Action<ReadOnlyMemory<byte>, IModbusClient>? OnWrite { get; set; }
-  
+
   /// <inheritdoc />
   public Action<ReadOnlyMemory<byte>, IModbusClient>? OnRead { get; set; }
 

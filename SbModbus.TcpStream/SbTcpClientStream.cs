@@ -72,34 +72,34 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public override ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  protected override ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
     _tcpClient.ClearBuffer();
     return ValueTask.CompletedTask;
   }
 
   /// <inheritdoc />
-  public override void Write(ReadOnlySpan<byte> buffer)
+  protected override void Write(ReadOnlySpan<byte> buffer)
   {
     _tcpClient.SendAsync(buffer);
   }
 
   /// <inheritdoc />
-  public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
     Write(buffer.Span);
     return ValueTask.CompletedTask;
   }
 
   /// <inheritdoc />
-  public override int Read(Span<byte> buffer)
+  protected override int Read(Span<byte> buffer)
   {
     var len = _tcpClient.GetBuffer(buffer);
     return len;
   }
 
   /// <inheritdoc />
-  public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  protected override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
     var len = Read(buffer.Span);
     return ValueTask.FromResult(len);

@@ -75,7 +75,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public override async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  protected override async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
     var b = SerialPort.BytesToRead;
     if (b > 0)
@@ -86,7 +86,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public override int Read(Span<byte> buffer)
+  protected override int Read(Span<byte> buffer)
   {
     var len = Math.Min(SerialPort.BytesToRead, buffer.Length);
     if (BaseStream is not null && len > 0)
@@ -109,7 +109,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public override
+  protected override
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_0_OR_GREATER
     async
 #endif
