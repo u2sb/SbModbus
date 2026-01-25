@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Net;
 using Sb.Extensions.System;
 
@@ -11,21 +12,21 @@ public static class SbValidation
 {
   public static ValidationResult StringIsByte(string value, ValidationContext context)
   {
-    var isValid = value.IsByte();
+    var isValid = value.IsByte(NumberStyles.Integer | NumberStyles.AllowHexSpecifier);
 
     return isValid ? ValidationResult.Success! : new ValidationResult("value is not byte");
   }
 
   public static ValidationResult StringIsUInt16(string value, ValidationContext context)
   {
-    var isValid = value.IsUInt16();
+    var isValid = value.IsUInt16(NumberStyles.Integer | NumberStyles.AllowHexSpecifier);
 
     return isValid ? ValidationResult.Success! : new ValidationResult("value is not uint16");
   }
 
   public static ValidationResult StringIsInt32(string value, ValidationContext context)
   {
-    var isValid = value.IsInt32();
+    var isValid = value.IsInt32(NumberStyles.Integer | NumberStyles.AllowHexSpecifier);
 
     return isValid ? ValidationResult.Success! : new ValidationResult("value is not int32");
   }

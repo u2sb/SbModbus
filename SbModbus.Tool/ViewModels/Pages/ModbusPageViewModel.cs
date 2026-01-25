@@ -276,7 +276,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   {
     if (value is not null)
     {
-      var number = Convert.ToByte(ModbusAddressString, ModbusAddressType == 0 ? 10 : 16);
+      var number = Convert.ToUInt16(ModbusAddressString, ModbusAddressType == 0 ? 10 : 16);
       ModbusAddress = number;
     }
   }
@@ -288,7 +288,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   partial void OnModbusAddressTypeChanged(int value)
   {
-    var number = Convert.ToByte(ModbusAddressString, ModbusAddressType == 0 ? 10 : 16);
+    var number = Convert.ToUInt16(ModbusAddressString, ModbusAddressType == 0 ? 10 : 16);
     ModbusAddress = number;
   }
 
