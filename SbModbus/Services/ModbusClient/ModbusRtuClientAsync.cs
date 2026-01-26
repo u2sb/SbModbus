@@ -140,10 +140,10 @@ public partial class ModbusRtuClient
 
       var result = memory[..bytesRead];
 
-      OnRead?.Invoke(result, this);
-
       // 验证数据帧
       VerifyFrame(result.Span);
+
+      OnRead?.Invoke(result, this);
 
       return result;
     }

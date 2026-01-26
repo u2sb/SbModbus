@@ -167,9 +167,9 @@ public partial class ModbusTcpClient
 
       var result = memory[..bytesRead];
 
-      OnRead?.Invoke(result, this);
-
       VerifyFrame(result.Span, tid);
+
+      OnRead?.Invoke(result, this);
 
       return result;
     }
