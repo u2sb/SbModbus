@@ -263,7 +263,8 @@
           </ScrollViewer>
         </Grid>
 
-        <Rectangle Grid.Row="1" Margin="5,0" HorizontalAlignment="Stretch" Height="2" Fill="Gray" />
+        <GridSplitter Grid.Row="1" Height="3" Margin="5,0" Background="Gray"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" />
 
         <Grid Row="2">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"

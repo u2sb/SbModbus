@@ -44,135 +44,148 @@
     <!-- 左侧区域 -->
     <Border Grid.Column="0" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
             BorderBrush="Black" BorderThickness="1">
-      <StackPanel Margin="5">
-        <Grid Height="45">
-          <TextBlock Text="{StaticResource lang.dataInterface}" />
-          <ComboBox
-            SelectedIndex="{Binding DataTransferType, 
+      <Grid>
+        <StackPanel Margin="5">
+          <Grid Height="45">
+            <TextBlock Text="{StaticResource lang.dataInterface}" />
+            <ComboBox
+              SelectedIndex="{Binding DataTransferType, 
                     Converter={StaticResource EnumToIntConverter}}">
-            <ComboBoxItem Content="{StaticResource lang.noneType}" />
-            <ComboBoxItem Content="{StaticResource lang.serialPortType}" />
-            <ComboBoxItem Content="{StaticResource lang.tcpClientType}" />
-            <ComboBoxItem Content="{StaticResource lang.tcpServerType}" />
-            <ComboBoxItem Content="{StaticResource lang.udpClientType}" />
-            <ComboBoxItem Content="{StaticResource lang.udpServerType}" />
-          </ComboBox>
-        </Grid>
+              <ComboBoxItem Content="{StaticResource lang.noneType}" />
+              <ComboBoxItem Content="{StaticResource lang.serialPortType}" />
+              <ComboBoxItem Content="{StaticResource lang.tcpClientType}" />
+              <ComboBoxItem Content="{StaticResource lang.tcpServerType}" />
+              <ComboBoxItem Content="{StaticResource lang.udpClientType}" />
+              <ComboBoxItem Content="{StaticResource lang.udpServerType}" />
+            </ComboBox>
+          </Grid>
 
-        <Grid Height="45">
-          <TextBlock Text="{StaticResource lang.connectionStatus}" />
-          <Rectangle Width="130" Margin="5,0" Height="15" HorizontalAlignment="Right"
-                     Fill="{Binding IsConnected, Converter={StaticResource BoolToColorBrushConverter}}" />
-        </Grid>
+          <Grid Height="45">
+            <TextBlock Text="{StaticResource lang.connectionStatus}" />
+            <Rectangle Width="130" Margin="5,0" Height="15" HorizontalAlignment="Right"
+                       Fill="{Binding IsConnected, Converter={StaticResource BoolToColorBrushConverter}}" />
+          </Grid>
 
-        <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3" Fill="Gray" />
+          <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3" Fill="Gray" />
 
-        <Grid
-          Visibility="{Binding DataTransferType, 
+          <Grid
+            Visibility="{Binding DataTransferType, 
                             Converter={StaticResource EnumToVisibilityConverter},
                             ConverterParameter=SerialPort }">
-          <StackPanel>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.protName}" />
-              <ComboBox ItemsSource="{Binding SerialPortNames}"
-                        SelectedValue="{Binding SerialPortName}" />
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.baudRate}" />
-              <TextBox Text="{Binding BaudRateString}" />
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.dataBit}" />
-              <ComboBox SelectedValuePath="Tag"
-                        SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
-                <ComboBoxItem Tag="8" Content="8" />
-                <ComboBoxItem Tag="7" Content="7" />
-                <ComboBoxItem Tag="6" Content="6" />
-                <ComboBoxItem Tag="5" Content="5" />
-              </ComboBox>
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.parityBit}" />
-              <ComboBox ItemsSource="{Binding ParityValues}"
-                        SelectedIndex="{Binding Parity, 
+            <StackPanel>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.protName}" />
+                <ComboBox ItemsSource="{Binding SerialPortNames}"
+                          SelectedValue="{Binding SerialPortName}" />
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.baudRate}" />
+                <TextBox Text="{Binding BaudRateString}" />
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.dataBit}" />
+                <ComboBox SelectedValuePath="Tag"
+                          SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
+                  <ComboBoxItem Tag="8" Content="8" />
+                  <ComboBoxItem Tag="7" Content="7" />
+                  <ComboBoxItem Tag="6" Content="6" />
+                  <ComboBoxItem Tag="5" Content="5" />
+                </ComboBox>
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.parityBit}" />
+                <ComboBox ItemsSource="{Binding ParityValues}"
+                          SelectedIndex="{Binding Parity, 
                     Converter={StaticResource EnumToIntConverter}}" />
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.stopBit}" />
-              <ComboBox ItemsSource="{Binding StopBitsValues}"
-                        SelectedIndex="{Binding StopBits, 
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.stopBit}" />
+                <ComboBox ItemsSource="{Binding StopBitsValues}"
+                          SelectedIndex="{Binding StopBits, 
                     Converter={StaticResource EnumToIntConverter}}" />
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.flowControl}" />
-              <ComboBox
-                ItemsSource="{Binding HandshakeValues}"
-                SelectedIndex="{Binding Handshake, 
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.flowControl}" />
+                <ComboBox
+                  ItemsSource="{Binding HandshakeValues}"
+                  SelectedIndex="{Binding Handshake, 
                     Converter={StaticResource EnumToIntConverter}}" />
-            </Grid>
-            <!-- <UniformGrid Height="45" Columns="3"> -->
-            <!--   <Button Content="DTR" /> -->
-            <!--   <Button Content="RTS" /> -->
-            <!--   <Button Content="Break" /> -->
-            <!-- </UniformGrid> -->
-          </StackPanel>
-        </Grid>
+              </Grid>
+              <!-- <UniformGrid Height="45" Columns="3"> -->
+              <!--   <Button Content="DTR" /> -->
+              <!--   <Button Content="RTS" /> -->
+              <!--   <Button Content="Break" /> -->
+              <!-- </UniformGrid> -->
+            </StackPanel>
+          </Grid>
 
-        <Grid
-          Visibility="{Binding DataTransferType, 
+          <Grid
+            Visibility="{Binding DataTransferType, 
                             Converter={StaticResource EnumToVisibilityConverter},
                             ConverterParameter=TcpClient;UdpClient }">
 
-          <StackPanel>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.targetIp}" />
-              <TextBox
-                Text="{Binding TargetIp}" />
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.targetPort}" />
-              <TextBox
-                Text="{Binding TargetPort}" />
-            </Grid>
-          </StackPanel>
-        </Grid>
+            <StackPanel>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.targetIp}" />
+                <TextBox
+                  Text="{Binding TargetIp}" />
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.targetPort}" />
+                <TextBox
+                  Text="{Binding TargetPort}" />
+              </Grid>
+            </StackPanel>
+          </Grid>
 
-        <Grid
-          Visibility="{Binding DataTransferType, 
+          <Grid
+            Visibility="{Binding DataTransferType, 
                             Converter={StaticResource EnumToVisibilityConverter},
                             ConverterParameter=TcpServer;UdpServer }">
-          <StackPanel>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.localIp}" />
-              <TextBox
-                Text="{Binding LocalIp}" />
-            </Grid>
-            <Grid Height="45">
-              <TextBlock Text="{StaticResource lang.localPort}" />
-              <TextBox
-                Text="{Binding LocalPort}" />
-            </Grid>
+            <StackPanel>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.localIp}" />
+                <TextBox
+                  Text="{Binding LocalIp}" />
+              </Grid>
+              <Grid Height="45">
+                <TextBlock Text="{StaticResource lang.localPort}" />
+                <TextBox
+                  Text="{Binding LocalPort}" />
+              </Grid>
 
-            <Grid Height="100">
-              <TextBlock Margin="0,30" VerticalAlignment="Top" Text="{StaticResource lang.targetClient}" />
-              <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35" Width="Auto"
-                        ItemsSource="{Binding Sessions}"
-                        SelectedIndex="{Binding SelectedSessionIndex}" />
-            </Grid>
+              <Grid Height="100">
+                <TextBlock Margin="0,30" VerticalAlignment="Top" Text="{StaticResource lang.targetClient}" />
+                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35" Width="Auto"
+                          ItemsSource="{Binding Sessions}"
+                          SelectedIndex="{Binding SelectedSessionIndex}" />
+              </Grid>
+            </StackPanel>
+          </Grid>
+
+          <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Margin="10,0" Width="80" FontWeight="Bold" Content="{StaticResource lang.btnConnect}"
+                    Command="{Binding ConnectCommand}" />
+            <Button Margin="10,0" Width="80" FontWeight="Bold" Content="{StaticResource lang.btnDisConnect}"
+                    Command="{Binding DisconnectCommand}" />
           </StackPanel>
-        </Grid>
-
-        <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
-          <Button Margin="10,0" Width="80" FontWeight="Bold" Content="{StaticResource lang.btnConnect}"
-                  Command="{Binding ConnectCommand}" />
-          <Button Margin="10,0" Width="80" FontWeight="Bold" Content="{StaticResource lang.btnDisConnect}"
-                  Command="{Binding DisconnectCommand}" />
         </StackPanel>
-      </StackPanel>
+        <UniformGrid Margin="5,10" Columns="3" VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
+          <Button Margin="2" FontWeight="Bold" Height="Auto" FontSize="18"
+                  Content="{StaticResource lang.btnClear}"
+                  Command="{Binding CleanOutputCommand}" />
+          <Button Margin="2" FontWeight="Bold" Height="Auto" FontSize="18"
+                  Content="{Binding InputMode}"
+                  Command="{Binding ChangeInputModeCommand}" />
+          <Button Margin="2" FontWeight="Bold" Height="Auto" FontSize="18"
+                  Content="{StaticResource lang.btnSend}"
+                  Command="{Binding SendCommand}" />
+        </UniformGrid>
+      </Grid>
     </Border>
     <Border Grid.Column="1" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
             BorderBrush="Black" BorderThickness="1">
-      <Grid RowDefinitions="*, 10, 180">
+      <Grid RowDefinitions="*, 5, 180">
         <Grid Row="0">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                         bh:SmartScrollBehavior.IsEnabled="True">
@@ -203,36 +216,26 @@
             </ItemsControl>
           </ScrollViewer>
         </Grid>
-        <Rectangle Grid.Row="1" Margin="5,0" HorizontalAlignment="Stretch" Height="2" Fill="Gray" />
-        <Grid Grid.Row="2" ColumnDefinitions="*, 100">
-          <Grid Column="0" RowDefinitions="*, 110">
-            <Border Grid.Row="0" Margin="5,5,5,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                    BorderBrush="Black" BorderThickness="1">
-              <TextBox Margin="5" FontSize="18" Width="Auto"
-                       BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}"
-                       AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
-                       VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left" IsReadOnly="True"
-                       Text="{Binding OutputString}" />
-            </Border>
-            <Border Grid.Row="1" Margin="5,2,5,5" BorderBrush="Black" BorderThickness="1">
-              <TextBox Margin="5" FontSize="18" Width="Auto"
-                       BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}"
-                       AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
-                       VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left"
-                       Text="{Binding InputString, UpdateSourceTrigger=PropertyChanged}" />
-            </Border>
-          </Grid>
-          <UniformGrid Grid.Column="1" Margin="2,2,5,5" Rows="3">
-            <Button Margin="0,1,0,5" FontWeight="Bold" Height="Auto" FontSize="18"
-                    Content="{StaticResource lang.btnClear}"
-                    Command="{Binding CleanOutputCommand}" />
-            <Button Margin="0,1,0,5" FontWeight="Bold" Height="Auto" FontSize="18"
-                    Content="{Binding InputMode}"
-                    Command="{Binding ChangeInputModeCommand}" />
-            <Button Margin="0,5,0,2" FontWeight="Bold" Height="Auto" FontSize="18"
-                    Content="{StaticResource lang.btnSend}"
-                    Command="{Binding SendCommand}" />
-          </UniformGrid>
+        <GridSplitter Grid.Row="1" Height="3" Margin="5,0" Background="Gray"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" />
+        <Grid Grid.Row="2" RowDefinitions="*, 5, 110">
+          <Border Grid.Row="0" Margin="5,2,5,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                  BorderBrush="Black" BorderThickness="1">
+            <TextBox Margin="5" FontSize="18" Width="Auto"
+                     BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}"
+                     AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
+                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left" IsReadOnly="True"
+                     Text="{Binding OutputString}" />
+          </Border>
+          <GridSplitter Grid.Row="1" Height="3" Margin="5,0" Background="Gray"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" />
+          <Border Grid.Row="2" Margin="5,2,5,5" BorderBrush="Black" BorderThickness="1">
+            <TextBox Margin="5" FontSize="18" Width="Auto"
+                     BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}"
+                     AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
+                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left"
+                     Text="{Binding InputString, UpdateSourceTrigger=PropertyChanged}" />
+          </Border>
         </Grid>
       </Grid>
     </Border>
