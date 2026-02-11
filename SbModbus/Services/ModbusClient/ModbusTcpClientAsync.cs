@@ -23,7 +23,7 @@ public partial class ModbusTcpClient
     var length = 7 + 1 + 1 + ((count + 7) >> 3);
     var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
 
-    ((ushort)(temp.Length - 6)).WriteTo(temp[4..6].Span, BigAndSmallEndianEncodingMode.ABCD);
+    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
     var result = await WriteAndReadWithTimeoutAsync(temp, length, ReadTimeout, ct);
 
     // 返回数据
@@ -40,7 +40,7 @@ public partial class ModbusTcpClient
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
     var length = 7 + 1 + 1 + ((count + 7) >> 3);
     var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp[4..6].Span, BigAndSmallEndianEncodingMode.ABCD);
+    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
     var result = await WriteAndReadWithTimeoutAsync(temp, length, ReadTimeout, ct);
 
     // 返回数据
@@ -57,7 +57,7 @@ public partial class ModbusTcpClient
     // 7MBAP 1功能码 2寄存器地址 2数据数量
     const int length = 7 + 1 + 2 + 2;
     var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp[4..6].Span, BigAndSmallEndianEncodingMode.ABCD);
+    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
     _ = await WriteAndReadWithTimeoutAsync(temp, length, ReadTimeout, ct);
   }
 
@@ -71,7 +71,7 @@ public partial class ModbusTcpClient
     // 7MBAP 1功能码 2寄存器地址 2数据数量
     const int length = 7 + 1 + 2 + 2;
     var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp[4..6].Span, BigAndSmallEndianEncodingMode.ABCD);
+    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
     _ = await WriteAndReadWithTimeoutAsync(temp, length, ReadTimeout, ct);
   }
 
@@ -94,7 +94,7 @@ public partial class ModbusTcpClient
     // 7MBAP 1功能码 2寄存器地址 2数据数量
     const int length = 7 + 1 + 2 + 2;
     var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp[4..6].Span, BigAndSmallEndianEncodingMode.ABCD);
+    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
 
     await WriteAndReadWithTimeoutAsync(temp, length, ReadTimeout, ct);
   }
@@ -109,7 +109,7 @@ public partial class ModbusTcpClient
     // 7MBAP 1功能码 1数据长度 2n数据
     var length = 7 + 1 + 1 + count * 2;
     var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp[4..6].Span, BigAndSmallEndianEncodingMode.ABCD);
+    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
     var result = await WriteAndReadWithTimeoutAsync(temp, length, ReadTimeout, ct);
 
     // 返回数据
@@ -122,13 +122,13 @@ public partial class ModbusTcpClient
   {
     if (!ModbusStream.IsConnected) throw new SbModbusException("Not Connected");
 
-    var tid = data[..2].Span.ToUInt16();
+    var tid = data.Span[..2].ToUInt16();
 
     using var mt = await ModbusStream.LockAsync(ct);
     // 清除读缓存
     await mt.ClearReadBufferAsync(ct);
 
-    // 写入数据 
+    // 写入数据
     await mt.WriteAsync(data, ct);
 
     OnWrite?.Invoke(data, this);

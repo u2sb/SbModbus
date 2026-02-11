@@ -110,8 +110,8 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <summary>
     ///   缓冲区
     /// </summary>
-    private readonly FixedSizeRingBuffer<byte> _circularBuffer = new(4096);
-    
+    private readonly FixedSizeRingBuffer<byte> _circularBuffer = new(8192);
+
     private readonly AsyncLock _locker = new();
 
 
