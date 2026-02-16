@@ -47,6 +47,33 @@ public interface IModbusStream : IDisposable
   public bool Disconnect();
 
   /// <summary>
+  ///   接收到消息时触发
+  /// </summary>
+  public event ModbusStreamHandler OnDataReceived;
+
+  /// <summary>
+  ///   接收消息时触发（异步）
+  ///   只有真正异步处理时才建议使用此事件，以免阻塞接收线程，简单处理请使用同步事件
+  /// </summary>
+  public event ModbusStreamAsyncHandler OnDataReceivedAsync;
+
+  /// <summary>
+  ///   发送消息时触发
+  /// </summary>
+  public event ModbusStreamHandler OnDataSent;
+
+  /// <summary>
+  ///   发送消息时触发（异步）
+  ///   只有真正异步处理时才建议使用此事件，以免阻塞接收线程，简单处理请使用同步事件
+  /// </summary>
+  public event ModbusStreamAsyncHandler OnDataSentAsync;
+
+  /// <summary>
+  ///   连接状态改变时触发
+  /// </summary>
+  public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
+
+  /// <summary>
   ///   锁
   /// </summary>
   /// <returns></returns>

@@ -19,31 +19,44 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public SbTcpClientStream(IPAddress address, int port)
   {
-    _tcpClient = new SbTcpClient(address, port);
+    _tcpClient = new SbTcpClient(address, port)
+    {
+      ModbusStream = this
+    };
   }
 
   /// <inheritdoc />
   public SbTcpClientStream(string address, int port)
   {
-    _tcpClient = new SbTcpClient(address, port);
+    _tcpClient = new SbTcpClient(address, port)
+    {
+      ModbusStream = this
+    };
   }
 
   /// <inheritdoc />
   public SbTcpClientStream(DnsEndPoint endpoint)
   {
-    _tcpClient = new SbTcpClient(endpoint);
+    _tcpClient = new SbTcpClient(endpoint)
+    {
+      ModbusStream = this
+    };
   }
 
   /// <inheritdoc />
   public SbTcpClientStream(IPEndPoint endpoint)
   {
-    _tcpClient = new SbTcpClient(endpoint);
+    _tcpClient = new SbTcpClient(endpoint)
+    {
+      ModbusStream = this
+    };
   }
 
   /// <inheritdoc />
   public override void Dispose()
   {
     _tcpClient.Dispose();
+    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -82,6 +95,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   protected override void Write(ReadOnlySpan<byte> buffer)
   {
     _tcpClient.SendAsync(buffer);
+    DataSent(buffer);
   }
 
   /// <inheritdoc />
@@ -131,14 +145,27 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     {
     }
 
+    public required SbTcpClientStream ModbusStream { get; init; }
+
     /// <inheritdoc />
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
-
-      using(_locker.Lock())
+      using (_locker.Lock())
       {
-        _circularBuffer.AddLastRange(buffer.AsSpan((int)offset, (int)size));
+        var span = buffer.AsSpan((int)offset, (int)size);
+        _circularBuffer.AddLastRange(span);
+        ModbusStream.DataReceived(span);
       }
+    }
+
+    protected override void OnConnected()
+    {
+      ModbusStream.ConnectStateChanged(true);
+    }
+
+    protected override void OnDisconnected()
+    {
+      ModbusStream.ConnectStateChanged(false);
     }
 
     /// <summary>
@@ -147,12 +174,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <param name="buffer"></param>
     public int GetBuffer(Span<byte> buffer)
     {
-      using(_locker.Lock())
+      using (_locker.Lock())
       {
-        if (_circularBuffer.Count == 0)
-        {
-          return 0;
-        }
+        if (_circularBuffer.Count == 0) return 0;
 
         var len = Math.Min(_circularBuffer.Count, buffer.Length);
 
@@ -166,7 +190,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
     public void ClearBuffer()
     {
-      using(_locker.Lock())
+      using (_locker.Lock())
       {
         _circularBuffer.Clear();
       }

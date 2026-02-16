@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System.Threading;
@@ -66,6 +68,7 @@ public abstract class ModbusStream : IModbusStream
     {
       BaseStream.Write(buffer);
       BaseStream.Flush();
+      DataSent(buffer);
     }
   }
 
@@ -81,6 +84,7 @@ public abstract class ModbusStream : IModbusStream
     {
       await BaseStream.WriteAsync(buffer, ct);
       await BaseStream.FlushAsync(ct);
+      DataSent(buffer.Span);
     }
   }
 
@@ -188,4 +192,110 @@ public abstract class ModbusStream : IModbusStream
 
     #endregion
   }
+
+  #region 事件
+
+  /// <inheritdoc />
+  public event ModbusStreamHandler? OnDataReceived;
+
+  /// <inheritdoc />
+  public event ModbusStreamAsyncHandler? OnDataReceivedAsync;
+
+  /// <inheritdoc />
+  public event ModbusStreamHandler? OnDataSent;
+
+  /// <inheritdoc />
+  public event ModbusStreamAsyncHandler? OnDataSentAsync;
+
+  /// <inheritdoc />
+  public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
+
+  /// <summary>
+  ///   连接状态发生变化时
+  /// </summary>
+  /// <param name="isConnected"></param>
+  protected void ConnectStateChanged(bool isConnected)
+  {
+    try
+    {
+      OnConnectStateChanged?.Invoke(this, isConnected);
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+  }
+
+  /// <summary>
+  ///   接收到消息时触发
+  /// </summary>
+  /// <param name="data"></param>
+  protected virtual void DataReceived(ReadOnlySpan<byte> data)
+  {
+    DataTransportAsync(OnDataReceivedAsync, data, CancellationToken.None);
+
+    try
+    {
+      OnDataReceived?.Invoke(this, data);
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+  }
+
+  /// <summary>
+  ///   接收到消息时触发
+  /// </summary>
+  /// <param name="data"></param>
+  protected virtual void DataSent(ReadOnlySpan<byte> data)
+  {
+    DataTransportAsync(OnDataSentAsync, data, CancellationToken.None);
+
+    try
+    {
+      OnDataSent?.Invoke(this, data);
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+  }
+
+  /// <summary>
+  ///   接收或发送数据时触发（异步调用）
+  /// </summary>
+  /// <param name="handler"></param>
+  /// <param name="data"></param>
+  /// <param name="ct"></param>
+  protected virtual void DataTransportAsync(ModbusStreamAsyncHandler? handler, ReadOnlySpan<byte> data,
+    CancellationToken ct)
+  {
+    if (handler is null) return;
+
+    var length = data.Length;
+    using var bs = MemoryPool<byte>.Shared.Rent(length);
+
+    foreach (var invocation in handler.GetInvocationList().Cast<ModbusStreamAsyncHandler>())
+      // 异步调用每个订阅者，并处理异常
+      // ReSharper disable once MethodSupportsCancellation
+      _ = Task.Run(async () =>
+      {
+        using var buffer = MemoryPool<byte>.Shared.Rent(length);
+        try
+        {
+          bs.Memory.CopyTo(buffer.Memory);
+          await invocation(this, buffer.Memory, ct);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+          // ignore
+        }
+      });
+  }
+
+  #endregion
 }

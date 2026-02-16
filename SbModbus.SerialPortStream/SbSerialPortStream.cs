@@ -59,7 +59,10 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     SerialPort.Open();
 
     if (IsConnected)
+    {
       BaseStream = SerialPort.BaseStream;
+      ConnectStateChanged(IsConnected);
+    }
 
     return IsConnected;
   }
@@ -71,6 +74,8 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
 
     SerialPort.Close();
     BaseStream = null;
+
+    ConnectStateChanged(IsConnected);
 
     return !IsConnected;
   }
@@ -99,6 +104,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
 #else
       len = BaseStream.Read(b);
 #endif
+      DataReceived(b);
     }
 
     return len;
@@ -119,8 +125,9 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
 #else
       len = await BaseStream.ReadAsync(b, cts.Token);
 #endif
+      DataReceived(b.Span);
     }
-    
+
     return len;
   }
 
@@ -128,6 +135,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   public override void Dispose()
   {
     Disconnect();
+    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 }
