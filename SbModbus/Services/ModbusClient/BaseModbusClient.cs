@@ -41,6 +41,9 @@ public abstract class BaseModbusClient : IModbusClient
   public bool IsConnected => ModbusStream.IsConnected;
 
   /// <inheritdoc />
+  public int DiffSidIntervalTime { get; set; } = 0;
+
+  /// <inheritdoc />
   public Action<ReadOnlyMemory<byte>, IModbusClient>? OnWrite { get; set; }
 
   /// <inheritdoc />
@@ -127,6 +130,42 @@ public abstract class BaseModbusClient : IModbusClient
       throw new Exception(ErrorMessage.Modbus_InvalidValueUShort);
 
     return unchecked((ushort)value);
+  }
+
+  /// <summary>
+  ///   上一次通信结束时间
+  /// </summary>
+  private DateTime _previousOverTime = DateTime.UtcNow;
+
+  /// <summary>
+  ///   上一次通信的sid
+  /// </summary>
+  private byte _previousSid;
+
+  /// <summary>
+  ///   设置上一次通信结束时间
+  /// </summary>
+  protected void SetPreviousOverTime(byte sid)
+  {
+    _previousSid = sid;
+    _previousOverTime = DateTime.UtcNow;
+  }
+
+  /// <summary>
+  ///   等待通信时间
+  /// </summary>
+  /// <returns></returns>
+  protected async ValueTask WaitDiffSidIntervalTime(byte sid)
+  {
+    if (DiffSidIntervalTime <= 0 || sid == _previousSid) return;
+
+    var interval = TimeSpan.FromMilliseconds(DiffSidIntervalTime);
+
+    var span = interval - (DateTime.UtcNow - _previousOverTime);
+
+    if (span <= TimeSpan.Zero) return;
+
+    await Task.Delay(span);
   }
 
   #endregion

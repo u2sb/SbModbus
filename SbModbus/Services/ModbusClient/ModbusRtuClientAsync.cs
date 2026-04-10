@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +18,7 @@ public partial class ModbusRtuClient
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var length = 1 + 1 + 1 + (count + 7 >> 3) + 2;
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
 
     // 返回数据
@@ -34,7 +33,7 @@ public partial class ModbusRtuClient
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var length = 1 + 1 + 1 + (count + 7 >> 3) + 2;
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
 
     // 返回数据
@@ -96,10 +95,12 @@ public partial class ModbusRtuClient
 
     using var mt = await ModbusStream.LockAsync(ct);
 
+    await WaitDiffSidIntervalTime(data.Span[0]);
+
     // 清除读缓存
     await mt.ClearReadBufferAsync(ct);
 
-    // 写入数据 
+    // 写入数据
     await mt.WriteAsync(data, ct);
 
     OnWrite?.Invoke(data, this);
@@ -154,6 +155,10 @@ public partial class ModbusRtuClient
     catch (EndOfStreamException)
     {
       throw new SbModbusException($"Timeout occurred after {readTimeout} milliseconds");
+    }
+    finally
+    {
+      SetPreviousOverTime(data.Span[0]);
     }
   }
 

@@ -19,7 +19,12 @@ public interface IModbusClient
   ///   是否连接
   /// </summary>
   public bool IsConnected { get; }
-  
+
+  /// <summary>
+  ///   不同设备通信间隔时间，单位毫秒，0ms 不启用延时
+  /// </summary>
+  public int DiffSidIntervalTime { get; set; }
+
   /// <summary>
   ///   发送事件
   /// </summary>
