@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Buffers;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Sb.Extensions.System.Buffers.RingBuffers;
 using Sb.Extensions.System.Threading;
 #if NETSTANDARD2_0
-using CommunityToolkit.HighPerformance;
 #endif
 
 
@@ -17,9 +15,6 @@ public abstract class ModbusStream : IModbusStream
 {
   /// <inheritdoc />
   public abstract void Dispose();
-
-  /// <inheritdoc />
-  public abstract Stream? BaseStream { get; protected set; }
 
   /// <inheritdoc />
   public abstract bool IsConnected { get; }
@@ -56,21 +51,21 @@ public abstract class ModbusStream : IModbusStream
   /// </summary>
   /// <param name="ct"></param>
   /// <returns></returns>
-  protected abstract ValueTask ClearReadBufferAsync(CancellationToken ct = default);
+  protected virtual ValueTask ClearReadBufferAsync(CancellationToken ct = default)
+  {
+    ClearBuffer();
+#if NET8_0_OR_GREATER
+    return ValueTask.CompletedTask;
+#else
+    return default;
+#endif
+  }
 
   /// <summary>
   ///   写入数据
   /// </summary>
   /// <param name="buffer"></param>
-  protected virtual void Write(ReadOnlySpan<byte> buffer)
-  {
-    if (IsConnected && BaseStream is not null)
-    {
-      BaseStream.Write(buffer);
-      BaseStream.Flush();
-      DataSent(buffer);
-    }
-  }
+  protected abstract void Write(ReadOnlySpan<byte> buffer);
 
   /// <summary>
   ///   异步写入数据
@@ -78,22 +73,17 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="buffer"></param>
   /// <param name="ct"></param>
   /// <returns></returns>
-  protected virtual async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
-  {
-    if (IsConnected && BaseStream is not null)
-    {
-      await BaseStream.WriteAsync(buffer, ct);
-      await BaseStream.FlushAsync(ct);
-      DataSent(buffer.Span);
-    }
-  }
+  protected abstract ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default);
 
   /// <summary>
   ///   读取数据
   /// </summary>
   /// <param name="buffer"></param>
   /// <returns></returns>
-  protected abstract int Read(Span<byte> buffer);
+  protected virtual int Read(Span<byte> buffer)
+  {
+    return ReadBuffer(buffer);
+  }
 
   /// <summary>
   ///   异步读取数据
@@ -101,7 +91,14 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="buffer"></param>
   /// <param name="ct"></param>
   /// <returns></returns>
-  protected abstract ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default);
+  protected virtual ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  {
+#if NET8_0_OR_GREATER
+    return ValueTask.FromResult(ReadBuffer(buffer.Span));
+#else
+    return new ValueTask<int>(ReadBuffer(buffer.Span));
+#endif
+  }
 
   /// <summary>
   ///   锁定的读写流
@@ -273,19 +270,17 @@ public abstract class ModbusStream : IModbusStream
   {
     if (handler is null) return;
 
-    var length = data.Length;
-    using var bs = MemoryPool<byte>.Shared.Rent(length);
+    var bs = data.ToArray();
 
     foreach (var invocation in handler.GetInvocationList().Cast<ModbusStreamAsyncHandler>())
       // 异步调用每个订阅者，并处理异常
       // ReSharper disable once MethodSupportsCancellation
+    {
       _ = Task.Run(async () =>
       {
-        using var buffer = MemoryPool<byte>.Shared.Rent(length);
         try
         {
-          bs.Memory.CopyTo(buffer.Memory);
-          await invocation(this, buffer.Memory, ct);
+          await invocation(this, bs, ct);
         }
         catch (OperationCanceledException)
         {
@@ -294,7 +289,67 @@ public abstract class ModbusStream : IModbusStream
         {
           // ignore
         }
-      });
+      }, ct);
+    }
+  }
+
+  #endregion
+
+  #region 缓冲区
+
+#if NET10_0_OR_GREATER
+  private readonly Lock _locker = new();
+#else
+  private readonly object _locker = new();
+#endif
+
+
+  /// <summary>
+  ///   缓冲区
+  /// </summary>
+  protected readonly FixedSizeRingBuffer<byte> Buffer = new(512);
+
+  /// <summary>
+  ///   向缓冲区内写数据
+  /// </summary>
+  /// <param name="buffer"></param>
+  protected void WriteBuffer(ReadOnlySpan<byte> buffer)
+  {
+    lock (_locker)
+    {
+      Buffer.AddLastRange(buffer);
+    }
+  }
+
+  /// <summary>
+  ///   清除缓存
+  /// </summary>
+  protected void ClearBuffer()
+  {
+    lock (_locker)
+    {
+      Buffer.Clear();
+    }
+  }
+
+  /// <summary>
+  ///   读缓冲区
+  /// </summary>
+  /// <param name="span"></param>
+  /// <returns></returns>
+  protected int ReadBuffer(in Span<byte> span)
+  {
+    // ReSharper disable once InconsistentlySynchronizedField
+    if (Buffer.Count == 0) return 0;
+
+    lock (_locker)
+    {
+      var length = Math.Min(Buffer.Count, span.Length);
+
+      Buffer.WrittenSpan[..length].CopyTo(span);
+      Buffer.RemoveFirst(length);
+      return length;
+    }
   }
 
   #endregion

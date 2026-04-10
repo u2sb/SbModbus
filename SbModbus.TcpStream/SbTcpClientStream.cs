@@ -1,11 +1,8 @@
 using System;
-using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using NetCoreServer;
-using Sb.Extensions.System.Buffers.RingBuffers;
-using Sb.Extensions.System.Threading;
 using SbModbus.Models;
 
 namespace SbModbus.TcpStream;
@@ -61,9 +58,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public override Stream? BaseStream { get; protected set; } = null;
-
-  /// <inheritdoc />
   public override bool IsConnected => _tcpClient.IsConnected;
 
   /// <inheritdoc />
@@ -85,13 +79,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  protected override ValueTask ClearReadBufferAsync(CancellationToken ct = default)
-  {
-    _tcpClient.ClearBuffer();
-    return ValueTask.CompletedTask;
-  }
-
-  /// <inheritdoc />
   protected override void Write(ReadOnlySpan<byte> buffer)
   {
     _tcpClient.SendAsync(buffer);
@@ -105,30 +92,8 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     return ValueTask.CompletedTask;
   }
 
-  /// <inheritdoc />
-  protected override int Read(Span<byte> buffer)
-  {
-    var len = _tcpClient.GetBuffer(buffer);
-    return len;
-  }
-
-  /// <inheritdoc />
-  protected override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
-  {
-    var len = Read(buffer.Span);
-    return ValueTask.FromResult(len);
-  }
-
   private class SbTcpClient : TcpClient
   {
-    /// <summary>
-    ///   缓冲区
-    /// </summary>
-    private readonly FixedSizeRingBuffer<byte> _circularBuffer = new(8192);
-
-    private readonly AsyncLock _locker = new();
-
-
     public SbTcpClient(IPAddress address, int port) : base(address, port)
     {
     }
@@ -150,12 +115,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     /// <inheritdoc />
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
-      using (_locker.Lock())
-      {
-        var span = buffer.AsSpan((int)offset, (int)size);
-        _circularBuffer.AddLastRange(span);
-        ModbusStream.DataReceived(span);
-      }
+      var span = buffer.AsSpan((int)offset, (int)size);
+      ModbusStream.WriteBuffer(span);
+      ModbusStream.DataReceived(span);
     }
 
     protected override void OnConnected()
@@ -166,34 +128,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     protected override void OnDisconnected()
     {
       ModbusStream.ConnectStateChanged(false);
-    }
-
-    /// <summary>
-    ///   获取Buffer
-    /// </summary>
-    /// <param name="buffer"></param>
-    public int GetBuffer(Span<byte> buffer)
-    {
-      using (_locker.Lock())
-      {
-        if (_circularBuffer.Count == 0) return 0;
-
-        var len = Math.Min(_circularBuffer.Count, buffer.Length);
-
-        _circularBuffer.WrittenSpan[..len].CopyTo(buffer);
-
-        _circularBuffer.RemoveFirst(len);
-
-        return len;
-      }
-    }
-
-    public void ClearBuffer()
-    {
-      using (_locker.Lock())
-      {
-        _circularBuffer.Clear();
-      }
     }
   }
 }

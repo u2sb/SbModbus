@@ -8,7 +8,6 @@ namespace SbModbus.Tool.Services.ModbusServices;
 /// </summary>
 public class VirtualModbusStream : ModbusStream
 {
-  public override Stream? BaseStream { get; protected set; }
   public override bool IsConnected { get; } = true;
   public override int ReadTimeout { get; set; }
   public override int WriteTimeout { get; set; }

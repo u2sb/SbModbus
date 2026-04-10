@@ -1,11 +1,12 @@
 using System;
-using System.Buffers;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
-using CommunityToolkit.HighPerformance;
 using SbModbus.Models;
+#if NETSTANDARD2_0 || NET462_OR_GREATER
+using CommunityToolkit.HighPerformance;
+#endif
 
 namespace SbModbus.SerialPortStream;
 
@@ -30,9 +31,6 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   ///   串口
   /// </summary>
   public SerialPort SerialPort { get; }
-
-  /// <inheritdoc />
-  public override Stream? BaseStream { get; protected set; }
 
   /// <inheritdoc />
   public override bool IsConnected => SerialPort.IsOpen;
@@ -60,8 +58,8 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
 
     if (IsConnected)
     {
-      BaseStream = SerialPort.BaseStream;
       ConnectStateChanged(IsConnected);
+      StartAutoReceive();
     }
 
     return IsConnected;
@@ -70,14 +68,22 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Disconnect()
   {
+    StopAutoReceive();
     if (!IsConnected) return !IsConnected;
 
     SerialPort.Close();
-    BaseStream = null;
 
     ConnectStateChanged(IsConnected);
 
     return !IsConnected;
+  }
+
+  /// <inheritdoc />
+  public override void Dispose()
+  {
+    Disconnect();
+    StreamLock.Dispose();
+    GC.SuppressFinalize(this);
   }
 
   /// <inheritdoc />
@@ -92,50 +98,86 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  protected override int Read(Span<byte> buffer)
+  protected override void Write(ReadOnlySpan<byte> buffer)
   {
-    var len = Math.Min(SerialPort.BytesToRead, buffer.Length);
-    if (BaseStream is not null && len > 0)
-    {
-      var b = buffer[..len];
-
-#if NET8_0_OR_GREATER
-      BaseStream.ReadExactly(b);
-#else
-      len = BaseStream.Read(b);
-#endif
-      DataReceived(b);
-    }
-
-    return len;
+    if (IsConnected) SerialPort.BaseStream.Write(buffer);
   }
 
   /// <inheritdoc />
-  protected override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+  protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-    cts.CancelAfter(ReadTimeout);
-    var len = Math.Min(SerialPort.BytesToRead, buffer.Length);
-    if (BaseStream is not null && len > 0)
-    {
-      var b = buffer[..len];
+    if (IsConnected) return SerialPort.BaseStream.WriteAsync(buffer, ct);
 
-#if NET8_0_OR_GREATER
-      await BaseStream.ReadExactlyAsync(b, cts.Token);
+#if NET6_0_OR_GREATER
+    return ValueTask.CompletedTask;
 #else
-      len = await BaseStream.ReadAsync(b, cts.Token);
+    return default;
 #endif
-      DataReceived(b.Span);
-    }
-
-    return len;
   }
 
-  /// <inheritdoc />
-  public override void Dispose()
+  #region 自动接收
+
+  private CancellationTokenSource? _autoRecCts;
+
+  /// <summary>
+  ///   开始自动接收
+  /// </summary>
+  private void StartAutoReceive()
   {
-    Disconnect();
-    StreamLock.Dispose();
-    GC.SuppressFinalize(this);
+    StopAutoReceive();
+    _autoRecCts = new CancellationTokenSource();
+
+    _ = Task.Run(() => AutoReceiveAsync(_autoRecCts.Token), _autoRecCts.Token);
   }
+
+  /// <summary>
+  ///   自动接收任务
+  /// </summary>
+  /// <param name="ct"></param>
+  private async Task AutoReceiveAsync(CancellationToken ct)
+  {
+    while (!ct.IsCancellationRequested)
+    {
+      var buffer = new byte[256];
+      var memory = buffer.AsMemory();
+      if (IsConnected)
+        try
+        {
+          var bytesRead = await SerialPort.BaseStream.ReadAsync(memory, ct);
+
+          // 通信异常
+          if (bytesRead == 0) break;
+
+          WriteBuffer(memory.Span);
+        }
+        catch (OperationCanceledException)
+        {
+          // 正常取消任务
+          break;
+        }
+        catch (IOException)
+        {
+          // IO异常
+          break;
+        }
+        catch (Exception)
+        {
+          // ignored
+        }
+      else
+        await Task.Yield();
+    }
+  }
+
+  /// <summary>
+  ///   停止自动接收
+  /// </summary>
+  private void StopAutoReceive()
+  {
+    _autoRecCts?.Cancel();
+    _autoRecCts?.Dispose();
+    _autoRecCts = null;
+  }
+
+  #endregion
 }

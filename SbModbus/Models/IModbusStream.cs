@@ -12,11 +12,6 @@ namespace SbModbus.Models;
 public interface IModbusStream : IDisposable
 {
   /// <summary>
-  ///   基础流
-  /// </summary>
-  public Stream? BaseStream { get; }
-
-  /// <summary>
   ///   是否连接
   /// </summary>
   public bool IsConnected { get; }
