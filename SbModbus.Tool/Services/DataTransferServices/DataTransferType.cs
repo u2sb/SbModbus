@@ -1,4 +1,4 @@
-﻿namespace SbModbus.Tool.Services.DataTransferServices;
+namespace SbModbus.Tool.Services.DataTransferServices;
 
 public enum DataTransferType
 {

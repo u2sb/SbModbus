@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations;
 using System.IO.Ports;
 using System.Net;
 using System.Text;
-using System.Windows;
-using System.Windows.Media;
+using Avalonia.Interactivity;
+using Avalonia.Media;
 using SbModbus.Tool.Models.Settings;
 using SbModbus.Tool.Services.DataTransferServices;
 using SbModbus.Tool.Services.RecordServices;
@@ -18,6 +18,7 @@ using Sb.Extensions.System;
 
 namespace SbModbus.Tool.ViewModels.Pages;
 
+[AutoInject]
 public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposable
 {
   /// <summary>
@@ -50,7 +51,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     if (!IsDesignMode)
     {
-      _dtr = Ioc.Default.GetRequiredService<DataTransmissionRecord>();
+      _dtr = GetService<DataTransmissionRecord>();
       LoadSettings();
     }
   }
@@ -363,7 +364,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   #region 加载和保存配置文件
 
-  public override void OnLoaded(object sender, RoutedEventArgs e)
+  public override void OnLoaded(object? sender, RoutedEventArgs e)
   {
     RefreshSerialPortNames();
   }
@@ -451,7 +452,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   private void OnDataWrite(ReadOnlySpan<byte> data, IDtStream dtStream)
   {
     _dtr?.WriteOutLog(data);
-    
+
     var content = data.ToArray();
     App.Current.Dispatcher.Invoke(() =>
     {

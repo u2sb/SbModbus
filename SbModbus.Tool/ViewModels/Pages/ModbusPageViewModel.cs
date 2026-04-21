@@ -4,7 +4,7 @@ using System.IO.Ports;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Windows.Media;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
@@ -21,6 +21,7 @@ using SbModbus.Tool.Utils;
 
 namespace SbModbus.Tool.ViewModels.Pages;
 
+[AutoInject]
 public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 {
   /// <summary>
@@ -51,7 +52,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   {
     if (!IsDesignMode)
     {
-      _dtr = Ioc.Default.GetRequiredService<DataTransmissionRecord>();
+      _dtr = GetService<DataTransmissionRecord>();
       OnLoaded();
       LoadSettings();
     }

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using System.Windows;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.DependencyInjection;
 
 namespace SbModbus.Tool.Utils;
@@ -12,18 +11,8 @@ public static class WindowHelper
     return window ?? new T();
   }
 
-  public static bool IsInDesignMode()
+  extension(Control? view)
   {
-    return DesignerProperties.GetIsInDesignMode(new DependencyObject());
-  }
-
-  extension(FrameworkElement? view)
-  {
-    public bool IsInDesignMode()
-    {
-      return view is null
-        ? IsInDesignMode()
-        : DesignerProperties.GetIsInDesignMode(view);
-    }
+    public bool IsInDesignMode => Design.IsDesignMode;
   }
 }

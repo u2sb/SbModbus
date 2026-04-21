@@ -1,45 +1,53 @@
-﻿<UserControl x:Class="SbModbus.Tool.Views.Pages.SerialPortAssistantPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
              xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
-             xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
-             d:DataContext="{d:DesignInstance pvm:SerialPortAssistantPageViewModel}"
+             x:Class="SbModbus.Tool.Views.Pages.SerialPortAssistantPage"
+             x:DataType="pvm:SerialPortAssistantPageViewModel"
              x:Name="Root">
-  <UserControl.Resources>
-    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-      <Setter Property="FontSize" Value="{StaticResource SubHeadFontSize}" />
+
+  <Design.DataContext>
+    <pvm:SerialPortAssistantPageViewModel />
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock">
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="TextAlignment" Value="Left" />
     </Style>
-    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-      <Setter Property="FontSize" Value="{StaticResource SubHeadFontSize}" />
+    <Style Selector="SelectableTextBlock">
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="TextAlignment" Value="Left" />
+    </Style>
+    <Style Selector="TextBox">
       <Setter Property="Margin" Value="0,5" />
       <Setter Property="VerticalAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Right" />
       <Setter Property="Width" Value="140" />
-      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="TextAlignment" Value="Left" />
     </Style>
-    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+    <Style Selector="ComboBox">
       <Setter Property="Margin" Value="0,5" />
       <Setter Property="VerticalAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Right" />
       <Setter Property="Width" Value="140" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="FontWeight" Value="Normal" />
-      <Setter Property="FontSize" Value="{StaticResource SubHeadFontSize}" />
     </Style>
-    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Style Selector="Button">
       <Setter Property="Margin" Value="5,0" />
       <Setter Property="Height" Value="35" />
-      <Setter Property="FontSize" Value="{StaticResource SubHeadFontSize}" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="VerticalAlignment" Value="Stretch" />
     </Style>
-  </UserControl.Resources>
+  </UserControl.Styles>
+
+
   <Grid ColumnDefinitions="240,*">
     <!-- 左侧区域 -->
     <Border Grid.Column="0" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
@@ -49,7 +57,7 @@
           <Grid Height="45">
             <TextBlock Text="{StaticResource lang.dataInterface}" />
             <ComboBox
-              SelectedIndex="{Binding DataTransferType, 
+              SelectedIndex="{Binding DataTransferType,
                     Converter={StaticResource EnumToIntConverter}}">
               <ComboBoxItem Content="{StaticResource lang.noneType}" />
               <ComboBoxItem Content="{StaticResource lang.serialPortType}" />
@@ -69,8 +77,8 @@
           <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3" Fill="Gray" />
 
           <Grid
-            Visibility="{Binding DataTransferType, 
-                            Converter={StaticResource EnumToVisibilityConverter},
+            IsVisible="{Binding DataTransferType,
+                            Converter={StaticResource EnumToBoolConverter},
                             ConverterParameter=SerialPort }">
             <StackPanel>
               <Grid Height="45">
@@ -84,8 +92,7 @@
               </Grid>
               <Grid Height="45">
                 <TextBlock Text="{StaticResource lang.dataBit}" />
-                <ComboBox SelectedValuePath="Tag"
-                          SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
+                <ComboBox SelectedValue="{Binding DataBits, Converter={StaticResource IntToStringConverter}}">
                   <ComboBoxItem Tag="8" Content="8" />
                   <ComboBoxItem Tag="7" Content="7" />
                   <ComboBoxItem Tag="6" Content="6" />
@@ -95,20 +102,20 @@
               <Grid Height="45">
                 <TextBlock Text="{StaticResource lang.parityBit}" />
                 <ComboBox ItemsSource="{Binding ParityValues}"
-                          SelectedIndex="{Binding Parity, 
+                          SelectedIndex="{Binding Parity,
                     Converter={StaticResource EnumToIntConverter}}" />
               </Grid>
               <Grid Height="45">
                 <TextBlock Text="{StaticResource lang.stopBit}" />
                 <ComboBox ItemsSource="{Binding StopBitsValues}"
-                          SelectedIndex="{Binding StopBits, 
+                          SelectedIndex="{Binding StopBits,
                     Converter={StaticResource EnumToIntConverter}}" />
               </Grid>
               <Grid Height="45">
                 <TextBlock Text="{StaticResource lang.flowControl}" />
                 <ComboBox
                   ItemsSource="{Binding HandshakeValues}"
-                  SelectedIndex="{Binding Handshake, 
+                  SelectedIndex="{Binding Handshake,
                     Converter={StaticResource EnumToIntConverter}}" />
               </Grid>
               <!-- <UniformGrid Height="45" Columns="3"> -->
@@ -120,8 +127,8 @@
           </Grid>
 
           <Grid
-            Visibility="{Binding DataTransferType, 
-                            Converter={StaticResource EnumToVisibilityConverter},
+            IsVisible="{Binding DataTransferType,
+                            Converter={StaticResource EnumToBoolConverter},
                             ConverterParameter=TcpClient;UdpClient }">
 
             <StackPanel>
@@ -139,8 +146,8 @@
           </Grid>
 
           <Grid
-            Visibility="{Binding DataTransferType, 
-                            Converter={StaticResource EnumToVisibilityConverter},
+            IsVisible="{Binding DataTransferType,
+                            Converter={StaticResource EnumToBoolConverter},
                             ConverterParameter=TcpServer;UdpServer }">
             <StackPanel>
               <Grid Height="45">
@@ -156,7 +163,7 @@
 
               <Grid Height="100">
                 <TextBlock Margin="0,30" VerticalAlignment="Top" Text="{StaticResource lang.targetClient}" />
-                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35" Width="Auto"
+                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35"
                           ItemsSource="{Binding Sessions}"
                           SelectedIndex="{Binding SelectedSessionIndex}" />
               </Grid>
@@ -171,13 +178,13 @@
           </StackPanel>
         </StackPanel>
         <UniformGrid Margin="5,10" Columns="3" VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
-          <Button Margin="2" FontWeight="Bold" Height="Auto" FontSize="18"
+          <Button Margin="2" FontWeight="Bold" FontSize="18"
                   Content="{StaticResource lang.btnClear}"
                   Command="{Binding CleanOutputCommand}" />
-          <Button Margin="2" FontWeight="Bold" Height="Auto" FontSize="18"
+          <Button Margin="2" FontWeight="Bold" FontSize="18"
                   Content="{Binding InputMode}"
                   Command="{Binding ChangeInputModeCommand}" />
-          <Button Margin="2" FontWeight="Bold" Height="Auto" FontSize="18"
+          <Button Margin="2" FontWeight="Bold" FontSize="18"
                   Content="{StaticResource lang.btnSend}"
                   Command="{Binding SendCommand}" />
         </UniformGrid>
@@ -186,30 +193,29 @@
     <Border Grid.Column="1" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
             BorderBrush="Black" BorderThickness="1">
       <Grid RowDefinitions="*, 5, 180">
-        <Grid Row="0">
+        <Grid Grid.Row="0">
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                         bh:SmartScrollBehavior.IsEnabled="True">
             <ItemsControl ItemsSource="{Binding DsLogs}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Grid Margin="2" ColumnDefinitions="Auto, 10, *">
-                    <hc:SimpleText Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left" FontSize="18"
-                                   Foreground="CornflowerBlue"
-                                   Text="{Binding DateTimeString}" />
-                    <hc:SimpleText Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
-                                   TextWrapping="Wrap" FontSize="18"
-                                   Foreground="{Binding TextColor}"
-                                   Visibility="{Binding DataContext.UseHex, 
-                                          Converter={StaticResource Boolean2VisibilityConverter},
+                    <SelectableTextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left"
+                                         FontSize="18"
+                                         Foreground="CornflowerBlue"
+                                         Text="{Binding DateTimeString}" />
+                    <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                         TextWrapping="Wrap" FontSize="18"
+                                         Foreground="{Binding TextColor}"
+                                         IsVisible="{Binding DataContext.UseHex,
                                           ElementName=Root}"
-                                   Text="{Binding HexString}" />
-                    <hc:SimpleText Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
-                                   TextWrapping="Wrap" FontSize="18"
-                                   Foreground="{Binding TextColor}"
-                                   Visibility="{Binding DataContext.UseHex,
-                                          Converter={StaticResource Boolean2VisibilityReConverter},
+                                         Text="{Binding HexString}" />
+                    <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                         TextWrapping="Wrap" FontSize="18"
+                                         Foreground="{Binding TextColor}"
+                                         IsVisible="{Binding DataContext.UseHex,
                                           ElementName=Root}"
-                                   Text="{Binding Utf8String}" />
+                                         Text="{Binding Utf8String}" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -221,17 +227,18 @@
         <Grid Grid.Row="2" RowDefinitions="*, 5, 110">
           <Border Grid.Row="0" Margin="5,2,5,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                   BorderBrush="Black" BorderThickness="1">
-            <TextBox Margin="5" FontSize="18" Width="Auto"
-                     BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}"
+            <TextBox Margin="5" FontSize="18"
+                     BorderThickness="0"
                      AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left" IsReadOnly="True"
                      Text="{Binding OutputString}" />
           </Border>
           <GridSplitter Grid.Row="1" Height="3" Margin="5,0" Background="Gray"
                         HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" />
-          <Border Grid.Row="2" Margin="5,2,5,5" BorderBrush="Black" BorderThickness="1">
-            <TextBox Margin="5" FontSize="18" Width="Auto"
-                     BorderThickness="0" Background="Transparent" FocusVisualStyle="{x:Null}"
+          <Border Grid.Row="2" Margin="5,2,5,5" BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+            <TextBox Margin="5" FontSize="18"
+                     BorderThickness="0"
                      AcceptsReturn="True" TextWrapping="Wrap" HorizontalContentAlignment="Left"
                      VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left"
                      Text="{Binding InputString, UpdateSourceTrigger=PropertyChanged}" />

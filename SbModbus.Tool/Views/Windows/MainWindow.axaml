@@ -1,15 +1,20 @@
-<Window x:Class="SbModbus.Tool.Views.Windows.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
         xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
-        d:DataContext="{d:DesignInstance wvm:MainWindowViewModel}"
+        x:Class="SbModbus.Tool.Views.Windows.MainWindow"
+        x:DataType="wvm:MainWindowViewModel"
         WindowStartupLocation="CenterScreen"
         Title="{StaticResource lang.title}"
-        Icon="pack://application:,,,/Assets/icon.ico">
+        Icon="/Assets/icon.ico">
+
+  <Design.DataContext>
+    <wvm:MainWindowViewModel />
+  </Design.DataContext>
+
   <Grid>
     <TabControl>
       <TabControl.ItemsPanel>
@@ -28,15 +33,15 @@
         </Border>
       </TabItem>
     </TabControl>
-    <StackPanel Orientation="Horizontal" Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top">
-      <TextBlock VerticalAlignment="Center" Margin="10,0">
-        <Hyperlink Command="{Binding OpenSbModbusCommand}">
-          SbModbus
-        </Hyperlink>
-      </TextBlock>
-      <Button Margin="10,0" Width="100" Height="25"
-              Content="{StaticResource lang.btnDsLog}"
-              Command="{Binding OpenLogDirectoryCommand}" />
-    </StackPanel>
+    <!-- <StackPanel Orientation="Horizontal" Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top"> -->
+    <!--   <TextBlock VerticalAlignment="Center" Margin="10,0"> -->
+    <!--     <Hyperlink Command="{Binding OpenSbModbusCommand}"> -->
+    <!--       SbModbus -->
+    <!--     </Hyperlink> -->
+    <!--   </TextBlock> -->
+    <!--   <Button Margin="10,0" Width="100" Height="25" -->
+    <!--           Content="{StaticResource lang.btnDsLog}" -->
+    <!--           Command="{Binding OpenLogDirectoryCommand}" /> -->
+    <!-- </StackPanel> -->
   </Grid>
 </Window>

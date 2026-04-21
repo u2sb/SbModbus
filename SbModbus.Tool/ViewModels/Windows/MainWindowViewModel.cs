@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using R3;
@@ -6,6 +6,7 @@ using SbModbus.Tool.Services.RecordServices;
 
 namespace SbModbus.Tool.ViewModels.Windows;
 
+[AutoInject]
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
   private DisposableBag _disposableBag;

@@ -2,8 +2,9 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:s="clr-namespace:System;assembly=mscorlib">
   <!-- ReSharper disable InconsistentNaming -->
-  <s:String x:Key="lang.title">帅比 Modbus 助手</s:String>
+  <s:String x:Key="lang.title">万能调试工具</s:String>
   <s:String x:Key="lang.serialPortAssistant">串口助手</s:String>
+  <s:String x:Key="lang.deviceDebug">主板调试</s:String>
   <s:String x:Key="lang.modbus">Modbus</s:String>
   <s:String x:Key="lang.noneType">无</s:String>
   <s:String x:Key="lang.serialPortType">串口</s:String>
@@ -27,7 +28,7 @@
   <s:String x:Key="lang.modbusVirtualType">虚拟接口</s:String>
   <s:String x:Key="lang.modbusRtuType">ModbusRTU</s:String>
   <s:String x:Key="lang.modbusTcpType">ModbusTCP</s:String>
-  <s:String x:Key="lang.modbusRtuOverTcpType">ModbusRtuOverTcp</s:String>
+  <s:String x:Key="lang.modbusRtuOverTcpType">ModbusRTUOverTCP</s:String>
   <s:String x:Key="lang.modbusInterface">连接方式</s:String>
   <s:String x:Key="lang.modbusStationId">站号</s:String>
   <s:String x:Key="lang.modbusEncodeMode">编码方式</s:String>
@@ -53,5 +54,8 @@
   <s:String x:Key="lang.btnDsLog">传输日志</s:String>
   <s:String x:Key="lang.btnRead">读取</s:String>
   <s:String x:Key="lang.btnWrite">写入</s:String>
+  <s:String x:Key="lang.btnRefresh">刷新</s:String>
+  <s:String x:Key="lang.btnCollection">采集</s:String>
+  <s:String x:Key="lang.btnStop">停止</s:String>
   <!-- ReSharper restore InconsistentNaming -->
 </ResourceDictionary>

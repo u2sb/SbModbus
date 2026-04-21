@@ -1,5 +1,5 @@
-﻿using System.Globalization;
-using System.Windows.Data;
+using System.Globalization;
+using Avalonia.Data.Converters;
 
 namespace SbModbus.Tool.Models.ValueConverters;
 
@@ -12,18 +12,12 @@ public class EnumToBoolConverter : IValueConverter
 
   public virtual object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
   {
-    if (value is null || parameter is null)
-    {
-      return false;
-    }
+    if (value is null || parameter is null) return false;
 
     var valueString = value.ToString();
     var parameterString = parameter.ToString();
 
-    if (string.IsNullOrEmpty(valueString) || string.IsNullOrEmpty(parameterString))
-    {
-      return false;
-    }
+    if (string.IsNullOrEmpty(valueString) || string.IsNullOrEmpty(parameterString)) return false;
 
     // 检查参数是否包含多个枚举值（用分隔符分隔）
     if (parameterString.Contains(Separator))
@@ -44,10 +38,7 @@ public class EnumToBoolConverter : IValueConverter
     if (value is true && parameter != null)
     {
       var parameterString = parameter.ToString();
-      if (string.IsNullOrEmpty(parameterString))
-      {
-        return null;
-      }
+      if (string.IsNullOrEmpty(parameterString)) return null;
 
       try
       {
@@ -57,10 +48,7 @@ public class EnumToBoolConverter : IValueConverter
           parameterString = parameterString.Split([Separator], StringSplitOptions.RemoveEmptyEntries)
             .FirstOrDefault()?.Trim();
 
-          if (string.IsNullOrEmpty(parameterString))
-          {
-            return null;
-          }
+          if (string.IsNullOrEmpty(parameterString)) return null;
         }
 
         return Enum.Parse(targetType, parameterString, true);

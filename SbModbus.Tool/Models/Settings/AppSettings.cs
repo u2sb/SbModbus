@@ -1,35 +1,31 @@
-﻿using System.IO;
 using System.IO.Ports;
+using System.Text.Json.Serialization;
 using SbModbus.Tool.Services.DataTransferServices;
 using SbModbus.Tool.Services.ModbusServices;
-using VYaml.Annotations;
-using VYaml.Serialization;
+using SbModbus.Tool.Utils.Serializer;
 
 namespace SbModbus.Tool.Models.Settings;
 
-[YamlObject]
-public partial class AppSettings
+public class AppSettings
 {
   #region 字段
 
-  [YamlMember] public string Lang { get; set; }
+  public string Lang { get; set; }
 
-  [YamlMember] public int DsLogMaxShow { get; set; }
+  public int DsLogMaxShow { get; set; }
 
-  [YamlMember] public SerialPortAssistantPageSettings SerialPortAssistant { get; set; } = new();
+  public SerialPortAssistantPageSettings SerialPortAssistant { get; set; } = new();
 
-  [YamlMember] public ModbusPageSettings Modbus { get; set; } = new();
+  public ModbusPageSettings Modbus { get; set; } = new();
 
-  [YamlMember] public Motherboard660Settings Motherboard660 { get; set; } = new();
-
-  [YamlIgnore] public Dictionary<string, string> LanguageMap { get; }
+  public Dictionary<string, string> LanguageMap { get; }
 
   #endregion
 
   #region 初始化和保存
 
-  [YamlConstructor]
-  private AppSettings(string lang = LanguageName.ZhCN)
+  [JsonConstructor]
+  private AppSettings(string lang = "zh-CN")
   {
     Lang = lang;
 
@@ -38,38 +34,30 @@ public partial class AppSettings
     if (File.Exists(LangBaseFilePath))
     {
       var lb = File.ReadAllBytes(LangBaseFilePath);
-      var b0 = YamlSerializer.Deserialize<Dictionary<string, string>?>(lb) ?? new Dictionary<string, string>();
-      foreach (var (key, value) in b0)
-      {
-        LanguageMap[key] = value;
-      }
+      var b0 = SbModbusJsonSerializer.Deserialize<Dictionary<string, string>?>(lb) ?? new Dictionary<string, string>();
+      foreach (var (key, value) in b0) LanguageMap[key] = value;
     }
 
     if (File.Exists(LangFilePath(lang)))
     {
       var l = File.ReadAllBytes(LangFilePath(lang));
-      var b1 = YamlSerializer.Deserialize<Dictionary<string, string>?>(l) ?? new Dictionary<string, string>();
-      foreach (var (key, value) in b1)
-      {
-        LanguageMap[key] = value;
-      }
+      var b1 = SbModbusJsonSerializer.Deserialize<Dictionary<string, string>?>(l) ?? new Dictionary<string, string>();
+      foreach (var (key, value) in b1) LanguageMap[key] = value;
     }
   }
 
   // ReSharper disable InconsistentNaming
 
-  private const string SettingsDirectory = "Settings";
+  private const string SettingsDirectory = "settings";
   private const string LangDirectory = "i18n";
 
+  private static readonly string AppSettingsFilePath = Path.Combine(SettingsDirectory, "app.json");
 
-  private static readonly string AppSettingsFilePath = Path.Combine(SettingsDirectory, "app.yml");
-
-
-  private static readonly string LangBaseFilePath = Path.Combine(LangDirectory, "base.yml");
+  private static readonly string LangBaseFilePath = Path.Combine(LangDirectory, "base.json");
 
   private static string LangFilePath(string l)
   {
-    return Path.Combine(LangDirectory, $"{l}.yml");
+    return Path.Combine(LangDirectory, $"{l}.json");
   }
 
   // ReSharper restore InconsistentNaming
@@ -85,7 +73,7 @@ public partial class AppSettings
         if (File.Exists(AppSettingsFilePath))
         {
           var sb = File.ReadAllBytes(AppSettingsFilePath);
-          var b = YamlSerializer.Deserialize<AppSettings?>(sb) ?? new AppSettings();
+          var b = SbModbusJsonSerializer.Deserialize<AppSettings?>(sb) ?? new AppSettings();
           _instance = b;
         }
         else
@@ -104,15 +92,13 @@ public partial class AppSettings
   public async ValueTask SaveAsync()
   {
     await using var fs = File.Create(AppSettingsFilePath);
-    var bs = YamlSerializer.Serialize(this);
-    await fs.WriteAsync(bs);
+    await SbModbusJsonSerializer.SerializeAsync(fs, this);
   }
 
   #endregion
 }
 
-[YamlObject]
-public partial class SerialPortAssistantPageSettings
+public class SerialPortAssistantPageSettings
 {
   /// <summary>
   ///   传输类型
@@ -170,8 +156,7 @@ public partial class SerialPortAssistantPageSettings
   public ushort LocalPort { get; set; } = 13567;
 }
 
-[YamlObject]
-public partial class ModbusPageSettings
+public class ModbusPageSettings
 {
   /// <summary>
   ///   传输类型
@@ -222,18 +207,4 @@ public partial class ModbusPageSettings
   ///   站号
   /// </summary>
   public byte StationId { get; set; } = 0;
-}
-
-[YamlObject]
-public partial class Motherboard660Settings
-{
-  /// <summary>
-  ///   目标IP
-  /// </summary>
-  public string TargetIp { get; set; } = "127.0.0.1";
-
-  /// <summary>
-  ///   目标端口
-  /// </summary>
-  public ushort TargetPort { get; set; } = 1000;
 }

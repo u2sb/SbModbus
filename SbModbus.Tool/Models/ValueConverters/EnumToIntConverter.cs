@@ -1,5 +1,5 @@
-﻿using System.Globalization;
-using System.Windows.Data;
+using System.Globalization;
+using Avalonia.Data.Converters;
 
 namespace SbModbus.Tool.Models.ValueConverters;
 
@@ -7,22 +7,13 @@ public class EnumToIntConverter : IValueConverter
 {
   public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
   {
-    if (value == null)
-    {
-      return 0;
-    }
+    if (value == null) return 0;
 
     // 如果已经是int类型，直接返回
-    if (value is int intValue)
-    {
-      return intValue;
-    }
+    if (value is int intValue) return intValue;
 
     // 如果是枚举类型，转换为int
-    if (value is Enum enumValue)
-    {
-      return System.Convert.ToInt32(enumValue);
-    }
+    if (value is Enum enumValue) return System.Convert.ToInt32(enumValue);
 
     // 尝试将其他类型转换为int
     try
@@ -37,10 +28,7 @@ public class EnumToIntConverter : IValueConverter
 
   public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
   {
-    if (value == null)
-    {
-      return GetDefaultEnumValue(targetType);
-    }
+    if (value == null) return GetDefaultEnumValue(targetType);
 
     try
     {
@@ -52,16 +40,10 @@ public class EnumToIntConverter : IValueConverter
       }
 
       // 如果目标类型是int
-      if (targetType == typeof(int))
-      {
-        return System.Convert.ToInt32(value);
-      }
+      if (targetType == typeof(int)) return System.Convert.ToInt32(value);
 
       // 如果目标类型是可为空的int
-      if (targetType == typeof(int?))
-      {
-        return System.Convert.ToInt32(value);
-      }
+      if (targetType == typeof(int?)) return System.Convert.ToInt32(value);
 
       // 如果目标类型是可为空的枚举
       if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
@@ -95,10 +77,7 @@ public class EnumToIntConverter : IValueConverter
     if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
     {
       var underlyingType = Nullable.GetUnderlyingType(targetType);
-      if (underlyingType?.IsEnum == true)
-      {
-        return null;
-      }
+      if (underlyingType?.IsEnum == true) return null;
     }
 
     return 0;
