@@ -1,19 +1,30 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
-        xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
-        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
-        x:Class="SbModbus.Tool.Views.Windows.MainWindow"
-        x:DataType="wvm:MainWindowViewModel"
-        WindowStartupLocation="CenterScreen"
-        Title="{StaticResource lang.title}"
-        Icon="/Assets/icon.ico">
+<pipboy:PipboyWindow xmlns="https://github.com/avaloniaui"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
+                     xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
+                     xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
+                     mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+                     x:Class="SbModbus.Tool.Views.Windows.MainWindow"
+                     x:DataType="wvm:MainWindowViewModel"
+                     WindowStartupLocation="CenterScreen"
+                     Title="{StaticResource lang.title}">
 
   <Design.DataContext>
     <wvm:MainWindowViewModel />
   </Design.DataContext>
+
+  <pipboy:PipboyWindow.TitleBarContent>
+    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
+      <ComboBox
+        ItemsSource="{Binding ThemeColors}"
+        DisplayMemberBinding="{Binding Key}"
+        SelectedValueBinding="{Binding Value}"
+        SelectedIndex="0"
+        SelectedValue="{Binding SelectedTheme, Mode=OneWayToSource}" />
+    </StackPanel>
+  </pipboy:PipboyWindow.TitleBarContent>
 
   <Grid>
     <TabControl>
@@ -22,26 +33,22 @@
           <StackPanel Orientation="Horizontal" />
         </ItemsPanelTemplate>
       </TabControl.ItemsPanel>
-      <TabItem Header="{StaticResource lang.serialPortAssistant}" FontSize="{StaticResource HeadFontSize}">
+      <TabItem Header="{StaticResource lang.serialPortAssistant}">
         <Border>
           <pages:SerialPortAssistantPage Margin="1" />
         </Border>
       </TabItem>
-      <TabItem Header="{StaticResource lang.modbus}" FontSize="{StaticResource HeadFontSize}">
+      <TabItem Header="{StaticResource lang.modbus}">
         <Border>
           <pages:ModbusPage Margin="1" />
         </Border>
       </TabItem>
     </TabControl>
-    <!-- <StackPanel Orientation="Horizontal" Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top"> -->
-    <!--   <TextBlock VerticalAlignment="Center" Margin="10,0"> -->
-    <!--     <Hyperlink Command="{Binding OpenSbModbusCommand}"> -->
-    <!--       SbModbus -->
-    <!--     </Hyperlink> -->
-    <!--   </TextBlock> -->
-    <!--   <Button Margin="10,0" Width="100" Height="25" -->
-    <!--           Content="{StaticResource lang.btnDsLog}" -->
-    <!--           Command="{Binding OpenLogDirectoryCommand}" /> -->
-    <!-- </StackPanel> -->
+    <StackPanel Orientation="Horizontal" Margin="0,5,5,0" HorizontalAlignment="Right" VerticalAlignment="Top">
+      <HyperlinkButton Command="{Binding OpenSbModbusCommand}">SbModbus</HyperlinkButton>
+      <HyperlinkButton Margin="10,0"
+                       Content="{StaticResource lang.btnDsLog}"
+                       Command="{Binding OpenLogDirectoryCommand}" />
+    </StackPanel>
   </Grid>
-</Window>
+</pipboy:PipboyWindow>

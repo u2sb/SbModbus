@@ -2,11 +2,9 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.Threading;
 using Sb.Extensions.System.Buffers.RingBuffers;
-using Sb.Extensions.System.Threading;
-#if NETSTANDARD2_0
-#endif
-
+using SbModbus.Utils;
 
 namespace SbModbus.Models;
 
@@ -25,8 +23,10 @@ public abstract class ModbusStream : IModbusStream
   /// <inheritdoc />
   public abstract int WriteTimeout { get; set; }
 
-  /// <inheritdoc />
-  public AsyncLock StreamLock { get; } = new();
+  /// <summary>
+  ///   异步锁
+  /// </summary>
+  public AsyncSemaphore StreamLock { get; } = new(1);
 
   /// <inheritdoc />
   public abstract bool Connect();
@@ -41,7 +41,7 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <inheritdoc />
-  public ValueTask<LockedModbusStream> LockAsync(CancellationToken ct = default)
+  public Task<LockedModbusStream> LockAsync(CancellationToken ct = default)
   {
     return LockedModbusStream.LockAsync(this, ct);
   }
@@ -62,28 +62,12 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <summary>
-  ///   写入数据
-  /// </summary>
-  /// <param name="buffer"></param>
-  protected abstract void Write(ReadOnlySpan<byte> buffer);
-
-  /// <summary>
   ///   异步写入数据
   /// </summary>
   /// <param name="buffer"></param>
   /// <param name="ct"></param>
   /// <returns></returns>
   protected abstract ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default);
-
-  /// <summary>
-  ///   读取数据
-  /// </summary>
-  /// <param name="buffer"></param>
-  /// <returns></returns>
-  protected virtual int Read(Span<byte> buffer)
-  {
-    return ReadBuffer(buffer);
-  }
 
   /// <summary>
   ///   异步读取数据
@@ -93,11 +77,18 @@ public abstract class ModbusStream : IModbusStream
   /// <returns></returns>
   protected virtual ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
-#if NET8_0_OR_GREATER
-    return ValueTask.FromResult(ReadBuffer(buffer.Span));
-#else
-    return new ValueTask<int>(ReadBuffer(buffer.Span));
-#endif
+    return ReadAsyncCoreAsync(buffer, ct);
+  }
+
+  private async ValueTask<int> ReadAsyncCoreAsync(Memory<byte> buffer, CancellationToken ct)
+  {
+    while (true)
+    {
+      var length = ReadBuffer(buffer.Span);
+      if (length > 0) return length;
+
+      await _dataAvailable.WaitAsync(ct).ConfigureAwait(false);
+    }
   }
 
   /// <summary>
@@ -105,11 +96,11 @@ public abstract class ModbusStream : IModbusStream
   /// </summary>
   public readonly struct LockedModbusStream : IDisposable
   {
-    private readonly InnerLock _lock;
+    private readonly AsyncSemaphore.Releaser _lock;
 
     private readonly ModbusStream _modbusStream;
 
-    private LockedModbusStream(ModbusStream modbusStream, InnerLock l)
+    private LockedModbusStream(ModbusStream modbusStream, AsyncSemaphore.Releaser l)
     {
       _modbusStream = modbusStream;
       _lock = l;
@@ -117,14 +108,13 @@ public abstract class ModbusStream : IModbusStream
 
     internal static LockedModbusStream Lock(ModbusStream modbusStream)
     {
-      var l = modbusStream.StreamLock.Lock();
-      return new LockedModbusStream(modbusStream, l);
+      return SbThreading.Jtf.Run(() => LockAsync(modbusStream));
     }
 
-    internal static async ValueTask<LockedModbusStream> LockAsync(ModbusStream modbusStream,
+    internal static async Task<LockedModbusStream> LockAsync(ModbusStream modbusStream,
       CancellationToken ct = default)
     {
-      var l = await modbusStream.StreamLock.LockAsync(ct).ConfigureAwait(false);
+      var l = await modbusStream.StreamLock.EnterAsync(ct);
       return new LockedModbusStream(modbusStream, l);
     }
 
@@ -147,15 +137,6 @@ public abstract class ModbusStream : IModbusStream
     }
 
     /// <summary>
-    ///   写入数据
-    /// </summary>
-    /// <param name="buffer"></param>
-    public void Write(ReadOnlySpan<byte> buffer)
-    {
-      _modbusStream.Write(buffer);
-    }
-
-    /// <summary>
     ///   异步写入数据
     /// </summary>
     /// <param name="buffer"></param>
@@ -164,16 +145,6 @@ public abstract class ModbusStream : IModbusStream
     public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
     {
       return _modbusStream.WriteAsync(buffer, ct);
-    }
-
-    /// <summary>
-    ///   读取数据
-    /// </summary>
-    /// <param name="buffer"></param>
-    /// <returns></returns>
-    public int Read(Span<byte> buffer)
-    {
-      return _modbusStream.Read(buffer);
     }
 
     /// <summary>
@@ -229,7 +200,7 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="data"></param>
   protected virtual void DataReceived(ReadOnlySpan<byte> data)
   {
-    DataTransportAsync(OnDataReceivedAsync, data, CancellationToken.None);
+    DataTransport(OnDataReceivedAsync, data, CancellationToken.None);
 
     try
     {
@@ -247,7 +218,7 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="data"></param>
   protected virtual void DataSent(ReadOnlySpan<byte> data)
   {
-    DataTransportAsync(OnDataSentAsync, data, CancellationToken.None);
+    DataTransport(OnDataSentAsync, data, CancellationToken.None);
 
     try
     {
@@ -265,7 +236,7 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="handler"></param>
   /// <param name="data"></param>
   /// <param name="ct"></param>
-  protected virtual void DataTransportAsync(ModbusStreamAsyncHandler? handler, ReadOnlySpan<byte> data,
+  protected virtual void DataTransport(ModbusStreamAsyncHandler? handler, ReadOnlySpan<byte> data,
     CancellationToken ct)
   {
     if (handler is null) return;
@@ -275,12 +246,11 @@ public abstract class ModbusStream : IModbusStream
     foreach (var invocation in handler.GetInvocationList().Cast<ModbusStreamAsyncHandler>())
       // 异步调用每个订阅者，并处理异常
       // ReSharper disable once MethodSupportsCancellation
-    {
-      _ = Task.Run(async () =>
+      _ = SbThreading.Jtf.RunAsync(async () =>
       {
         try
         {
-          await invocation(this, bs, ct);
+          await invocation(this, bs, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -289,8 +259,7 @@ public abstract class ModbusStream : IModbusStream
         {
           // ignore
         }
-      }, ct);
-    }
+      });
   }
 
   #endregion
@@ -302,6 +271,8 @@ public abstract class ModbusStream : IModbusStream
 #else
   private readonly object _locker = new();
 #endif
+
+  private readonly SemaphoreSlim _dataAvailable = new(0);
 
 
   /// <summary>
@@ -319,6 +290,8 @@ public abstract class ModbusStream : IModbusStream
     {
       Buffer.AddLastRange(buffer);
     }
+
+    _dataAvailable.Release();
   }
 
   /// <summary>
@@ -330,6 +303,8 @@ public abstract class ModbusStream : IModbusStream
     {
       Buffer.Clear();
     }
+
+    while (_dataAvailable.CurrentCount > 0) _ = _dataAvailable.Wait(0);
   }
 
   /// <summary>

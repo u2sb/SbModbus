@@ -1,13 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
+using Pipboy.Avalonia;
 using SbModbus.Tool.Utils;
 using SbModbus.Tool.ViewModels;
 
 namespace SbModbus.Tool.Views.Windows;
 
 [AutoInject(ServiceLifetime.Transient)]
-public partial class MainWindow : Window
+public partial class MainWindow : PipboyWindow
 {
   public MainWindow()
   {

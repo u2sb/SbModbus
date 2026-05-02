@@ -1,8 +1,11 @@
 using System;
+#if NETSTANDARD2_0
+using Sb.Extensions.System.Buffers;
+#else
 using System.Buffers;
+#endif
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
-using Sb.Extensions.System.Buffers;
 using SbModbus.Models;
 using SbModbus.Utils;
 
@@ -14,80 +17,6 @@ namespace SbModbus.Services.ModbusClient;
 /// <param name="stream"></param>
 public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(stream), IModbusClient
 {
-  /// <inheritdoc />
-  public override Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).WithEndianness(true));
-
-    // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
-    var result = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-
-    // 返回数据
-    return result[3..^2];
-  }
-
-  /// <inheritdoc />
-  public override Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).WithEndianness(true));
-
-    // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
-    var result = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-
-    // 返回数据
-    return result[3..^2];
-  }
-
-
-  /// <inheritdoc />
-  public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
-      value ? [0xFF, 0x00] : "\0\0"u8);
-
-    // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
-    const int length = 1 + 1 + 2 + 2 + 2;
-    _ = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-  }
-
-
-  /// <inheritdoc />
-  public override void WriteSingleRegister(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, data);
-
-    // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
-    const int length = 1 + 1 + 2 + 2 + 2;
-    _ = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-  }
-
-  /// <summary>
-  /// </summary>
-  /// <param name="unitIdentifier"></param>
-  /// <param name="startingAddress"></param>
-  /// <param name="data"></param>
-  public override void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data)
-  {
-    var l = data.Length;
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data,
-      writer =>
-      {
-        // 写寄存器数量
-        writer.Write(ConvertUshort(l / 2).WithEndianness(true));
-
-        // 写字节数
-        writer.Write(ConvertByte(l).WithEndianness());
-      });
-
-    // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
-    const int length = 1 + 1 + 2 + 2 + 2;
-    _ = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-  }
-
   #region 通用方法
 
   /// <summary>
@@ -156,21 +85,6 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
     buffer.WriteCrc16();
 
     return buffer;
-  }
-
-
-  /// <inheritdoc />
-  protected override Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode, int startingAddress,
-    int count)
-  {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
-
-    // 1设备地址 1功能码 1数据长度 2n数据 2校验
-    var length = 1 + 1 + 1 + count * 2 + 2;
-    var result = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-
-    // 返回数据
-    return result[3..^2];
   }
 
 

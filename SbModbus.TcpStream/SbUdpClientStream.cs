@@ -79,16 +79,10 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  protected override void Write(ReadOnlySpan<byte> buffer)
-  {
-    _udpClient.SendAsync(buffer);
-    DataSent(buffer);
-  }
-
-  /// <inheritdoc />
   protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    Write(buffer.Span);
+    _udpClient.SendAsync(buffer.Span);
+    DataSent(buffer.Span);
     return ValueTask.CompletedTask;
   }
 

@@ -18,8 +18,9 @@ public partial class ModbusRtuClient
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + (count + 7 >> 3) + 2;
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
+    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
+      .ConfigureAwait(false);
 
     // 返回数据
     return result[3..^2];
@@ -33,23 +34,24 @@ public partial class ModbusRtuClient
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + (count + 7 >> 3) + 2;
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
+    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
+      .ConfigureAwait(false);
 
     // 返回数据
     return result[3..^2];
   }
 
   /// <inheritdoc />
-  public override async ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
+  public override async ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress,
+    ReadOnlyMemory<byte> data,
     CancellationToken ct = default)
   {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress,
-      value ? [0xFF, 0x00] : "\0\0"u8);
+    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, data.Span);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
   }
 
   /// <inheritdoc />
@@ -60,7 +62,7 @@ public partial class ModbusRtuClient
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
   }
 
   /// <inheritdoc />
@@ -80,7 +82,7 @@ public partial class ModbusRtuClient
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
-    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
   }
 
   #region 通用方法
@@ -93,15 +95,15 @@ public partial class ModbusRtuClient
   {
     if (!ModbusStream.IsConnected) throw new SbModbusException("Not Connected");
 
-    using var mt = await ModbusStream.LockAsync(ct);
+    using var mt = await ModbusStream.LockAsync(ct).ConfigureAwait(false);
 
-    await WaitDiffSidIntervalTime(data.Span[0]);
+    await WaitDiffSidIntervalTimeAsync(data.Span[0]).ConfigureAwait(false);
 
     // 清除读缓存
-    await mt.ClearReadBufferAsync(ct);
+    await mt.ClearReadBufferAsync(ct).ConfigureAwait(false);
 
     // 写入数据
-    await mt.WriteAsync(data, ct);
+    await mt.WriteAsync(data, ct).ConfigureAwait(false);
 
     OnWrite?.Invoke(data, this);
 
@@ -121,22 +123,25 @@ public partial class ModbusRtuClient
       while (bytesRead < length)
       {
         cts.Token.ThrowIfCancellationRequested();
-        var read = await mt.ReadAsync(memory[bytesRead..], cts.Token);
+        var read = await mt.ReadAsync(memory[bytesRead..], cts.Token).ConfigureAwait(false);
 
         // 如果没读到数据就跳过
-        if (read == 0) continue;
-
-        bytesRead += read;
-
-        // 如果已经读到功能码和错误码
-        if (!verificationFunctionCode && bytesRead >= 2)
+        if (read > 0)
         {
-          // 如果功能码不一致
-          if ((buffer[1] & 0x80) != 0) length = 5; // 相应不正常时返回值长度变为5
-          verificationFunctionCode = true;
-        }
+          bytesRead += read;
 
-        await Task.Yield();
+          // 如果已经读到功能码和错误码
+          if (!verificationFunctionCode && bytesRead >= 2)
+          {
+            // 如果功能码不一致
+            if ((buffer[1] & 0x80) != 0) length = 5; // 相应不正常时返回值长度变为5
+            verificationFunctionCode = true;
+          }
+        }
+        else
+        {
+          await Task.Yield();
+        }
       }
 
       var result = memory[..bytesRead];
@@ -175,7 +180,8 @@ public partial class ModbusRtuClient
 
     // 1设备地址 1功能码 1数据长度 2n数据 2校验
     var length = 1 + 1 + 1 + count * 2 + 2;
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct);
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
+      .ConfigureAwait(false);
 
     // 返回数据
     return result[3..^2];

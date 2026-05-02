@@ -1,7 +1,7 @@
 <Application x:Class="SbModbus.Tool.App"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:semi="https://irihi.tech/semi"
+             xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
              xmlns:utils="clr-namespace:SbModbus.Tool.Utils"
              RequestedThemeVariant="Light">
 
@@ -12,7 +12,7 @@
   <Application.Resources>
     <ResourceDictionary>
       <FontFamily x:Key="SarasaFonts">/Assets/Fonts#Sarasa Mono SC</FontFamily>
-      <FontFamily x:Key="SemiFontFamilyRegular">/Assets/Fonts#等距更纱黑体 SC</FontFamily>
+      <FontFamily x:Key="PipboyFontFamily">/Assets/Fonts#Sarasa Mono SC</FontFamily>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="/Resources/ValueConverter.axaml" />
         <ResourceInclude Source="/Resources/Language.axaml" />
@@ -21,7 +21,7 @@
   </Application.Resources>
 
   <Application.Styles>
-    <semi:SemiTheme Locale="zh-CN" />
+    <pipboy:PipboyTheme />
     <StyleInclude Source="/Resources/BaseStyle.axaml" />
   </Application.Styles>
 </Application>

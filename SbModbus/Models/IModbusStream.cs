@@ -1,8 +1,6 @@
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Sb.Extensions.System.Threading;
 
 namespace SbModbus.Models;
 
@@ -25,11 +23,6 @@ public interface IModbusStream : IDisposable
   ///   写入超时时间 ms
   /// </summary>
   public int WriteTimeout { get; set; }
-
-  /// <summary>
-  ///   异步锁
-  /// </summary>
-  public AsyncLock StreamLock { get; }
 
   /// <summary>
   ///   连接
@@ -79,5 +72,5 @@ public interface IModbusStream : IDisposable
   /// </summary>
   /// <param name="ct"></param>
   /// <returns></returns>
-  public ValueTask<ModbusStream.LockedModbusStream> LockAsync(CancellationToken ct = default);
+  public Task<ModbusStream.LockedModbusStream> LockAsync(CancellationToken ct = default);
 }

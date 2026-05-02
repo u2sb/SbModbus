@@ -1,9 +1,11 @@
-using System;
+#if NETSTANDARD2_0
+using Sb.Extensions.System.Buffers;
+#else
 using System.Buffers;
-using System.Runtime.InteropServices;
+#endif
+using System;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
-using Sb.Extensions.System.Buffers;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusClient;
@@ -18,105 +20,6 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   ///   事务Id
   /// </summary>
   protected ushort TransactionsId;
-
-  /// <inheritdoc />
-  public override Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      ConvertUshort(count).WithEndianness(true));
-
-    // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
-    var length = 7 + 1 + 1 + ((count + 7) >> 3);
-    var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
-
-    var result = WriteAndReadWithTimeout(temp, length, ReadTimeout);
-
-    // 返回数据
-    return result[9..];
-  }
-
-
-  /// <inheritdoc />
-  public override void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
-      value ? [0xFF, 0x00] : "\0\0"u8);
-
-    // 7MBAP 1功能码 2寄存器地址 2数据数量
-    const int length = 7 + 1 + 2 + 2;
-    var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
-
-    _ = WriteAndReadWithTimeout(temp, length, ReadTimeout);
-  }
-
-  /// <inheritdoc />
-  public override Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
-      ConvertUshort(count).WithEndianness(true));
-
-    // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
-    var length = 7 + 1 + 1 + ((count + 7) >> 3);
-    var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
-
-    var result = WriteAndReadWithTimeout(buffer.WrittenMemory, length, ReadTimeout);
-
-    // 返回数据
-    return result[9..];
-  }
-
-  /// <inheritdoc />
-  public override void WriteSingleRegister(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data)
-  {
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress, data);
-
-    // 7MBAP 1功能码 2寄存器地址 2数据数量
-    const int length = 7 + 1 + 2 + 2;
-    var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
-    _ = WriteAndReadWithTimeout(temp, length, ReadTimeout);
-  }
-
-  /// <inheritdoc />
-  public override void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data)
-  {
-    var l = data.Length;
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data, writer =>
-    {
-      // 写寄存器数量
-      writer.Write(ConvertUshort(l / 2).WithEndianness(true));
-
-      // 写字节数
-      writer.Write(ConvertByte(l));
-    });
-
-
-    // 7MBAP 1功能码 2寄存器地址 2数据数量
-    const int length = 7 + 1 + 2 + 2;
-    var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
-    _ = WriteAndReadWithTimeout(temp, length, ReadTimeout);
-  }
-
-
-  /// <inheritdoc />
-  protected override Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode, int startingAddress,
-    int count)
-  {
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
-
-    // 7MBAP 1功能码 1数据长度 2n数据
-    var length = 7 + 1 + 1 + count * 2;
-    var temp = MemoryMarshal.AsMemory(buffer.WrittenMemory);
-    ((ushort)(temp.Length - 6)).WriteTo(temp.Span[4..6], BigAndSmallEndianEncodingMode.ABCD);
-    var result = WriteAndReadWithTimeout(temp, length, ReadTimeout);
-
-    // 返回数据
-    return result[9..];
-  }
 
   /// <summary>
   ///   创建数据帧

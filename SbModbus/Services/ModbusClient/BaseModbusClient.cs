@@ -155,7 +155,7 @@ public abstract class BaseModbusClient : IModbusClient
   ///   等待通信时间
   /// </summary>
   /// <returns></returns>
-  protected async ValueTask WaitDiffSidIntervalTime(byte sid)
+  protected async ValueTask WaitDiffSidIntervalTimeAsync(byte sid)
   {
     if (DiffSidIntervalTime <= 0 || sid == _previousSid) return;
 
@@ -165,7 +165,7 @@ public abstract class BaseModbusClient : IModbusClient
 
     if (span <= TimeSpan.Zero) return;
 
-    await Task.Delay(span);
+    await Task.Delay(span).ConfigureAwait(false);
   }
 
   #endregion
@@ -178,35 +178,11 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="data">要写入的数据</param>
   /// <param name="length">需要读取的数据长度</param>
   /// <param name="readTimeout">超时时间 单位ms</param>
-  /// <returns></returns>
-  protected Span<byte> WriteAndReadWithTimeout(ReadOnlyMemory<byte> data, int length, int readTimeout)
-  {
-    return WriteAndReadWithTimeoutAsync(data, length, readTimeout,
-      CancellationToken.None).Result.Span;
-  }
-
-  /// <summary>
-  ///   读取数据
-  /// </summary>
-  /// <param name="data">要写入的数据</param>
-  /// <param name="length">需要读取的数据长度</param>
-  /// <param name="readTimeout">超时时间 单位ms</param>
   /// <param name="ct"></param>
   /// <returns></returns>
   /// <exception cref="SbModbusException"></exception>
   protected abstract ValueTask<Memory<byte>> WriteAndReadWithTimeoutAsync(ReadOnlyMemory<byte> data, int length,
     int readTimeout, CancellationToken ct = default);
-
-  /// <summary>
-  ///   读寄存器通用方法
-  /// </summary>
-  /// <param name="unitIdentifier"></param>
-  /// <param name="functionCode"></param>
-  /// <param name="startingAddress"></param>
-  /// <param name="count"></param>
-  /// <returns></returns>
-  protected abstract Span<byte> ReadRegisters(int unitIdentifier, ModbusFunctionCode functionCode,
-    int startingAddress, int count);
 
   /// <summary>
   ///   异步读取寄存器通用方法
@@ -225,15 +201,9 @@ public abstract class BaseModbusClient : IModbusClient
   #region Modbus具体实现
 
   /// <inheritdoc />
-  public abstract Span<byte> ReadCoils(int unitIdentifier, int startingAddress, int count);
-
-  /// <inheritdoc />
   public abstract ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
     CancellationToken ct = default);
 
-
-  /// <inheritdoc />
-  public abstract Span<byte> ReadDiscreteInputs(int unitIdentifier, int startingAddress, int count);
 
   /// <inheritdoc />
   public abstract ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress, int count,
@@ -241,54 +211,33 @@ public abstract class BaseModbusClient : IModbusClient
 
 
   /// <inheritdoc />
-  public Span<byte> ReadHoldingRegisters(int unitIdentifier, int startingAddress, int count)
-  {
-    return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count);
-  }
-
-  /// <inheritdoc />
   public async ValueTask<Memory<byte>> ReadHoldingRegistersAsync(int unitIdentifier, int startingAddress, int count,
     CancellationToken ct = default)
   {
     return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadHoldingRegisters, startingAddress, count,
-      ct);
+      ct).ConfigureAwait(false);
   }
 
-
-  /// <inheritdoc />
-  public Span<byte> ReadInputRegisters(int unitIdentifier, int startingAddress, int count)
-  {
-    return ReadRegisters(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count);
-  }
 
   /// <inheritdoc />
   public async ValueTask<Memory<byte>> ReadInputRegistersAsync(int unitIdentifier, int startingAddress, int count,
     CancellationToken ct = default)
   {
-    return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count, ct);
+    return await ReadRegistersAsync(unitIdentifier, ModbusFunctionCode.ReadInputRegisters, startingAddress, count, ct)
+      .ConfigureAwait(false);
   }
 
   /// <inheritdoc />
-  public abstract void WriteSingleCoil(int unitIdentifier, int startingAddress, bool value);
+  public virtual ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
+    CancellationToken ct = default)
+  {
+    var buffer = value ? [0xFF, 0x00] : "\0\0"u8.ToArray();
+    return WriteSingleCoilAsync(unitIdentifier, startingAddress, buffer, ct);
+  }
 
   /// <inheritdoc />
-  public abstract ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
+  public abstract ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, ReadOnlyMemory<byte> data,
     CancellationToken ct = default);
-
-  /// <inheritdoc />
-  public abstract void WriteSingleRegister(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
-
-  /// <inheritdoc />
-  public void WriteSingleRegister(int unitIdentifier, int startingAddress, ushort value)
-  {
-    WriteSingleRegister(unitIdentifier, startingAddress, value.ToByteArray());
-  }
-
-  /// <inheritdoc />
-  public void WriteSingleRegister(int unitIdentifier, int startingAddress, short value)
-  {
-    WriteSingleRegister(unitIdentifier, startingAddress, value.ToByteArray());
-  }
 
   /// <inheritdoc />
   public abstract ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress, ReadOnlyMemory<byte> data,
@@ -307,9 +256,6 @@ public abstract class BaseModbusClient : IModbusClient
   {
     return WriteSingleRegisterAsync(unitIdentifier, startingAddress, value.ToByteArray(), ct);
   }
-
-  /// <inheritdoc />
-  public abstract void WriteMultipleRegisters(int unitIdentifier, int startingAddress, ReadOnlySpan<byte> data);
 
 
   /// <inheritdoc />

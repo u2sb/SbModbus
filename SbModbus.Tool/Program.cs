@@ -1,4 +1,5 @@
 using Avalonia;
+using SbModbus.Utils;
 
 namespace SbModbus.Tool;
 
@@ -10,6 +11,8 @@ internal sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        SbThreading.InitializeMainThread();
+
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
     }

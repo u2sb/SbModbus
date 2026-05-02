@@ -98,26 +98,18 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  protected override void Write(ReadOnlySpan<byte> buffer)
-  {
-    if (IsConnected) SerialPort.BaseStream.Write(buffer);
-  }
-
-  /// <inheritdoc />
   protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
     if (IsConnected) return SerialPort.BaseStream.WriteAsync(buffer, ct);
 
 #if NET6_0_OR_GREATER
-    return ValueTask.CompletedTask;
+    return ValueTask.FromException(new IOException("Serial port is not connected"));
 #else
-    return default;
+    return new ValueTask(Task.FromException(new IOException("Serial port is not connected")));
 #endif
   }
 
   #region 自动接收
-
-  private CancellationTokenSource? _autoRecCts;
 
   /// <summary>
   ///   开始自动接收
@@ -125,47 +117,18 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   private void StartAutoReceive()
   {
     StopAutoReceive();
-    _autoRecCts = new CancellationTokenSource();
-
-    _ = Task.Run(() => AutoReceiveAsync(_autoRecCts.Token), _autoRecCts.Token);
+    SerialPort.DataReceived += SerialPortOnDataReceived;
   }
 
-  /// <summary>
-  ///   自动接收任务
-  /// </summary>
-  /// <param name="ct"></param>
-  private async Task AutoReceiveAsync(CancellationToken ct)
+  private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e)
   {
-    while (!ct.IsCancellationRequested)
+    var length = SerialPort.BytesToRead;
+
+    if (length > 0)
     {
-      var buffer = new byte[256];
-      var memory = buffer.AsMemory();
-      if (IsConnected)
-        try
-        {
-          var bytesRead = await SerialPort.BaseStream.ReadAsync(memory, ct);
-
-          // 通信异常
-          if (bytesRead == 0) break;
-
-          WriteBuffer(memory.Span);
-        }
-        catch (OperationCanceledException)
-        {
-          // 正常取消任务
-          break;
-        }
-        catch (IOException)
-        {
-          // IO异常
-          break;
-        }
-        catch (Exception)
-        {
-          // ignored
-        }
-      else
-        await Task.Yield();
+      var temp = new byte[length];
+      SerialPort.Read(temp, 0, length);
+      WriteBuffer(temp);
     }
   }
 
@@ -174,9 +137,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   /// </summary>
   private void StopAutoReceive()
   {
-    _autoRecCts?.Cancel();
-    _autoRecCts?.Dispose();
-    _autoRecCts = null;
+    SerialPort.DataReceived -= SerialPortOnDataReceived;
   }
 
   #endregion

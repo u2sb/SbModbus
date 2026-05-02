@@ -79,16 +79,10 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  protected override void Write(ReadOnlySpan<byte> buffer)
-  {
-    _tcpClient.SendAsync(buffer);
-    DataSent(buffer);
-  }
-
-  /// <inheritdoc />
   protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    Write(buffer.Span);
+    _tcpClient.SendAsync(buffer.Span);
+    DataSent(buffer.Span);
     return ValueTask.CompletedTask;
   }
 

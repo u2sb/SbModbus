@@ -48,7 +48,7 @@ public class BaseModbusServer : IModbusServer
 
 
     _looperTask = Task.Factory.StartNew(
-      async () => await Looper(_looperCts.Token),
+      async () => await LooperAsync(_looperCts.Token),
       _looperCts.Token,
       TaskCreationOptions.LongRunning,
       TaskScheduler.Default
@@ -126,14 +126,14 @@ public class BaseModbusServer : IModbusServer
   private readonly CancellationTokenSource _looperCts = new();
   private readonly Task _looperTask;
 
-  private async Task Looper(CancellationToken ct)
+  private async Task LooperAsync(CancellationToken ct)
   {
     try
     {
       while (true)
       {
         ct.ThrowIfCancellationRequested();
-        await Loop(ct).ConfigureAwait(false);
+        await LoopAsync(ct).ConfigureAwait(false);
       }
     }
     catch (OperationCanceledException)
@@ -147,7 +147,7 @@ public class BaseModbusServer : IModbusServer
   ///   循环执行
   /// </summary>
   /// <returns></returns>
-  protected virtual async Task Loop(CancellationToken ct)
+  protected virtual async Task LoopAsync(CancellationToken ct)
   {
     await Task.CompletedTask;
   }
