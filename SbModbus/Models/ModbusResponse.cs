@@ -39,6 +39,39 @@ public class ModbusResponse
   }
 
   /// <summary>
+  ///   从请求构造响应
+  /// </summary>
+  /// <param name="request"></param>
+  public ModbusResponse(ModbusRequest request)
+  {
+    SlaveId = request.SlaveId;
+    FunctionCode = request.FunctionCode;
+    StartingAddress = request.StartingAddress;
+    Quantity = request.Quantity;
+  }
+
+  /// <summary>
+  ///   从站地址
+  /// </summary>
+  public byte SlaveId { get; set; } = 1;
+
+  /// <summary>
+  ///   功能码
+  /// </summary>
+  public ModbusFunctionCode FunctionCode { get; set; }
+
+  /// <summary>
+  ///   地址
+  ///   0-based
+  /// </summary>
+  public ushort StartingAddress { get; set; }
+
+  /// <summary>
+  ///   读请求数量
+  /// </summary>
+  public ushort Quantity { get; set; } = 1;
+
+  /// <summary>
   ///   当前状态
   /// </summary>
   public ResponseStatus Status { get; set; } = ResponseStatus.Ready;
@@ -62,4 +95,14 @@ public class ModbusResponse
   ///   异常对象（本地调用异常）
   /// </summary>
   public Exception? Error { get; set; }
+
+  /// <summary>
+  ///   已经成功
+  /// </summary>
+  public bool IsSucceed => Status == ResponseStatus.Success;
+
+  /// <summary>
+  ///   已经失败
+  /// </summary>
+  public bool IsBreakdown => Status is ResponseStatus.Timeout or ResponseStatus.Exception;
 }

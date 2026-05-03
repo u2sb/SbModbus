@@ -15,6 +15,7 @@ public class ModbusRequest
 {
   private ModbusRequest()
   {
+    Response = new ModbusResponse(this);
   }
 
   /// <summary>
@@ -46,14 +47,14 @@ public class ModbusRequest
   /// <summary>
   ///   返回值
   /// </summary>
-  public ModbusResponse Response { get; set; } = new();
+  public ModbusResponse Response { get; set; }
 
   /// <summary>
   ///   重置
   /// </summary>
   public void Reset()
   {
-    Response = new ModbusResponse();
+    Response = new ModbusResponse(this);
   }
 
   /// <summary>
@@ -210,17 +211,19 @@ public class ModbusRequest
   /// <returns>已校验的请求对象。</returns>
   public static ModbusRequest CreateWriteSingleCoil(ushort startingAddress, bool value, byte slaveId = 1)
   {
-    var request = new ModbusRequest
-    {
-      SlaveId = slaveId,
-      FunctionCode = ModbusFunctionCode.WriteSingleCoil,
-      StartingAddress = startingAddress,
-      Quantity = 1,
-      Data = value ? [0xFF, 0x00] : "\0\0"u8.ToArray()
-    };
+    return CreateWriteSingleCoil(startingAddress, value ? [0xFF, 0x00] : "\0\0"u8.ToArray(), slaveId);
+  }
 
-    request.Validate();
-    return request;
+  /// <summary>
+  ///   创建写单个线圈请求（FC05）。
+  /// </summary>
+  /// <param name="startingAddress">线圈地址（0-based）。</param>
+  /// <param name="data">线圈值 [0xFF, 0x00] 或 [0x00, 0x00]</param>
+  /// <param name="slaveId">从站地址。</param>
+  /// <returns>已校验的请求对象。</returns>
+  public static ModbusRequest CreateWriteSingleCoil(ushort startingAddress, ReadOnlySpan<byte> data, byte slaveId = 1)
+  {
+    return CreateWriteRequest(ModbusFunctionCode.WriteSingleCoil, startingAddress, data, 1, slaveId);
   }
 
   /// <summary>
@@ -228,21 +231,27 @@ public class ModbusRequest
   /// </summary>
   /// <param name="startingAddress">寄存器地址（0-based）。</param>
   /// <param name="value">寄存器值。</param>
+  /// <param name="useBigEndianMode">是否使用大端模式</param>
   /// <param name="slaveId">从站地址。</param>
   /// <returns>已校验的请求对象。</returns>
-  public static ModbusRequest CreateWriteSingleRegister(ushort startingAddress, ushort value, byte slaveId = 1)
+  public static ModbusRequest CreateWriteSingleRegister(ushort startingAddress, ushort value,
+    bool useBigEndianMode = true, byte slaveId = 1)
   {
-    var request = new ModbusRequest
-    {
-      SlaveId = slaveId,
-      FunctionCode = ModbusFunctionCode.WriteSingleRegister,
-      StartingAddress = startingAddress,
-      Quantity = 1,
-      Data = [(byte)(value >> 8), (byte)value]
-    };
+    var data = value.ToByteArray(useBigEndianMode);
+    return CreateWriteSingleRegister(startingAddress, data, slaveId);
+  }
 
-    request.Validate();
-    return request;
+  /// <summary>
+  ///   创建写单个寄存器请求（FC06）。
+  /// </summary>
+  /// <param name="startingAddress">寄存器地址（0-based）。</param>
+  /// <param name="data">寄存器值。</param>
+  /// <param name="slaveId">从站地址。</param>
+  /// <returns>已校验的请求对象。</returns>
+  public static ModbusRequest CreateWriteSingleRegister(ushort startingAddress, ReadOnlySpan<byte> data,
+    byte slaveId = 1)
+  {
+    return CreateWriteRequest(ModbusFunctionCode.WriteSingleRegister, startingAddress, data, 1, slaveId);
   }
 
   /// <summary>
@@ -260,17 +269,8 @@ public class ModbusRequest
     var bytes = new byte[(length + 7) / 8];
     data.CopyTo(bytes.AsSpan(), 0, length);
 
-    var request = new ModbusRequest
-    {
-      SlaveId = slaveId,
-      FunctionCode = ModbusFunctionCode.WriteMultipleCoils,
-      StartingAddress = startingAddress,
-      Quantity = checked((ushort)data.Length),
-      Data = bytes
-    };
-
-    request.Validate();
-    return request;
+    return CreateWriteRequest(ModbusFunctionCode.WriteMultipleCoils, startingAddress, bytes,
+      checked((ushort)length), slaveId);
   }
 
   /// <summary>
@@ -288,17 +288,8 @@ public class ModbusRequest
     var bytes = new byte[(length + 7) / 8];
     data.CopyTo(bytes, 0);
 
-    var request = new ModbusRequest
-    {
-      SlaveId = slaveId,
-      FunctionCode = ModbusFunctionCode.WriteMultipleCoils,
-      StartingAddress = startingAddress,
-      Quantity = checked((ushort)data.Length),
-      Data = bytes
-    };
-
-    request.Validate();
-    return request;
+    return CreateWriteRequest(ModbusFunctionCode.WriteMultipleCoils, startingAddress, bytes,
+      checked((ushort)length), slaveId);
   }
 
   /// <summary>
@@ -308,24 +299,23 @@ public class ModbusRequest
   /// <param name="data">按高字节在前排列的寄存器字节流。</param>
   /// <param name="slaveId">从站地址。</param>
   /// <returns>已校验的请求对象。</returns>
-  public static ModbusRequest CreateWriteMultipleRegisters(ushort startingAddress, ReadOnlyMemory<byte> data,
+  public static ModbusRequest CreateWriteMultipleRegisters(ushort startingAddress, ReadOnlySpan<byte> data,
     byte slaveId = 1)
   {
-    var request = new ModbusRequest
-    {
-      SlaveId = slaveId,
-      FunctionCode = ModbusFunctionCode.WriteMultipleRegisters,
-      StartingAddress = startingAddress,
-      Quantity = checked((ushort)(data.Length / 2)),
-      Data = data.ToArray()
-    };
-
-    request.Validate();
-    return request;
+    return CreateWriteRequest(ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data,
+      checked((ushort)(data.Length / 2)), slaveId);
   }
 
-  private static ModbusRequest CreateReadRequest(ModbusFunctionCode functionCode, ushort startingAddress,
-    ushort quantity, byte slaveId)
+  /// <summary>
+  ///   创建读请求
+  /// </summary>
+  /// <param name="functionCode"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="quantity"></param>
+  /// <param name="slaveId"></param>
+  /// <returns></returns>
+  public static ModbusRequest CreateReadRequest(ModbusFunctionCode functionCode, ushort startingAddress,
+    ushort quantity, byte slaveId = 1)
   {
     var request = new ModbusRequest
     {
@@ -340,8 +330,32 @@ public class ModbusRequest
     return request;
   }
 
-  #endregion
+  /// <summary>
+  ///   创建写请求
+  /// </summary>
+  /// <param name="functionCode"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="quantity"></param>
+  /// <param name="data"></param>
+  /// <param name="slaveId"></param>
+  /// <returns></returns>
+  public static ModbusRequest CreateWriteRequest(ModbusFunctionCode functionCode, ushort startingAddress,
+    ReadOnlySpan<byte> data, ushort quantity = 1, byte slaveId = 1)
+  {
+    var request = new ModbusRequest
+    {
+      SlaveId = slaveId,
+      FunctionCode = functionCode,
+      StartingAddress = startingAddress,
+      Quantity = quantity,
+      Data = data.ToArray()
+    };
 
+    request.Validate();
+    return request;
+  }
+
+  #endregion
 
   #region 校验
 

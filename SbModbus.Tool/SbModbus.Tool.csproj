@@ -49,7 +49,7 @@
 
   <ItemGroup>
     <None Update="settings\**">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="i18n\**\*.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

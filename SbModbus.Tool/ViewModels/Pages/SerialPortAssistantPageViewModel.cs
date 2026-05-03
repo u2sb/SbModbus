@@ -6,15 +6,15 @@ using System.Net;
 using System.Text;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using SbModbus.Tool.Models.Settings;
-using SbModbus.Tool.Services.DataTransferServices;
-using SbModbus.Tool.Services.RecordServices;
-using SbModbus.Tool.Utils;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using R3;
 using Sb.Extensions.System;
+using SbModbus.Tool.Models.Settings;
+using SbModbus.Tool.Services.DataTransferServices;
+using SbModbus.Tool.Services.RecordServices;
+using SbModbus.Tool.Utils;
 
 namespace SbModbus.Tool.ViewModels.Pages;
 
@@ -31,7 +31,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   传输类型
   /// </summary>
-  [ObservableProperty] private DataTransferType _dataTransferType = DataTransferType.SerialPort;
+  [ObservableProperty] public partial DataTransferType DataTransferType { get; set; } = DataTransferType.SerialPort;
 
   private DisposableBag _disposableBag;
 
@@ -39,11 +39,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   ///   数据传输流
   /// </summary>
   private IDtStream? _dtStream;
-
-  /// <summary>
-  ///   连接状态
-  /// </summary>
-  [ObservableProperty] private bool _isConnected;
 
   private SerialPortAssistantPageSettings? _settings;
 
@@ -55,6 +50,12 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       LoadSettings();
     }
   }
+
+  /// <summary>
+  ///   连接状态
+  /// </summary>
+  [ObservableProperty]
+  public partial bool IsConnected { get; set; }
 
   public void Dispose()
   {
@@ -68,10 +69,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     Disconnect();
 
-    if (value == DataTransferType.SerialPort)
-    {
-      RefreshSerialPortNames();
-    }
+    if (value == DataTransferType.SerialPort) RefreshSerialPortNames();
   }
 
   #region 命令
@@ -108,6 +106,11 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
     switch (_dtStream)
     {
+      case SerialPortDtStream sps:
+        DtrButton = sps.SerialPort.DtrEnable;
+        RtsButton = sps.SerialPort.RtsEnable;
+        BreakButton = sps.SerialPort.BreakState;
+        break;
       case TcpServerDtStream tsds:
         tsds.OnSessionStateChanged += OnSessionStateChanged;
         break;
@@ -123,15 +126,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   [RelayCommand]
   private void Disconnect()
   {
-    if (_dtStream is null)
-    {
-      return;
-    }
+    if (_dtStream is null) return;
 
-    if (_dtStream.IsConnected)
-    {
-      _dtStream.Disconnect();
-    }
+    if (_dtStream.IsConnected) _dtStream.Disconnect();
 
     _dtStream.OnConnectStateChanged -= OnConnectStateChanged;
     _dtStream.OnDataWrite -= OnDataWrite;
@@ -162,12 +159,14 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   串口号
   /// </summary>
-  [ObservableProperty] private string? _serialPortName;
+  [ObservableProperty]
+  public partial string SerialPortName { get; set; } = string.Empty;
 
   /// <summary>
   ///   波特率
   /// </summary>
-  [ObservableProperty] private int _baudRate;
+  [ObservableProperty]
+  public partial int BaudRate { get; set; }
 
   partial void OnBaudRateChanged(int value)
   {
@@ -178,40 +177,80 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   ///   波特率
   /// </summary>
   [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
-  private string? _baudRateString = "9600";
+  public partial string? BaudRateString { get; set; } = "9600";
 
   partial void OnBaudRateStringChanged(string? value)
   {
-    if (value is not null && value.TryParseToInt32(out var baudRate))
-    {
-      BaudRate = baudRate;
-    }
+    if (value is not null && value.TryParseToInt32(out var baudRate)) BaudRate = baudRate;
   }
 
   /// <summary>
   ///   数据位
   /// </summary>
-  [ObservableProperty] private int _dataBits;
+  [ObservableProperty]
+  public partial int DataBits { get; set; } = 8;
 
   /// <summary>
   ///   校验位
   /// </summary>
-  [ObservableProperty] private Parity _parity;
+  [ObservableProperty]
+  public partial Parity Parity { get; set; }
 
   /// <summary>
   ///   停止位
   /// </summary>
-  [ObservableProperty] private StopBits _stopBits;
+  [ObservableProperty]
+  public partial StopBits StopBits { get; set; }
 
   /// <summary>
   ///   流控
   /// </summary>
-  [ObservableProperty] private Handshake _handshake;
+  [ObservableProperty]
+  public partial Handshake Handshake { get; set; }
+
+  /// <summary>
+  ///   DTR状态
+  /// </summary>
+  [ObservableProperty]
+  public partial bool DtrButton { get; set; }
+
+  partial void OnDtrButtonChanged(bool value)
+  {
+    if (_dtStream is SerialPortDtStream sps) sps.SerialPort.DtrEnable = value;
+  }
+
+  /// <summary>
+  ///   DTR状态
+  /// </summary>
+  [ObservableProperty]
+  public partial bool RtsButton { get; set; }
+
+  partial void OnRtsButtonChanged(bool value)
+  {
+    if (_dtStream is SerialPortDtStream sps) sps.SerialPort.RtsEnable = value;
+  }
+
+  /// <summary>
+  ///   DTR状态
+  /// </summary>
+  [ObservableProperty]
+  public partial bool BreakButton { get; set; }
+
+  partial void OnBreakButtonChanged(bool value)
+  {
+    if (_dtStream is SerialPortDtStream sps) sps.SerialPort.BreakState = value;
+  }
+
 
   /// <summary>
   ///   串口名称列表
   /// </summary>
   public ObservableCollection<string> SerialPortNames { get; } = [];
+
+  /// <summary>
+  ///   数据位
+  /// </summary>
+  public int[] DataBitsValues { get; } = [8, 7, 6, 5];
 
   /// <summary>
   ///   校验位列表
@@ -226,16 +265,17 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   流控列表
   /// </summary>
-  public string[] HandshakeValues { get; } = ["None", "XOnXOff", "RequestToSend", "RequestToSendXOnX0ff"];
+  public string[] HandshakeValues { get; } =
+  [
+    nameof(Handshake.None), nameof(Handshake.XOnXOff),
+    nameof(Handshake.RequestToSend), nameof(Handshake.RequestToSendXOnXOff)
+  ];
 
   private void CreateSerialPort()
   {
     Disconnect();
 
-    if (_dtStream is not null && _dtStream is not SerialPortDtStream)
-    {
-      _dtStream.Dispose();
-    }
+    if (_dtStream is not null && _dtStream is not SerialPortDtStream) _dtStream.Dispose();
 
     _dtStream ??= new SerialPortDtStream();
 
@@ -258,26 +298,30 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   IP
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
-  private string _targetIp = "127.0.0.1";
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
+  public partial string TargetIp { get; set; } = "127.0.0.1";
 
   /// <summary>
   ///   IP
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
-  private string _localIp = "0.0.0.0";
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
+  public partial string LocalIp { get; set; } = "0.0.0.0";
 
   /// <summary>
   ///   目标端口
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
-  private string _targetPort = "13567";
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
+  public partial string TargetPort { get; set; } = "13567";
 
   /// <summary>
   ///   本地端口
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
-  private string _localPort = "13567";
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
+  public partial string LocalPort { get; set; } = "13567";
 
   /// <summary>
   ///   客户端列表
@@ -306,58 +350,38 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     Disconnect();
 
-    if (_dtStream is not null && _dtStream is not TcpClientDtStream)
-    {
-      _dtStream.Dispose();
-    }
+    if (_dtStream is not null && _dtStream is not TcpClientDtStream) _dtStream.Dispose();
 
     if (IPAddress.TryParse(TargetIp, out var targetIp) && TargetPort.TryParseToUInt16(out var targetPort))
-    {
       _dtStream ??= new TcpClientDtStream(targetIp, targetPort);
-    }
   }
 
   private void CreateTcpServer()
   {
     Disconnect();
 
-    if (_dtStream is not null && _dtStream is not TcpServerDtStream)
-    {
-      _dtStream.Dispose();
-    }
+    if (_dtStream is not null && _dtStream is not TcpServerDtStream) _dtStream.Dispose();
 
     if (IPAddress.TryParse(LocalIp, out var localIp) && LocalPort.TryParseToUInt16(out var localPort))
-    {
       _dtStream ??= new TcpServerDtStream(localIp, localPort);
-    }
   }
 
   private void CreateUdpClient()
   {
     Disconnect();
-    if (_dtStream is not null && _dtStream is not UdpClientDtStream)
-    {
-      _dtStream.Dispose();
-    }
+    if (_dtStream is not null && _dtStream is not UdpClientDtStream) _dtStream.Dispose();
 
     if (IPAddress.TryParse(TargetIp, out var targetIp) && TargetPort.TryParseToUInt16(out var targetPort))
-    {
       _dtStream ??= new UdpClientDtStream(targetIp, targetPort);
-    }
   }
 
   private void CreateUdpServer()
   {
     Disconnect();
-    if (_dtStream is not null && _dtStream is not UdpServerDtStream)
-    {
-      _dtStream.Dispose();
-    }
+    if (_dtStream is not null && _dtStream is not UdpServerDtStream) _dtStream.Dispose();
 
     if (IPAddress.TryParse(LocalIp, out var localIp) && LocalPort.TryParseToUInt16(out var localPort))
-    {
       _dtStream ??= new UdpServerDtStream(localIp, localPort);
-    }
   }
 
   #endregion
@@ -374,12 +398,12 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
     SerialPortNames.Clear();
     var ports = SerialPort.GetPortNames();
     if (ports is { Length: > 0 })
-    {
       foreach (var port in ports)
-      {
         SerialPortNames.Add(port);
-      }
-    }
+    else
+      SerialPortNames.Add("None");
+
+    if (SerialPortNames.Count > 0 && !SerialPortNames.Contains(SerialPortName)) SerialPortName = SerialPortNames[0];
   }
 
   private void LoadSettings()
@@ -418,15 +442,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       _settings.Handshake = Handshake;
       _settings.TargetIp = TargetIp;
       _settings.LocalIp = LocalIp;
-      if (TargetPort.TryParseToUInt16(out var targetPort))
-      {
-        _settings.TargetPort = targetPort;
-      }
+      if (TargetPort.TryParseToUInt16(out var targetPort)) _settings.TargetPort = targetPort;
 
-      if (LocalPort.TryParseToUInt16(out var localPort))
-      {
-        _settings.LocalPort = localPort;
-      }
+      if (LocalPort.TryParseToUInt16(out var localPort)) _settings.LocalPort = localPort;
 
       await _appSettings.SaveAsync();
     }
@@ -440,13 +458,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   {
     IsConnected = isConnected;
     if (isConnected)
-    {
       _dtr?.Open();
-    }
     else
-    {
       _dtr?.Close();
-    }
   }
 
   private void OnDataWrite(ReadOnlySpan<byte> data, IDtStream dtStream)
@@ -475,10 +489,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   private void OnSessionStateChanged(IEnumerable<string> ids)
   {
     Sessions.Clear();
-    foreach (var id in ids)
-    {
-      Sessions.Add(id);
-    }
+    foreach (var id in ids) Sessions.Add(id);
   }
 
   #endregion
@@ -488,7 +499,8 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   输入框
   /// </summary>
-  [ObservableProperty] private string _inputString = string.Empty;
+  [ObservableProperty]
+  public partial string InputString { get; set; } = string.Empty;
 
   partial void OnInputStringChanged(string value)
   {
@@ -498,7 +510,8 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   输出的文本
   /// </summary>
-  [ObservableProperty] private string _outputString = string.Empty;
+  [ObservableProperty]
+  public partial string OutputString { get; set; } = string.Empty;
 
   /// <summary>
   ///   需要发送的Hex值
@@ -510,7 +523,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// </summary>
   public ObservableCollection<DsLog> DsLogs { get; } = [];
 
-  [ObservableProperty] private int _dsLogMaxShow = 50;
+  [ObservableProperty] public partial int DsLogMaxShow { get; set; } = 50;
 
   /// <summary>
   ///   输出日志
@@ -526,10 +539,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       get
       {
         var len = Content.Length * 3 - 1;
-        if (len < 0)
-        {
-          return string.Empty;
-        }
+        if (len < 0) return string.Empty;
 
         var temp = len < 512 ? stackalloc char[len] : new char[len];
         DataTransmissionRecordLogExtensions.WriteHexChar(Content, temp);
@@ -571,15 +581,9 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   [RelayCommand]
   private async Task SendAsync()
   {
-    if (_inputBuffer.WrittenCount == 0)
-    {
-      return;
-    }
+    if (_inputBuffer.WrittenCount == 0) return;
 
-    if (_dtStream is { IsConnected: true })
-    {
-      await _dtStream.WriteAsync(_inputBuffer.WrittenMemory);
-    }
+    if (_dtStream is { IsConnected: true }) await _dtStream.WriteAsync(_inputBuffer.WrittenMemory);
   }
 
   [RelayCommand]
@@ -605,13 +609,11 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       var cp = 0;
 
       foreach (var c in source)
-      {
         if (c != ' ')
         {
           temp[cp] = c;
           cp++;
         }
-      }
 
       try
       {
