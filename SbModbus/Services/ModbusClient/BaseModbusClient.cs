@@ -23,7 +23,7 @@ public abstract class BaseModbusClient : IModbusClient
   {
     ModbusStream = stream;
 
-    ModbusStream.OnConnectStateChanged += OnConnectStateChanged;
+    ModbusStream.OnConnectStateChanged = b => OnConnectStateChanged?.Invoke(this, b);
     ReadTimeout = ModbusStream.ReadTimeout;
     WriteTimeout = ModbusStream.WriteTimeout;
   }
@@ -50,7 +50,12 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public void Dispose()
   {
-    ModbusStream.OnConnectStateChanged -= OnConnectStateChanged;
+    ModbusStream.OnConnectStateChanged = null;
+    OnConnectStateChanged = null;
+    OnDataReceived = null;
+    OnDataReceivedAsync = null;
+    OnDataSent = null;
+    OnDataSentAsync = null;
   }
 
   #region 事件
@@ -85,10 +90,7 @@ public abstract class BaseModbusClient : IModbusClient
       // ignore
     }
 
-    if (OnDataReceivedAsync is null)
-    {
-      return;
-    }
+    if (OnDataReceivedAsync is null) return;
 
     try
     {
@@ -115,10 +117,7 @@ public abstract class BaseModbusClient : IModbusClient
       // ignore
     }
 
-    if (OnDataSentAsync is null)
-    {
-      return;
-    }
+    if (OnDataSentAsync is null) return;
 
     try
     {
@@ -132,7 +131,7 @@ public abstract class BaseModbusClient : IModbusClient
 
 
   /// <summary>
-  /// 异步消息
+  ///   异步消息
   /// </summary>
   /// <param name="handler"></param>
   /// <param name="data"></param>

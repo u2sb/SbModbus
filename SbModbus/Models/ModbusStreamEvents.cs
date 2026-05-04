@@ -27,4 +27,4 @@ public delegate Task ModbusClientAsyncHandler(IModbusClient sender, ReadOnlyMemo
 /// <typeparam name="T"></typeparam>
 /// <param name="sender"></param>
 /// <param name="state"></param>
-public delegate void ModbusStreamStateHandler<in T>(IModbusStream sender, T state);
+public delegate void ModbusStreamStateHandler<in T>(IModbusClient sender, T state);

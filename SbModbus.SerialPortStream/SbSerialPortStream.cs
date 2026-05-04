@@ -83,6 +83,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   {
     Disconnect();
     StreamLock.Dispose();
+    base.Dispose();
     GC.SuppressFinalize(this);
   }
 

@@ -78,7 +78,18 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
   partial void OnIsConnectedChanged(bool value)
   {
-    OnConnectStateChanged(value);
+    if (value)
+    {
+      _dtr?.Open();
+      _modbusClient?.OnDataReceived += OnDataReceived;
+      _modbusClient?.OnDataSent += OnDataSent;
+    }
+    else
+    {
+      _modbusClient?.OnDataReceived -= OnDataReceived;
+      _modbusClient?.OnDataSent -= OnDataSent;
+      _dtr?.Close();
+    }
   }
 
   #region 串口方式
@@ -552,18 +563,20 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       {
         _modbusStream.ReadTimeout = 2000;
         _modbusStream.WriteTimeout = 2000;
-        IsConnected = _modbusStream.Connect();
+        _modbusStream.Connect();
       }
       catch (Exception)
       {
         // ignore
       }
+    }
 
-      if (IsConnected)
+    if (_modbusClient is not null)
+    {
+      _modbusClient.OnConnectStateChanged += (sender, state) =>
       {
-        _modbusClient?.OnDataReceived += OnDataReceived;
-        _modbusClient?.OnDataSent += OnDataSent;
-      }
+        IsConnected = state;
+      };
     }
 
     await SaveSettingsAsync();
@@ -574,12 +587,12 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   {
     if (_modbusStream is null) return;
 
-    if (_modbusStream.IsConnected) _modbusStream.Disconnect();
-
-    _modbusClient?.OnDataReceived -= OnDataReceived;
-    _modbusClient?.OnDataSent -= OnDataSent;
-
-    IsConnected = false;
+    if (_modbusStream.IsConnected)
+    {
+      _modbusStream.Disconnect();
+      _modbusClient?.Dispose();
+      _modbusClient = null;
+    }
 
     _modbusStream.Dispose();
     _modbusStream = null;
@@ -588,15 +601,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   #endregion
 
   #region 串口委托
-
-  private void OnConnectStateChanged(bool isConnected)
-  {
-    IsConnected = isConnected;
-    if (isConnected)
-      _dtr?.Open();
-    else
-      _dtr?.Close();
-  }
 
   private void OnDataSent(IModbusClient sender, ReadOnlyMemory<byte> data)
   {

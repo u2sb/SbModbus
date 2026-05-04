@@ -37,7 +37,7 @@ public interface IModbusStream : IDisposable
   /// <summary>
   ///   连接状态改变时触发
   /// </summary>
-  public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
+  public Action<bool>? OnConnectStateChanged { get; set; }
 
   /// <summary>
   ///   锁

@@ -12,7 +12,10 @@ namespace SbModbus.Models;
 public abstract class ModbusStream : IModbusStream
 {
   /// <inheritdoc />
-  public abstract void Dispose();
+  public virtual void Dispose()
+  {
+    OnConnectStateChanged = null;
+  }
 
   /// <inheritdoc />
   public abstract bool IsConnected { get; }
@@ -164,7 +167,7 @@ public abstract class ModbusStream : IModbusStream
   #region 事件
 
   /// <inheritdoc />
-  public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
+  public Action<bool>? OnConnectStateChanged { get; set; }
 
   /// <summary>
   ///   连接状态发生变化时
@@ -174,7 +177,7 @@ public abstract class ModbusStream : IModbusStream
   {
     try
     {
-      OnConnectStateChanged?.Invoke(this, isConnected);
+      OnConnectStateChanged?.Invoke(isConnected);
     }
     catch (Exception)
     {
