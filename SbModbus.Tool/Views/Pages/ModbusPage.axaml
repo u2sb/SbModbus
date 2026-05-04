@@ -225,7 +225,7 @@
           <pipboy:CrtDisplay EnableScanBeam="False" NoiseOpacity="0.1">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                           bh:SmartScrollBehavior.IsEnabled="True">
-              <ListBox ItemsSource="{Binding DsLogs}">
+              <ListBox Classes="logNoSelect" SelectionMode="Single" ItemsSource="{Binding DsLogs}">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Grid Margin="2" ColumnDefinitions="Auto, 10, *">

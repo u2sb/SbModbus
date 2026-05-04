@@ -8,7 +8,7 @@ namespace SbModbus.Services.ModbusClient;
 /// <summary>
 ///   ModbusClient
 /// </summary>
-public interface IModbusClient
+public interface IModbusClient : IDisposable
 {
   /// <summary>
   ///   流
@@ -26,14 +26,31 @@ public interface IModbusClient
   public int DiffSidIntervalTime { get; set; }
 
   /// <summary>
-  ///   发送事件
+  ///   接收到消息时触发
   /// </summary>
-  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnWrite { get; set; }
+  public event ModbusClientHandler OnDataReceived;
 
   /// <summary>
-  ///   接收事件
+  ///   接收消息时触发（异步）
+  ///   只有真正异步处理时才建议使用此事件，以免阻塞接收线程，简单处理请使用同步事件
   /// </summary>
-  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnRead { get; set; }
+  public event ModbusClientAsyncHandler OnDataReceivedAsync;
+
+  /// <summary>
+  ///   发送消息时触发
+  /// </summary>
+  public event ModbusClientHandler OnDataSent;
+
+  /// <summary>
+  ///   发送消息时触发（异步）
+  ///   只有真正异步处理时才建议使用此事件，以免阻塞接收线程，简单处理请使用同步事件
+  /// </summary>
+  public event ModbusClientAsyncHandler OnDataSentAsync;
+
+  /// <summary>
+  ///   连接状态改变时触发
+  /// </summary>
+  public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
 
   /// <summary>
   ///   读取线圈 FC01

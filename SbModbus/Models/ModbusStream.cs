@@ -164,18 +164,6 @@ public abstract class ModbusStream : IModbusStream
   #region 事件
 
   /// <inheritdoc />
-  public event ModbusStreamHandler? OnDataReceived;
-
-  /// <inheritdoc />
-  public event ModbusStreamAsyncHandler? OnDataReceivedAsync;
-
-  /// <inheritdoc />
-  public event ModbusStreamHandler? OnDataSent;
-
-  /// <inheritdoc />
-  public event ModbusStreamAsyncHandler? OnDataSentAsync;
-
-  /// <inheritdoc />
   public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
 
   /// <summary>
@@ -192,74 +180,6 @@ public abstract class ModbusStream : IModbusStream
     {
       // ignore
     }
-  }
-
-  /// <summary>
-  ///   接收到消息时触发
-  /// </summary>
-  /// <param name="data"></param>
-  protected virtual void DataReceived(ReadOnlySpan<byte> data)
-  {
-    DataTransport(OnDataReceivedAsync, data, CancellationToken.None);
-
-    try
-    {
-      OnDataReceived?.Invoke(this, data);
-    }
-    catch (Exception)
-    {
-      // ignore
-    }
-  }
-
-  /// <summary>
-  ///   接收到消息时触发
-  /// </summary>
-  /// <param name="data"></param>
-  protected virtual void DataSent(ReadOnlySpan<byte> data)
-  {
-    DataTransport(OnDataSentAsync, data, CancellationToken.None);
-
-    try
-    {
-      OnDataSent?.Invoke(this, data);
-    }
-    catch (Exception)
-    {
-      // ignore
-    }
-  }
-
-  /// <summary>
-  ///   接收或发送数据时触发（异步调用）
-  /// </summary>
-  /// <param name="handler"></param>
-  /// <param name="data"></param>
-  /// <param name="ct"></param>
-  protected virtual void DataTransport(ModbusStreamAsyncHandler? handler, ReadOnlySpan<byte> data,
-    CancellationToken ct)
-  {
-    if (handler is null) return;
-
-    var bs = data.ToArray();
-
-    foreach (var invocation in handler.GetInvocationList().Cast<ModbusStreamAsyncHandler>())
-      // 异步调用每个订阅者，并处理异常
-      // ReSharper disable once MethodSupportsCancellation
-      _ = SbThreading.Jtf.RunAsync(async () =>
-      {
-        try
-        {
-          await invocation(this, bs, ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception)
-        {
-          // ignore
-        }
-      });
   }
 
   #endregion

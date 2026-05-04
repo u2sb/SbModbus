@@ -29,17 +29,17 @@ internal sealed class Program
             .LogToTrace()
             .UseR3();
 
-        if (OperatingSystem.IsWindows())
-        {
-            builder.With(new Win32PlatformOptions
-            {
-                RenderingMode =
-                [
-                    Win32RenderingMode.Vulkan, Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl,
-                    Win32RenderingMode.Software
-                ]
-            });
-        }
+        // if (OperatingSystem.IsWindows())
+        // {
+        //     builder.With(new Win32PlatformOptions
+        //     {
+        //         RenderingMode =
+        //         [
+        //             Win32RenderingMode.Vulkan, Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl,
+        //             Win32RenderingMode.Software
+        //         ]
+        //     });
+        // }
 
         return builder;
     }

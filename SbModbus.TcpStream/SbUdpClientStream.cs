@@ -82,7 +82,6 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
     _udpClient.SendAsync(buffer.Span);
-    DataSent(buffer.Span);
     return ValueTask.CompletedTask;
   }
 
@@ -110,7 +109,6 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     {
       var span = buffer.AsSpan((int)offset, (int)size);
       ModbusStream.WriteBuffer(span);
-      ModbusStream.DataReceived(span);
 
       ReceiveAsync();
     }

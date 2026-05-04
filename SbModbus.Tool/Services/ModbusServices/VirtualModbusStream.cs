@@ -33,7 +33,6 @@ public class VirtualModbusStream : ModbusStream
 
   protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    DataSent(buffer.Span);
     return ValueTask.CompletedTask;
   }
 

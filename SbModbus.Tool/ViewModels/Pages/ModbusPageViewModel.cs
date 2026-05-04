@@ -561,8 +561,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
       if (IsConnected)
       {
-        _modbusClient?.OnRead += OnDataReceived;
-        _modbusClient?.OnWrite += OnDataWrite;
+        _modbusClient?.OnDataReceived += OnDataReceived;
+        _modbusClient?.OnDataSent += OnDataSent;
       }
     }
 
@@ -576,8 +576,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
 
     if (_modbusStream.IsConnected) _modbusStream.Disconnect();
 
-    _modbusClient?.OnRead -= OnDataReceived;
-    _modbusClient?.OnWrite -= OnDataWrite;
+    _modbusClient?.OnDataReceived -= OnDataReceived;
+    _modbusClient?.OnDataSent -= OnDataSent;
 
     IsConnected = false;
 
@@ -598,7 +598,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       _dtr?.Close();
   }
 
-  private void OnDataWrite(ReadOnlyMemory<byte> data, IModbusClient _)
+  private void OnDataSent(IModbusClient sender, ReadOnlyMemory<byte> data)
   {
     if (data.IsEmpty) return;
 
@@ -610,7 +610,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     });
   }
 
-  private void OnDataReceived(ReadOnlyMemory<byte> data, IModbusClient _)
+  private void OnDataReceived(IModbusClient sender, ReadOnlyMemory<byte> data)
   {
     if (data.IsEmpty) return;
 

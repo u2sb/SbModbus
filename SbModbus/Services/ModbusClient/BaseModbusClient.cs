@@ -1,11 +1,13 @@
 // https://raw.githubusercontent.com/Apollo3zehn/FluentModbus/refs/heads/dev/src/FluentModbus/Client/ModbusClient.cs
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System;
 using SbModbus.Models;
 using SbModbus.Properties;
+using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -20,6 +22,8 @@ public abstract class BaseModbusClient : IModbusClient
   protected BaseModbusClient(IModbusStream stream)
   {
     ModbusStream = stream;
+
+    ModbusStream.OnConnectStateChanged += OnConnectStateChanged;
     ReadTimeout = ModbusStream.ReadTimeout;
     WriteTimeout = ModbusStream.WriteTimeout;
   }
@@ -44,10 +48,117 @@ public abstract class BaseModbusClient : IModbusClient
   public int DiffSidIntervalTime { get; set; } = 0;
 
   /// <inheritdoc />
-  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnWrite { get; set; }
+  public void Dispose()
+  {
+    ModbusStream.OnConnectStateChanged -= OnConnectStateChanged;
+  }
+
+  #region 事件
 
   /// <inheritdoc />
-  public Action<ReadOnlyMemory<byte>, IModbusClient>? OnRead { get; set; }
+  public event ModbusClientHandler? OnDataReceived;
+
+  /// <inheritdoc />
+  public event ModbusClientAsyncHandler? OnDataReceivedAsync;
+
+  /// <inheritdoc />
+  public event ModbusClientHandler? OnDataSent;
+
+  /// <inheritdoc />
+  public event ModbusClientAsyncHandler? OnDataSentAsync;
+
+  /// <inheritdoc />
+  public event ModbusStreamStateHandler<bool>? OnConnectStateChanged;
+
+  /// <summary>
+  ///   接收到消息时触发
+  /// </summary>
+  /// <param name="data"></param>
+  protected virtual void DataReceived(ReadOnlyMemory<byte> data)
+  {
+    try
+    {
+      OnDataReceived?.Invoke(this, data);
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+
+    if (OnDataReceivedAsync is null)
+    {
+      return;
+    }
+
+    try
+    {
+      SbThreading.Jtf.Run(() => OnDataTransportAsync(OnDataReceivedAsync, data));
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+  }
+
+  /// <summary>
+  ///   接收到消息时触发
+  /// </summary>
+  /// <param name="data"></param>
+  protected virtual void DataSent(ReadOnlyMemory<byte> data)
+  {
+    try
+    {
+      OnDataSent?.Invoke(this, data);
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+
+    if (OnDataSentAsync is null)
+    {
+      return;
+    }
+
+    try
+    {
+      SbThreading.Jtf.Run(() => OnDataTransportAsync(OnDataSentAsync, data));
+    }
+    catch (Exception)
+    {
+      // ignore
+    }
+  }
+
+
+  /// <summary>
+  /// 异步消息
+  /// </summary>
+  /// <param name="handler"></param>
+  /// <param name="data"></param>
+  /// <param name="ct"></param>
+  protected virtual async Task OnDataTransportAsync(ModbusClientAsyncHandler handler, ReadOnlyMemory<byte> data,
+    CancellationToken ct = default)
+  {
+    var tasks = handler.GetInvocationList()
+      .Cast<ModbusClientAsyncHandler>()
+      .Select(h =>
+        Task.Run(async () =>
+        {
+          try
+          {
+            await h.Invoke(this, data, ct);
+          }
+          catch (Exception)
+          {
+            // ignored
+          }
+        }, ct));
+
+    await Task.WhenAll(tasks);
+  }
+
+  #endregion
 
 
   #region 通用公共方法
