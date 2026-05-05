@@ -1,46 +1,43 @@
 using Avalonia;
-using SbModbus.Utils;
 
 namespace SbModbus.Tool;
 
-internal sealed class Program
+internal static class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
-    [STAThread]
-    public static void Main(string[] args)
-    {
-        SbThreading.InitializeMainThread();
+  // Initialization code. Don't use any Avalonia, third-party APIs or any
+  // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+  // yet and stuff might break.
+  [STAThread]
+  public static void Main(string[] args)
+  {
+    BuildAvaloniaApp()
+      .StartWithClassicDesktopLifetime(args);
+  }
 
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
-    }
-
-    // Avalonia configuration, don't remove; also used by visual designer.
-    public static AppBuilder BuildAvaloniaApp()
-    {
-        var builder = AppBuilder.Configure<App>()
-            .UsePlatformDetect()
+  // Avalonia configuration, don't remove; also used by visual designer.
+  private static AppBuilder BuildAvaloniaApp()
+  {
+    var builder = AppBuilder.Configure<App>()
+      .UsePlatformDetect()
 #if DEBUG
-            .WithDeveloperTools()
+      .WithDeveloperTools()
 #endif
-            .WithInterFont()
-            .LogToTrace()
-            .UseR3();
+      .WithInterFont()
+      .LogToTrace()
+      .UseR3();
 
-        // if (OperatingSystem.IsWindows())
-        // {
-        //     builder.With(new Win32PlatformOptions
-        //     {
-        //         RenderingMode =
-        //         [
-        //             Win32RenderingMode.Vulkan, Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl,
-        //             Win32RenderingMode.Software
-        //         ]
-        //     });
-        // }
+    // if (OperatingSystem.IsWindows())
+    // {
+    //     builder.With(new Win32PlatformOptions
+    //     {
+    //         RenderingMode =
+    //         [
+    //             Win32RenderingMode.Vulkan, Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl,
+    //             Win32RenderingMode.Software
+    //         ]
+    //     });
+    // }
 
-        return builder;
-    }
+    return builder;
+  }
 }

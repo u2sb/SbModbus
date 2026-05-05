@@ -5,12 +5,10 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Logging;
 using SbModbus.Tool.Models.Settings;
 using SbModbus.Tool.Services.RecordServices;
 using SbModbus.Tool.ViewModels;
-using SbModbus.Tool.ViewModels.Windows;
 using SbModbus.Tool.Views.Windows;
 using ZeroMessenger.DependencyInjection;
 
@@ -82,7 +80,7 @@ public static class Startup
   {
     if (_host is null) return;
 
-    using (_host)
+    using(_host)
     {
       _host.StopAsync().ConfigureAwait(true).GetAwaiter().GetResult();
     }
