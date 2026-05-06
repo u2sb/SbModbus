@@ -130,7 +130,7 @@ public partial class ModbusTcpClient
     // 写入数据
     await mt.WriteAsync(data, ct).ConfigureAwait(false);
 
-    DataSent(data);
+    await DataSentAsync(data);
 
     using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     cts.CancelAfter(readTimeout);
@@ -171,7 +171,7 @@ public partial class ModbusTcpClient
 
       VerifyFrame(result.Span, tid);
 
-      DataReceived(result);
+      await DataReceivedAsync(result);
 
       return result;
     }

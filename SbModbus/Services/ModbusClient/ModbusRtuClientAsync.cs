@@ -105,7 +105,7 @@ public partial class ModbusRtuClient
     // 写入数据
     await mt.WriteAsync(data, ct).ConfigureAwait(false);
 
-    DataSent(data);
+    await DataSentAsync(data);
 
     // TODO 这里没实现写超时 后续实现
 
@@ -149,7 +149,7 @@ public partial class ModbusRtuClient
       // 验证数据帧
       VerifyFrame(result.Span);
 
-      DataReceived(result);
+      await DataReceivedAsync(result);
 
       return result;
     }

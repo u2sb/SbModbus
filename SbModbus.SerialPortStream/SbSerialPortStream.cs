@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.IO.Ports;
 using System.Threading;
@@ -123,13 +124,21 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
 
   private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs e)
   {
-    var length = SerialPort.BytesToRead;
-
-    if (length > 0)
+    try
     {
-      var temp = new byte[length];
-      SerialPort.Read(temp, 0, length);
-      WriteBuffer(temp);
+      var length = SerialPort.BytesToRead;
+
+      if (length > 0)
+      {
+        var temp = ArrayPool<byte>.Shared.Rent(length);
+        SerialPort.Read(temp, 0, length);
+        WriteBuffer(temp);
+        ArrayPool<byte>.Shared.Return(temp);
+      }
+    }
+    catch (Exception)
+    {
+      // ignored
     }
   }
 

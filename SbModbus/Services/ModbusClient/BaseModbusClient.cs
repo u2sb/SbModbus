@@ -23,7 +23,8 @@ public abstract class BaseModbusClient : IModbusClient
   {
     ModbusStream = stream;
 
-    ModbusStream.OnConnectStateChanged = b => OnConnectStateChanged?.Invoke(this, b);
+    ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
+    ModbusStream.OnConnectStateChanged += StreamOnConnectStateChanged;
     ReadTimeout = ModbusStream.ReadTimeout;
     WriteTimeout = ModbusStream.WriteTimeout;
   }
@@ -50,12 +51,25 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public void Dispose()
   {
-    ModbusStream.OnConnectStateChanged = null;
+    try
+    {
+      ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
+    }
+    catch (Exception)
+    {
+      // ignored
+    }
+
     OnConnectStateChanged = null;
     OnDataReceived = null;
     OnDataReceivedAsync = null;
     OnDataSent = null;
     OnDataSentAsync = null;
+  }
+
+  private void StreamOnConnectStateChanged(bool b)
+  {
+    OnConnectStateChanged?.Invoke(this, b);
   }
 
   #region 事件
@@ -79,7 +93,7 @@ public abstract class BaseModbusClient : IModbusClient
   ///   接收到消息时触发
   /// </summary>
   /// <param name="data"></param>
-  protected virtual void DataReceived(ReadOnlyMemory<byte> data)
+  protected async ValueTask DataReceivedAsync(ReadOnlyMemory<byte> data)
   {
     try
     {
@@ -94,7 +108,7 @@ public abstract class BaseModbusClient : IModbusClient
 
     try
     {
-      SbThreading.Jtf.Run(() => OnDataTransportAsync(OnDataReceivedAsync, data));
+      await OnDataTransportAsync(OnDataReceivedAsync, data).ConfigureAwait(false);
     }
     catch (Exception)
     {
@@ -106,7 +120,7 @@ public abstract class BaseModbusClient : IModbusClient
   ///   接收到消息时触发
   /// </summary>
   /// <param name="data"></param>
-  protected virtual void DataSent(ReadOnlyMemory<byte> data)
+  protected async ValueTask DataSentAsync(ReadOnlyMemory<byte> data)
   {
     try
     {
@@ -121,7 +135,7 @@ public abstract class BaseModbusClient : IModbusClient
 
     try
     {
-      SbThreading.Jtf.Run(() => OnDataTransportAsync(OnDataSentAsync, data));
+      await OnDataTransportAsync(OnDataSentAsync, data).ConfigureAwait(false);
     }
     catch (Exception)
     {
@@ -136,7 +150,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="handler"></param>
   /// <param name="data"></param>
   /// <param name="ct"></param>
-  protected virtual async Task OnDataTransportAsync(ModbusClientAsyncHandler handler, ReadOnlyMemory<byte> data,
+  protected virtual async ValueTask OnDataTransportAsync(ModbusClientAsyncHandler handler, ReadOnlyMemory<byte> data,
     CancellationToken ct = default)
   {
     var tasks = handler.GetInvocationList()
