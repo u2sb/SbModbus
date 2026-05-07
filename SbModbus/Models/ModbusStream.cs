@@ -15,6 +15,7 @@ public abstract class ModbusStream : IModbusStream
   public virtual void Dispose()
   {
     OnConnectStateChanged = null;
+    _dataAvailable.Dispose();
   }
 
   /// <inheritdoc />
@@ -78,12 +79,7 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="buffer"></param>
   /// <param name="ct"></param>
   /// <returns></returns>
-  protected virtual ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
-  {
-    return ReadAsyncCoreAsync(buffer, ct);
-  }
-
-  private async ValueTask<int> ReadAsyncCoreAsync(Memory<byte> buffer, CancellationToken ct)
+  protected virtual async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
     while (true)
     {
@@ -212,9 +208,11 @@ public abstract class ModbusStream : IModbusStream
     lock (_locker)
     {
       Buffer.AddLastRange(buffer);
+      if (buffer.Length > 0 && _dataAvailable.CurrentCount == 0)
+      {
+        _dataAvailable.Release();
+      }
     }
-
-    _dataAvailable.Release();
   }
 
   /// <summary>
@@ -237,15 +235,26 @@ public abstract class ModbusStream : IModbusStream
   /// <returns></returns>
   protected int ReadBuffer(in Span<byte> span)
   {
-    // ReSharper disable once InconsistentlySynchronizedField
-    if (Buffer.Count == 0) return 0;
-
     lock (_locker)
     {
+      if (Buffer.Count == 0)
+      {
+        while (_dataAvailable.CurrentCount > 0)
+        {
+          _ = _dataAvailable.Wait(0);
+        }
+        return 0;
+      }
       var length = Math.Min(Buffer.Count, span.Length);
 
       Buffer.WrittenSpan[..length].CopyTo(span);
       Buffer.RemoveFirst(length);
+
+      if (Buffer.Count > 0 && _dataAvailable.CurrentCount == 0)
+      {
+        _dataAvailable.Release();
+      }
+
       return length;
     }
   }
