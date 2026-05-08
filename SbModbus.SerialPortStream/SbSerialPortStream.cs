@@ -89,17 +89,6 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  protected override async ValueTask ClearReadBufferAsync(CancellationToken ct = default)
-  {
-    var b = SerialPort.BytesToRead;
-    if (b > 0)
-    {
-      var temp = new byte[b];
-      await ReadAsync(temp, ct);
-    }
-  }
-
-  /// <inheritdoc />
   protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
     if (IsConnected) return SerialPort.BaseStream.WriteAsync(buffer, ct);
@@ -132,7 +121,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
       {
         var temp = ArrayPool<byte>.Shared.Rent(length);
         SerialPort.Read(temp, 0, length);
-        WriteBuffer(temp);
+        WriteBuffer(temp.AsSpan(0, length));
         ArrayPool<byte>.Shared.Return(temp);
       }
     }

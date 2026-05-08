@@ -73,6 +73,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   public void Dispose()
   {
     _modbusStream?.Dispose();
+    _modbusClient?.Dispose();
     _disposableBag.Dispose();
   }
 
@@ -557,6 +558,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
         break;
     }
 
+    if (_modbusClient is not null)
+    {
+        _modbusClient.OnConnectStateChanged += (sender, state) =>
+        {
+            IsConnected = state;
+        };
+    }
+
     if (_modbusStream is not null)
     {
       try
@@ -571,14 +580,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
       }
     }
 
-    if (_modbusClient is not null)
-    {
-      _modbusClient.OnConnectStateChanged += (sender, state) =>
-      {
-        IsConnected = state;
-      };
-    }
-
     await SaveSettingsAsync();
   }
 
@@ -590,6 +591,10 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     if (_modbusStream.IsConnected)
     {
       _modbusStream.Disconnect();
+    }
+
+    if (_modbusClient is not null)
+    {
       _modbusClient?.Dispose();
       _modbusClient = null;
     }
