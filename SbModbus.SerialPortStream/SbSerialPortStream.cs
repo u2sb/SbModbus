@@ -77,6 +77,32 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
+  public override string GetTransportInfo()
+  {
+    // 格式: COM3:9600-8-N-1
+    var parity = SerialPort.Parity switch
+    {
+      System.IO.Ports.Parity.None => 'N',
+      System.IO.Ports.Parity.Odd => 'O',
+      System.IO.Ports.Parity.Even => 'E',
+      System.IO.Ports.Parity.Mark => 'M',
+      System.IO.Ports.Parity.Space => 'S',
+      _ => '?'
+    };
+
+    var stopBits = SerialPort.StopBits switch
+    {
+      StopBits.None => "0",
+      StopBits.One => "1",
+      StopBits.Two => "2",
+      StopBits.OnePointFive => "1.5",
+      _ => "?"
+    };
+
+    return $"COM:{SerialPort.PortName}:{SerialPort.BaudRate}-{SerialPort.DataBits}-{parity}-{stopBits}";
+  }
+
+  /// <inheritdoc />
   public override bool Disconnect()
   {
     StopAutoReceive();

@@ -55,6 +55,9 @@ public abstract class ModbusStream : IModbusStream
   public abstract bool Disconnect();
 
   /// <inheritdoc />
+  public virtual string GetTransportInfo() => string.Empty;
+
+  /// <inheritdoc />
   public LockedModbusStream Lock()
   {
     return LockedModbusStream.Lock(this);

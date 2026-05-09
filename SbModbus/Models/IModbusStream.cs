@@ -51,4 +51,10 @@ public interface IModbusStream : IDisposable
   /// <param name="ct"></param>
   /// <returns></returns>
   public Task<ModbusStream.LockedModbusStream> LockAsync(CancellationToken ct = default);
+
+  /// <summary>
+  ///   获取传输层描述信息，用于日志记录
+  /// </summary>
+  /// <returns>格式化的传输层描述字符串</returns>
+  public string GetTransportInfo();
 }

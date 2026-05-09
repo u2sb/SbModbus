@@ -15,11 +15,13 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 {
   private readonly SbTcpClient _tcpClient;
   private readonly ILogger? _logger;
+  private readonly string _transportInfo;
 
   /// <inheritdoc />
   public SbTcpClientStream(IPAddress address, int port, ILogger<SbTcpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"TCP:{address}:{port}";
     _tcpClient = new SbTcpClient(address, port)
     {
       ModbusStream = this
@@ -30,6 +32,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   public SbTcpClientStream(string address, int port, ILogger<SbTcpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"TCP:{address}:{port}";
     _tcpClient = new SbTcpClient(address, port)
     {
       ModbusStream = this
@@ -40,6 +43,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   public SbTcpClientStream(DnsEndPoint endpoint, ILogger<SbTcpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"TCP:{endpoint.Host}:{endpoint.Port}";
     _tcpClient = new SbTcpClient(endpoint)
     {
       ModbusStream = this
@@ -50,6 +54,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   public SbTcpClientStream(IPEndPoint endpoint, ILogger<SbTcpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"TCP:{endpoint.Address}:{endpoint.Port}";
     _tcpClient = new SbTcpClient(endpoint)
     {
       ModbusStream = this
@@ -80,6 +85,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     _logger?.LogInformation("TCP client connecting...");
     return _tcpClient.ConnectAsync();
   }
+
+  /// <inheritdoc />
+  public override string GetTransportInfo() => _transportInfo;
 
   /// <inheritdoc />
   public override bool Disconnect()

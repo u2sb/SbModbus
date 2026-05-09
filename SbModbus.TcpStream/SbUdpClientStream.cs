@@ -15,11 +15,13 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
 {
   private readonly SbUdpClient _udpClient;
   private readonly ILogger? _logger;
+  private readonly string _transportInfo;
 
   /// <inheritdoc />
   public SbUdpClientStream(IPAddress address, int port, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"UDP:{address}:{port}";
     _udpClient = new SbUdpClient(address, port)
     {
       ModbusStream = this
@@ -30,6 +32,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   public SbUdpClientStream(string address, int port, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"UDP:{address}:{port}";
     _udpClient = new SbUdpClient(address, port)
     {
       ModbusStream = this
@@ -40,6 +43,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   public SbUdpClientStream(DnsEndPoint endpoint, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"UDP:{endpoint.Host}:{endpoint.Port}";
     _udpClient = new SbUdpClient(endpoint)
     {
       ModbusStream = this
@@ -50,6 +54,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   public SbUdpClientStream(IPEndPoint endpoint, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
     _logger = logger;
+    _transportInfo = $"UDP:{endpoint.Address}:{endpoint.Port}";
     _udpClient = new SbUdpClient(endpoint)
     {
       ModbusStream = this
@@ -80,6 +85,9 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     _logger?.LogInformation("UDP client connecting...");
     return _udpClient.Connect();
   }
+
+  /// <inheritdoc />
+  public override string GetTransportInfo() => _transportInfo;
 
   /// <inheritdoc />
   public override bool Disconnect()
