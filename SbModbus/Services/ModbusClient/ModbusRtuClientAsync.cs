@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
+using Microsoft.Extensions.Logging;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -14,6 +15,7 @@ public partial class ModbusRtuClient
   public override async ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
     CancellationToken ct = default)
   {
+    logger?.LogDebug("ReadCoils: slave={SlaveId}, address={Address}, count={Count}", unitIdentifier, startingAddress, count);
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
       ConvertUshort(count).WithEndianness(true));
 
@@ -30,6 +32,7 @@ public partial class ModbusRtuClient
   public override async ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress,
     int count, CancellationToken ct = default)
   {
+    logger?.LogDebug("ReadDiscreteInputs: slave={SlaveId}, address={Address}, count={Count}", unitIdentifier, startingAddress, count);
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
       ConvertUshort(count).WithEndianness(true));
 
@@ -47,6 +50,8 @@ public partial class ModbusRtuClient
     ReadOnlyMemory<byte> data,
     CancellationToken ct = default)
   {
+    ValidateSingleCoilData(data);
+    logger?.LogDebug("WriteSingleCoil: slave={SlaveId}, address={Address}", unitIdentifier, startingAddress);
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, data.Span);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
@@ -58,6 +63,7 @@ public partial class ModbusRtuClient
   public override async ValueTask WriteSingleRegisterAsync(int unitIdentifier, int startingAddress,
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
+    logger?.LogDebug("WriteSingleRegister: slave={SlaveId}, address={Address}", unitIdentifier, startingAddress);
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, data.Span);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
@@ -70,6 +76,7 @@ public partial class ModbusRtuClient
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     var l = data.Length;
+    logger?.LogDebug("WriteMultipleRegisters: slave={SlaveId}, address={Address}, registers={RegisterCount}", unitIdentifier, startingAddress, l / 2);
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
       writer =>
       {
@@ -93,8 +100,11 @@ public partial class ModbusRtuClient
     int length,
     int readTimeout, CancellationToken ct = default)
   {
-    if (!ModbusStream.IsConnected) throw new SbModbusException("Not Connected");
+    if (!ModbusStream.IsConnected) SbModbusThrow.NotConnected();
+    if (readTimeout <= 0) throw new SbModbusException("ReadTimeout must be greater than 0.");
 
+    var expectedSlaveId = data.Span[0];
+    var expectedFunctionCode = (ModbusFunctionCode)data.Span[1];
     using var mt = await ModbusStream.LockAsync(ct).ConfigureAwait(false);
 
     await WaitDiffSidIntervalTimeAsync(data.Span[0]).ConfigureAwait(false);
@@ -134,7 +144,11 @@ public partial class ModbusRtuClient
           if (!verificationFunctionCode && bytesRead >= 2)
           {
             // 如果功能码不一致
-            if ((buffer[1] & 0x80) != 0) length = 5; // 相应不正常时返回值长度变为5
+            if ((buffer[1] & 0x80) != 0)
+            {
+              length = 5; // 响应不正常时返回值长度变为5
+              logger?.LogWarning("RTU exception response detected, adjusting expected length to 5, bytesRead={BytesRead}", bytesRead);
+            }
             verificationFunctionCode = true;
           }
         }
@@ -144,10 +158,10 @@ public partial class ModbusRtuClient
         }
       }
 
-      var result = memory[..bytesRead];
+      var result = memory[..length];
 
       // 验证数据帧
-      VerifyFrame(result.Span);
+      VerifyFrame(result.Span, expectedSlaveId, expectedFunctionCode);
 
       await DataReceivedAsync(result);
 
@@ -155,11 +169,33 @@ public partial class ModbusRtuClient
     }
     catch (OperationCanceledException)
     {
-      throw new SbModbusException($"Timeout occurred after {readTimeout} milliseconds");
+      // 用户取消 vs 超时
+      if (ct.IsCancellationRequested)
+      {
+        logger?.LogDebug("RTU operation cancelled by user, slave={SlaveId}", expectedSlaveId);
+        throw;
+      }
+
+      logger?.LogError("RTU read timeout after {Timeout}ms, slave={SlaveId}, function=0x{FunctionCode:X2}", readTimeout, expectedSlaveId, (int)expectedFunctionCode);
+      SbModbusThrow.Timeout(readTimeout);
+      // unreachable
+      return default;
     }
     catch (EndOfStreamException)
     {
-      throw new SbModbusException($"Timeout occurred after {readTimeout} milliseconds");
+      logger?.LogError("RTU end of stream, slave={SlaveId}, function=0x{FunctionCode:X2}", expectedSlaveId, (int)expectedFunctionCode);
+      SbModbusThrow.Timeout(readTimeout);
+      // unreachable
+      return default;
+    }
+    catch (SbModbusException)
+    {
+      throw;
+    }
+    catch (Exception ex)
+    {
+      logger?.LogError(ex, "Unexpected error during RTU communication, slave={SlaveId}, function=0x{FunctionCode:X2}", expectedSlaveId, (int)expectedFunctionCode);
+      throw new SbModbusException("An unexpected error occurred during RTU communication.", ex);
     }
     finally
     {
@@ -171,6 +207,7 @@ public partial class ModbusRtuClient
   protected override async ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier,
     ModbusFunctionCode functionCode, int startingAddress, int count, CancellationToken ct = default)
   {
+    logger?.LogDebug("ReadRegisters: slave={SlaveId}, function=0x{FunctionCode:X2}, address={Address}, count={Count}", unitIdentifier, (int)functionCode, startingAddress, count);
     var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
     {
       // 写长度

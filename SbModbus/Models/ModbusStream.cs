@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Threading;
 using Sb.Extensions.System.Buffers.RingBuffers;
 using SbModbus.Utils;
@@ -11,11 +12,26 @@ namespace SbModbus.Models;
 /// <inheritdoc />
 public abstract class ModbusStream : IModbusStream
 {
+  private readonly ILogger? _logger;
+
+  /// <summary>
+  /// </summary>
+  /// <param name="logger"></param>
+  protected ModbusStream(ILogger? logger = null)
+  {
+    _logger = logger;
+  }
+
   /// <inheritdoc />
   public virtual void Dispose()
   {
+    if (_isDisposed) return;
+    _isDisposed = true;
+    _disposeCts.Cancel();
     OnConnectStateChanged = null;
     _dataAvailable.Dispose();
+    _disposeCts.Dispose();
+    _logger?.LogInformation("ModbusStream disposed");
   }
 
   /// <inheritdoc />
@@ -81,12 +97,23 @@ public abstract class ModbusStream : IModbusStream
   /// <returns></returns>
   protected virtual async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
+    if (_isDisposed) throw new ObjectDisposedException(nameof(ModbusStream));
+
     while (true)
     {
       var length = ReadBuffer(buffer.Span);
       if (length > 0) return length;
 
-      await _dataAvailable.WaitAsync(ct).ConfigureAwait(false);
+      if (ct.CanBeCanceled)
+      {
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _disposeCts.Token);
+        await _dataAvailable.WaitAsync(linkedCts.Token).ConfigureAwait(false);
+      }
+      else
+      {
+        // dispose 时会 Cancel _disposeCts，WaitAsync 抛 OperationCanceledException 退出
+        await _dataAvailable.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
+      }
     }
   }
 
@@ -171,13 +198,14 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="isConnected"></param>
   protected void ConnectStateChanged(bool isConnected)
   {
+    _logger?.LogInformation("Connection state changed: {State}", isConnected ? "Connected" : "Disconnected");
     try
     {
       OnConnectStateChanged?.Invoke(isConnected);
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // ignore
+      _logger?.LogError(ex, "OnConnectStateChanged callback threw an exception");
     }
   }
 
@@ -192,12 +220,14 @@ public abstract class ModbusStream : IModbusStream
 #endif
 
   private readonly SemaphoreSlim _dataAvailable = new(0);
+  private readonly CancellationTokenSource _disposeCts = new();
+  private volatile bool _isDisposed;
 
 
   /// <summary>
   ///   缓冲区
   /// </summary>
-  protected readonly FixedSizeRingBuffer<byte> Buffer = new(512);
+  protected readonly FixedSizeRingBuffer<byte> Buffer = new(2048);
 
   /// <summary>
   ///   向缓冲区内写数据
@@ -207,11 +237,19 @@ public abstract class ModbusStream : IModbusStream
   {
     lock (_locker)
     {
+      if (_isDisposed)
+      {
+        _logger?.LogWarning("Attempted to write buffer after dispose, ignoring");
+        return;
+      }
+
       Buffer.AddLastRange(buffer);
       if (buffer.Length > 0 && _dataAvailable.CurrentCount == 0)
       {
         _dataAvailable.Release();
       }
+
+      _logger?.LogDebug("Buffer write: {Length} bytes, total buffered: {Total}", buffer.Length, Buffer.Count);
     }
   }
 
@@ -222,10 +260,12 @@ public abstract class ModbusStream : IModbusStream
   {
     lock (_locker)
     {
+      var cleared = Buffer.Count;
       Buffer.Clear();
+      while (_dataAvailable.CurrentCount > 0) _ = _dataAvailable.Wait(0);
+      if (cleared > 0)
+        _logger?.LogDebug("Buffer cleared, discarded {Count} bytes", cleared);
     }
-
-    while (_dataAvailable.CurrentCount > 0) _ = _dataAvailable.Wait(0);
   }
 
   /// <summary>

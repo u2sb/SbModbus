@@ -4,9 +4,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Sb.Extensions.System;
 using SbModbus.Models;
-using SbModbus.Properties;
 using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
@@ -16,28 +16,38 @@ namespace SbModbus.Services.ModbusClient;
 /// </summary>
 public abstract class BaseModbusClient : IModbusClient
 {
+  private readonly ILogger? _logger;
+
   /// <summary>
   /// </summary>
   /// <param name="stream"></param>
-  protected BaseModbusClient(IModbusStream stream)
+  /// <param name="logger"></param>
+  protected BaseModbusClient(IModbusStream stream, ILogger? logger = null)
   {
     ModbusStream = stream;
+    _logger = logger;
 
     ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
     ModbusStream.OnConnectStateChanged += StreamOnConnectStateChanged;
-    ReadTimeout = ModbusStream.ReadTimeout;
-    WriteTimeout = ModbusStream.WriteTimeout;
   }
 
   /// <summary>
   ///   读超时时间
   /// </summary>
-  public int ReadTimeout { get; set; }
+  public int ReadTimeout
+  {
+    get => ModbusStream.ReadTimeout;
+    set => ModbusStream.ReadTimeout = value;
+  }
 
   /// <summary>
   ///   写超时时间
   /// </summary>
-  public int WriteTimeout { get; set; }
+  public int WriteTimeout
+  {
+    get => ModbusStream.WriteTimeout;
+    set => ModbusStream.WriteTimeout = value;
+  }
 
   /// <inheritdoc />
   public IModbusStream ModbusStream { get; }
@@ -55,9 +65,9 @@ public abstract class BaseModbusClient : IModbusClient
     {
       ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // ignored
+      _logger?.LogWarning(ex, "Failed to unsubscribe OnConnectStateChanged during Dispose");
     }
 
     OnConnectStateChanged = null;
@@ -65,6 +75,7 @@ public abstract class BaseModbusClient : IModbusClient
     OnDataReceivedAsync = null;
     OnDataSent = null;
     OnDataSentAsync = null;
+    _logger?.LogInformation("ModbusClient disposed");
   }
 
   private void StreamOnConnectStateChanged(bool b)
@@ -95,13 +106,15 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="data"></param>
   protected async ValueTask DataReceivedAsync(ReadOnlyMemory<byte> data)
   {
+    _logger?.LogDebug("Response received: {Hex}", SbModbusLogger.ToHexString(data.Span));
+
     try
     {
       OnDataReceived?.Invoke(this, data);
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // ignore
+      _logger?.LogError(ex, "OnDataReceived callback threw an exception");
     }
 
     if (OnDataReceivedAsync is null) return;
@@ -110,25 +123,27 @@ public abstract class BaseModbusClient : IModbusClient
     {
       await OnDataTransportAsync(OnDataReceivedAsync, data).ConfigureAwait(false);
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // ignore
+      _logger?.LogError(ex, "OnDataReceivedAsync callback threw an exception");
     }
   }
 
   /// <summary>
-  ///   接收到消息时触发
+  ///   发送消息时触发
   /// </summary>
   /// <param name="data"></param>
   protected async ValueTask DataSentAsync(ReadOnlyMemory<byte> data)
   {
+    _logger?.LogDebug("Request sent: {Hex}", SbModbusLogger.ToHexString(data.Span));
+
     try
     {
       OnDataSent?.Invoke(this, data);
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // ignore
+      _logger?.LogError(ex, "OnDataSent callback threw an exception");
     }
 
     if (OnDataSentAsync is null) return;
@@ -137,9 +152,9 @@ public abstract class BaseModbusClient : IModbusClient
     {
       await OnDataTransportAsync(OnDataSentAsync, data).ConfigureAwait(false);
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // ignore
+      _logger?.LogError(ex, "OnDataSentAsync callback threw an exception");
     }
   }
 
@@ -162,9 +177,9 @@ public abstract class BaseModbusClient : IModbusClient
           {
             await h.Invoke(this, data, ct);
           }
-          catch (Exception)
+          catch (Exception ex)
           {
-            // ignored
+            _logger?.LogError(ex, "Async event handler threw an exception");
           }
         }, ct));
 
@@ -184,47 +199,40 @@ public abstract class BaseModbusClient : IModbusClient
   /// <exception cref="SbModbusException"></exception>
   protected void ProcessError(ModbusFunctionCode functionCode, ModbusExceptionCode exceptionCode)
   {
+    _logger?.LogError("Modbus protocol error: functionCode=0x{FunctionCode:X2}, exceptionCode=0x{ExceptionCode:X2}", (int)functionCode, (int)exceptionCode);
+
     switch (exceptionCode)
     {
       case ModbusExceptionCode.IllegalFunction:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x01_IllegalFunction);
-
+        SbModbusThrow.IllegalFunction(exceptionCode);
+        break;
       case ModbusExceptionCode.IllegalDataAddress:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x02_IllegalDataAddress);
-
+        SbModbusThrow.IllegalDataAddress(exceptionCode);
+        break;
       case ModbusExceptionCode.IllegalDataValue:
-        throw functionCode switch
-        {
-          ModbusFunctionCode.WriteMultipleRegisters => new SbModbusException(exceptionCode,
-            ErrorMessage.ModbusClient_0x03_IllegalDataValue_0x7B),
-          ModbusFunctionCode.ReadHoldingRegisters or ModbusFunctionCode.ReadInputRegisters => new SbModbusException(
-            exceptionCode, ErrorMessage.ModbusClient_0x03_IllegalDataValue_0x7D),
-          ModbusFunctionCode.ReadCoils or ModbusFunctionCode.ReadDiscreteInputs => new SbModbusException(exceptionCode,
-            ErrorMessage.ModbusClient_0x03_IllegalDataValue_0x7D0),
-          _ => new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x03_IllegalDataValue)
-        };
-
+        SbModbusThrow.IllegalDataValue(exceptionCode, functionCode);
+        break;
       case ModbusExceptionCode.ServerDeviceFailure:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x04_ServerDeviceFailure);
-
+        SbModbusThrow.ServerDeviceFailure(exceptionCode);
+        break;
       case ModbusExceptionCode.Acknowledge:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x05_Acknowledge);
-
+        SbModbusThrow.Acknowledge(exceptionCode);
+        break;
       case ModbusExceptionCode.ServerDeviceBusy:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x06_ServerDeviceBusy);
-
+        SbModbusThrow.ServerDeviceBusy(exceptionCode);
+        break;
       case ModbusExceptionCode.MemoryParityError:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x08_MemoryParityError);
-
+        SbModbusThrow.MemoryParityError(exceptionCode);
+        break;
       case ModbusExceptionCode.GatewayPathUnavailable:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x0A_GatewayPathUnavailable);
-
+        SbModbusThrow.GatewayPathUnavailable(exceptionCode);
+        break;
       case ModbusExceptionCode.GatewayTargetDeviceFailedToRespond:
-        throw new SbModbusException(exceptionCode, ErrorMessage.ModbusClient_0x0B_GatewayTargetDeviceFailedToRespond);
-
+        SbModbusThrow.GatewayTargetDeviceFailedToRespond(exceptionCode);
+        break;
       default:
-        throw new SbModbusException(exceptionCode,
-          string.Format(ErrorMessage.ModbusClient_Unknown_Error, (int)exceptionCode));
+        SbModbusThrow.UnknownError(exceptionCode);
+        break;
     }
   }
 
@@ -233,11 +241,11 @@ public abstract class BaseModbusClient : IModbusClient
   /// </summary>
   /// <param name="unitIdentifier"></param>
   /// <returns></returns>
-  /// <exception cref="Exception"></exception>
+  /// <exception cref="SbModbusException"></exception>
   protected static byte ConvertByte(int unitIdentifier)
   {
     if (unitIdentifier is < 0 or > byte.MaxValue)
-      throw new Exception(ErrorMessage.ModbusClient_InvalidUnitIdentifier);
+      throw new SbModbusException(ErrorMessages.ModbusClient_InvalidUnitIdentifier);
 
     return unchecked((byte)unitIdentifier);
   }
@@ -247,11 +255,11 @@ public abstract class BaseModbusClient : IModbusClient
   /// </summary>
   /// <param name="value"></param>
   /// <returns></returns>
-  /// <exception cref="Exception"></exception>
+  /// <exception cref="SbModbusException"></exception>
   protected static ushort ConvertUshort(int value)
   {
     if (value is < 0 or > ushort.MaxValue)
-      throw new Exception(ErrorMessage.Modbus_InvalidValueUShort);
+      throw new SbModbusException(ErrorMessages.Modbus_InvalidValueUShort);
 
     return unchecked((ushort)value);
   }
@@ -289,6 +297,7 @@ public abstract class BaseModbusClient : IModbusClient
 
     if (span <= TimeSpan.Zero) return;
 
+    _logger?.LogDebug("Waiting {DelayMs:F1}ms for different SID interval (previous={PrevSid}, current={CurrentSid})", span.TotalMilliseconds, _previousSid, sid);
     await Task.Delay(span).ConfigureAwait(false);
   }
 
@@ -319,6 +328,26 @@ public abstract class BaseModbusClient : IModbusClient
   /// <returns></returns>
   protected abstract ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress, int count, CancellationToken ct = default);
+
+  #endregion
+
+  #region 校验
+
+  /// <summary>
+  ///   校验 WriteSingleCoil 数据
+  /// </summary>
+  /// <param name="data"></param>
+  /// <exception cref="SbModbusException"></exception>
+  protected static void ValidateSingleCoilData(ReadOnlyMemory<byte> data)
+  {
+    if (data.Length != 2)
+      throw new SbModbusException("WriteSingleCoil payload length must be exactly 2 bytes.");
+
+    var isOn = data.Span[0] == 0xFF && data.Span[1] == 0x00;
+    var isOff = data.Span[0] == 0x00 && data.Span[1] == 0x00;
+    if (!isOn && !isOff)
+      throw new SbModbusException("WriteSingleCoil payload must be 0xFF00 (ON) or 0x0000 (OFF).");
+  }
 
   #endregion
 

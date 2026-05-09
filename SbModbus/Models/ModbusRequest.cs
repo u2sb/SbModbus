@@ -75,7 +75,7 @@ public class ModbusRequest
   {
     Reset();
 
-    if (client is null) throw new ArgumentNullException(nameof(client));
+    if (client is null) throw new SbModbusException("Client cannot be null.");
 
     Validate();
 
@@ -116,10 +116,10 @@ public class ModbusRequest
           await client.WriteMultipleRegistersAsync(SlaveId, StartingAddress, Data, ct).ConfigureAwait(false);
           break;
         case ModbusFunctionCode.WriteMultipleCoils:
-          throw new NotSupportedException(
+          throw new SbModbusException(
             $"Function code '{FunctionCode}' is not supported by {nameof(IModbusClient)} currently.");
         default:
-          throw new NotSupportedException(
+          throw new SbModbusException(
             $"Function code '{FunctionCode}' is not supported by {nameof(ModbusRequest)}.{nameof(SendAsync)}().");
       }
 
@@ -148,8 +148,10 @@ public class ModbusRequest
 
   private static bool IsTimeout(Exception ex)
   {
-    return ex is TimeoutException or OperationCanceledException
-           || ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase);
+    if (ex is TimeoutException or OperationCanceledException) return true;
+    if (ex is SbModbusException mex && mex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase)) return true;
+    if (ex.InnerException is not null && IsTimeout(ex.InnerException)) return true;
+    return false;
   }
 
   #region 静态函数
@@ -362,9 +364,7 @@ public class ModbusRequest
   /// <summary>
   ///   校验请求参数是否符合功能码要求
   /// </summary>
-  /// <exception cref="ArgumentOutOfRangeException"></exception>
-  /// <exception cref="ArgumentException"></exception>
-  /// <exception cref="NotSupportedException"></exception>
+  /// <exception cref="SbModbusException"></exception>
   public void Validate()
   {
     switch (FunctionCode)
@@ -390,7 +390,7 @@ public class ModbusRequest
         ValidateWriteMultipleRegisters();
         break;
       default:
-        throw new NotSupportedException(
+        throw new SbModbusException(
           $"Function code '{FunctionCode}' is not supported by ModbusRequest.Validate().");
     }
   }
@@ -403,22 +403,22 @@ public class ModbusRequest
 
   private void ValidateWriteSingleCoil()
   {
-    if (Quantity != 1) throw new ArgumentOutOfRangeException(nameof(Quantity), "WriteSingleCoil quantity must be 1.");
+    if (Quantity != 1) throw new SbModbusException("WriteSingleCoil quantity must be 1.");
     if (Data.Length != 2)
-      throw new ArgumentException("WriteSingleCoil payload length must be exactly 2 bytes.", nameof(Data));
+      throw new SbModbusException("WriteSingleCoil payload length must be exactly 2 bytes.");
 
     var isOn = Data[0] == 0xFF && Data[1] == 0x00;
     var isOff = Data[0] == 0x00 && Data[1] == 0x00;
     if (!isOn && !isOff)
-      throw new ArgumentException("WriteSingleCoil payload must be 0xFF00 (ON) or 0x0000 (OFF).", nameof(Data));
+      throw new SbModbusException("WriteSingleCoil payload must be 0xFF00 (ON) or 0x0000 (OFF).");
   }
 
   private void ValidateWriteSingleRegister()
   {
     if (Quantity != 1)
-      throw new ArgumentOutOfRangeException(nameof(Quantity), "WriteSingleRegister quantity must be 1.");
+      throw new SbModbusException("WriteSingleRegister quantity must be 1.");
     if (Data.Length != 2)
-      throw new ArgumentException("WriteSingleRegister payload length must be exactly 2 bytes.", nameof(Data));
+      throw new SbModbusException("WriteSingleRegister payload length must be exactly 2 bytes.");
   }
 
   private void ValidateWriteMultipleCoils()
@@ -427,12 +427,11 @@ public class ModbusRequest
     ValidateAddressRange(Quantity);
 
     if (Data.Length is < 1 or > 246)
-      throw new ArgumentOutOfRangeException(nameof(Data),
-        "WriteMultipleCoils payload length must be in range 1..246 bytes.");
+      throw new SbModbusException("WriteMultipleCoils payload length must be in range 1..246 bytes.");
 
     var expectedByteCount = (Quantity + 7) / 8;
     if (Data.Length != expectedByteCount)
-      throw new ArgumentException("WriteMultipleCoils payload/coil quantity mismatch.", nameof(Data));
+      throw new SbModbusException("WriteMultipleCoils payload/coil quantity mismatch.");
   }
 
   private void ValidateWriteMultipleRegisters()
@@ -441,28 +440,26 @@ public class ModbusRequest
     ValidateAddressRange(Quantity);
 
     if ((Data.Length & 1) != 0)
-      throw new ArgumentException("WriteMultipleRegisters payload length must be even.", nameof(Data));
+      throw new SbModbusException("WriteMultipleRegisters payload length must be even.");
     if (Data.Length is < 2 or > 246)
-      throw new ArgumentOutOfRangeException(nameof(Data),
-        "WriteMultipleRegisters payload length must be in range 2..246 bytes.");
+      throw new SbModbusException("WriteMultipleRegisters payload length must be in range 2..246 bytes.");
 
     var registerCount = Data.Length / 2;
     if (registerCount != Quantity)
-      throw new ArgumentException("WriteMultipleRegisters payload/register quantity mismatch.", nameof(Data));
+      throw new SbModbusException("WriteMultipleRegisters payload/register quantity mismatch.");
   }
 
   private void ValidateQuantityRange(ushort min, ushort max)
   {
     if (Quantity < min || Quantity > max)
-      throw new ArgumentOutOfRangeException(nameof(Quantity),
-        $"Quantity for {FunctionCode} must be in range {min}..{max}.");
+      throw new SbModbusException($"Quantity for {FunctionCode} must be in range {min}..{max}.");
   }
 
   private void ValidateAddressRange(ushort quantity)
   {
     var endAddress = (uint)StartingAddress + quantity - 1;
     if (endAddress > ushort.MaxValue)
-      throw new ArgumentOutOfRangeException(nameof(StartingAddress), "Address range exceeds 0..65535.");
+      throw new SbModbusException("Address range exceeds 0..65535.");
   }
 
   #endregion

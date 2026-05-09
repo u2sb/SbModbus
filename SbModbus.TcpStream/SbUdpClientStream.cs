@@ -2,20 +2,24 @@ using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NetCoreServer;
 using SbModbus.Models;
 
 namespace SbModbus.TcpStream;
 
 /// <summary>
+///   UDP客户端流
 /// </summary>
 public class SbUdpClientStream : ModbusStream, IModbusStream
 {
   private readonly SbUdpClient _udpClient;
+  private readonly ILogger? _logger;
 
   /// <inheritdoc />
-  public SbUdpClientStream(IPAddress address, int port)
+  public SbUdpClientStream(IPAddress address, int port, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
+    _logger = logger;
     _udpClient = new SbUdpClient(address, port)
     {
       ModbusStream = this
@@ -23,8 +27,9 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbUdpClientStream(string address, int port)
+  public SbUdpClientStream(string address, int port, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
+    _logger = logger;
     _udpClient = new SbUdpClient(address, port)
     {
       ModbusStream = this
@@ -32,8 +37,9 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbUdpClientStream(DnsEndPoint endpoint)
+  public SbUdpClientStream(DnsEndPoint endpoint, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
+    _logger = logger;
     _udpClient = new SbUdpClient(endpoint)
     {
       ModbusStream = this
@@ -41,8 +47,9 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbUdpClientStream(IPEndPoint endpoint)
+  public SbUdpClientStream(IPEndPoint endpoint, ILogger<SbUdpClientStream>? logger = null) : base(logger)
   {
+    _logger = logger;
     _udpClient = new SbUdpClient(endpoint)
     {
       ModbusStream = this
@@ -53,6 +60,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   public override void Dispose()
   {
     _udpClient.Dispose();
+    base.Dispose();
     StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
@@ -69,12 +77,14 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Connect()
   {
+    _logger?.LogInformation("UDP client connecting...");
     return _udpClient.Connect();
   }
 
   /// <inheritdoc />
   public override bool Disconnect()
   {
+    _logger?.LogInformation("UDP client disconnecting");
     return _udpClient.Disconnect();
   }
 
@@ -115,13 +125,20 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
 
     protected override void OnConnected()
     {
+      ModbusStream._logger?.LogInformation("UDP client connected");
       ModbusStream.ConnectStateChanged(true);
       ReceiveAsync();
     }
 
     protected override void OnDisconnected()
     {
+      ModbusStream._logger?.LogWarning("UDP client disconnected");
       ModbusStream.ConnectStateChanged(false);
+    }
+
+    protected override void OnError(System.Net.Sockets.SocketError error)
+    {
+      ModbusStream._logger?.LogError("UDP client socket error: {Error}", error);
     }
   }
 }

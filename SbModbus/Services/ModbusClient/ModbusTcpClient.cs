@@ -4,7 +4,9 @@ using Sb.Extensions.System.Buffers;
 using System.Buffers;
 #endif
 using System;
+using System.Threading;
 using CommunityToolkit.HighPerformance;
+using Microsoft.Extensions.Logging;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -14,12 +16,13 @@ namespace SbModbus.Services.ModbusClient;
 ///   ModbusTcp 类
 /// </summary>
 /// <param name="stream"></param>
-public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(stream), IModbusClient
+/// <param name="logger"></param>
+public partial class ModbusTcpClient(IModbusStream stream, ILogger<ModbusTcpClient>? logger = null) : BaseModbusClient(stream, logger), IModbusClient
 {
   /// <summary>
   ///   事务Id
   /// </summary>
-  protected ushort TransactionsId;
+  private int _transactionsId;
 
   /// <summary>
   ///   创建数据帧
@@ -36,8 +39,8 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
     var buffer = new ArrayBufferWriter<byte>(256);
 
     // 事务处理标识
-    TransactionsId++;
-    buffer.Write(TransactionsId);
+    var tid = (ushort)Interlocked.Increment(ref _transactionsId);
+    buffer.Write(tid);
 
     // 协议标识符号
     buffer.Write("\0\0"u8);
@@ -76,8 +79,8 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
     var buffer = new ArrayBufferWriter<byte>(256);
 
     // 事务处理标识
-    TransactionsId++;
-    buffer.Write(TransactionsId);
+    var tid = (ushort)Interlocked.Increment(ref _transactionsId);
+    buffer.Write(tid);
 
     // 协议标识符号
     buffer.Write("\0\0"u8);
@@ -106,15 +109,49 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
   /// </summary>
   /// <param name="data">数据</param>
   /// <param name="tid">事务 Id</param>
+  /// <param name="expectedUnitId">期望的单元标识符</param>
+  /// <param name="expectedFunctionCode">期望的功能码</param>
   /// <exception cref="SbModbusException"></exception>
-  protected void VerifyFrame(Span<byte> data, ushort tid)
+  protected void VerifyFrame(Span<byte> data, ushort tid, byte expectedUnitId, ModbusFunctionCode expectedFunctionCode)
   {
-    if (data.Length < 9) throw new SbModbusException("The response message length is invalid.");
+    if (data.Length < 9)
+    {
+      logger?.LogError("TCP VerifyFrame: response too short ({Length} bytes), expected at least 9", data.Length);
+      SbModbusThrow.InvalidResponseLength();
+    }
 
-    if (data[..2].ToUInt16() != tid) throw new SbModbusException("The response TransactionsId is invalid.");
+    if (data[..2].ToUInt16() != tid)
+    {
+      logger?.LogError("TCP VerifyFrame: transaction ID mismatch, expected={Expected}, actual={Actual}", tid, data[..2].ToUInt16());
+      SbModbusThrow.InvalidTransactionsId();
+    }
+
+    // 检查协议标识
+    if (data[2] != 0 || data[3] != 0)
+    {
+      logger?.LogError("TCP VerifyFrame: protocol identifier invalid (expected 0x0000, got 0x{Pi:X2}{Pi2:X2})", data[2], data[3]);
+      SbModbusThrow.InvalidProtocolIdentifier();
+    }
+
+    // 检查单元标识符
+    if (data[6] != expectedUnitId)
+    {
+      logger?.LogError("TCP VerifyFrame: unit identifier mismatch, expected={Expected}, actual={Actual}", expectedUnitId, data[6]);
+      SbModbusThrow.UnitIdentifierMismatch();
+    }
+
+    // 检查功能码（异常响应时高位会被置1，取低7位比较）
+    if ((data[7] & 0x7F) != (byte)expectedFunctionCode)
+    {
+      logger?.LogError("TCP VerifyFrame: function code mismatch, expected=0x{Expected:X2}, actual=0x{Actual:X2}", (int)expectedFunctionCode, data[7]);
+      SbModbusThrow.FunctionCodeMismatch();
+    }
 
     // 检查错误码
     if ((data[7] & 0x80) != 0)
+    {
+      logger?.LogWarning("TCP exception response: unit={UnitId}, function=0x{FunctionCode:X2}, exceptionCode=0x{ExceptionCode:X2}", data[6], data[7], data[8]);
       ProcessError((ModbusFunctionCode)data[7], (ModbusExceptionCode)data[8]);
+    }
   }
 }
