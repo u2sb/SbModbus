@@ -73,16 +73,16 @@ public class ModbusRequest
   /// <param name="ct"></param>
   public async Task<ModbusResponse> SendAsync(IModbusClient client, CancellationToken ct = default)
   {
-    Reset();
-
-    if (client is null) throw new SbModbusException("Client cannot be null.");
-
-    Validate();
-
-    Response.Status = ModbusResponse.ResponseStatus.Requesting;
-
     try
     {
+      Reset();
+
+      if (client is null) throw new SbModbusException("Client cannot be null.");
+
+      Validate();
+
+      Response.Status = ModbusResponse.ResponseStatus.Requesting;
+
       switch (FunctionCode)
       {
         case ModbusFunctionCode.ReadCoils:
