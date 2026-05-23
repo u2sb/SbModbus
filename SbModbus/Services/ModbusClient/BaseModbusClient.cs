@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Sb.Extensions.System;
 using SbModbus.Models;
 using SbModbus.Utils;
@@ -16,16 +15,12 @@ namespace SbModbus.Services.ModbusClient;
 /// </summary>
 public abstract class BaseModbusClient : IModbusClient
 {
-  private readonly ILogger? _logger;
-
   /// <summary>
   /// </summary>
   /// <param name="stream"></param>
-  /// <param name="logger"></param>
-  protected BaseModbusClient(IModbusStream stream, ILogger? logger = null)
+  protected BaseModbusClient(IModbusStream stream)
   {
     ModbusStream = stream;
-    _logger = logger;
 
     ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
     ModbusStream.OnConnectStateChanged += StreamOnConnectStateChanged;
@@ -67,7 +62,7 @@ public abstract class BaseModbusClient : IModbusClient
     }
     catch (Exception ex)
     {
-      _logger?.LogWarning(ex, "Failed to unsubscribe OnConnectStateChanged during Dispose");
+      Logger.Error(ex, "Failed to unsubscribe OnConnectStateChanged during Dispose");
     }
 
     OnConnectStateChanged = null;
@@ -75,7 +70,7 @@ public abstract class BaseModbusClient : IModbusClient
     OnDataReceivedAsync = null;
     OnDataSent = null;
     OnDataSentAsync = null;
-    _logger?.LogInformation("ModbusClient disposed");
+    Logger.Information("ModbusClient disposed");
   }
 
   private void StreamOnConnectStateChanged(bool b)
@@ -106,7 +101,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="data"></param>
   protected async ValueTask DataReceivedAsync(ReadOnlyMemory<byte> data)
   {
-    _logger?.LogDebug("Response received: {Hex}", SbModbusLogger.ToHexString(data.Span));
+    Logger.Log(LogLevel.Debug, $"Response received: {SbModbusLogger.ToHexString(data.Span)}");
 
     try
     {
@@ -114,7 +109,7 @@ public abstract class BaseModbusClient : IModbusClient
     }
     catch (Exception ex)
     {
-      _logger?.LogError(ex, "OnDataReceived callback threw an exception");
+      Logger.Error(ex, "OnDataReceived callback threw an exception");
     }
 
     if (OnDataReceivedAsync is null) return;
@@ -125,7 +120,7 @@ public abstract class BaseModbusClient : IModbusClient
     }
     catch (Exception ex)
     {
-      _logger?.LogError(ex, "OnDataReceivedAsync callback threw an exception");
+      Logger.Error(ex, "OnDataReceivedAsync callback threw an exception");
     }
   }
 
@@ -135,7 +130,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="data"></param>
   protected async ValueTask DataSentAsync(ReadOnlyMemory<byte> data)
   {
-    _logger?.LogDebug("Request sent: {Hex}", SbModbusLogger.ToHexString(data.Span));
+    Logger.Log(LogLevel.Debug, $"Request sent: {SbModbusLogger.ToHexString(data.Span)}");
 
     try
     {
@@ -143,7 +138,7 @@ public abstract class BaseModbusClient : IModbusClient
     }
     catch (Exception ex)
     {
-      _logger?.LogError(ex, "OnDataSent callback threw an exception");
+      Logger.Error(ex, "OnDataSent callback threw an exception");
     }
 
     if (OnDataSentAsync is null) return;
@@ -154,7 +149,7 @@ public abstract class BaseModbusClient : IModbusClient
     }
     catch (Exception ex)
     {
-      _logger?.LogError(ex, "OnDataSentAsync callback threw an exception");
+      Logger.Error(ex, "OnDataSentAsync callback threw an exception");
     }
   }
 
@@ -179,7 +174,7 @@ public abstract class BaseModbusClient : IModbusClient
           }
           catch (Exception ex)
           {
-            _logger?.LogError(ex, "Async event handler threw an exception");
+            Logger.Error(ex, "Async event handler threw an exception");
           }
         }, ct));
 
@@ -199,7 +194,7 @@ public abstract class BaseModbusClient : IModbusClient
   /// <exception cref="SbModbusException"></exception>
   protected void ProcessError(ModbusFunctionCode functionCode, ModbusExceptionCode exceptionCode)
   {
-    _logger?.LogError("Modbus protocol error: functionCode=0x{FunctionCode:X2}, exceptionCode=0x{ExceptionCode:X2}", (int)functionCode, (int)exceptionCode);
+    Logger.Log(LogLevel.Error, $"Modbus protocol error: functionCode=0x{(int)functionCode:X2}, exceptionCode=0x{(int)exceptionCode:X2}");
 
     switch (exceptionCode)
     {
@@ -297,7 +292,7 @@ public abstract class BaseModbusClient : IModbusClient
 
     if (span <= TimeSpan.Zero) return;
 
-    _logger?.LogDebug("Waiting {DelayMs:F1}ms for different SID interval (previous={PrevSid}, current={CurrentSid})", span.TotalMilliseconds, _previousSid, sid);
+    Logger.Log(LogLevel.Debug, $"Waiting {span.TotalMilliseconds:F1}ms for different SID interval (previous={_previousSid}, current={sid})");
     await Task.Delay(span).ConfigureAwait(false);
   }
 

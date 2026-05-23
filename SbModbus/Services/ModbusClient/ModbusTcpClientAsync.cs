@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
-using Microsoft.Extensions.Logging;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -16,7 +15,7 @@ public partial class ModbusTcpClient
   public override async ValueTask<Memory<byte>> ReadCoilsAsync(int unitIdentifier, int startingAddress, int count,
     CancellationToken ct = default)
   {
-    logger?.LogDebug("ReadCoils: unit={UnitId}, address={Address}, count={Count}", unitIdentifier, startingAddress, count);
+    Logger.Log(LogLevel.Debug, $"ReadCoils: unit={unitIdentifier}, address={startingAddress}, count={count}");
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
       ConvertUshort(count).WithEndianness(true));
 
@@ -35,7 +34,7 @@ public partial class ModbusTcpClient
   public override async ValueTask<Memory<byte>> ReadDiscreteInputsAsync(int unitIdentifier, int startingAddress,
     int count, CancellationToken ct = default)
   {
-    logger?.LogDebug("ReadDiscreteInputs: unit={UnitId}, address={Address}, count={Count}", unitIdentifier, startingAddress, count);
+    Logger.Log(LogLevel.Debug, $"ReadDiscreteInputs: unit={unitIdentifier}, address={startingAddress}, count={count}");
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
       ConvertUshort(count).WithEndianness(true));
 
@@ -55,7 +54,7 @@ public partial class ModbusTcpClient
     CancellationToken ct = default)
   {
     ValidateSingleCoilData(data);
-    logger?.LogDebug("WriteSingleCoil: unit={UnitId}, address={Address}", unitIdentifier, startingAddress);
+    Logger.Log(LogLevel.Debug, $"WriteSingleCoil: unit={unitIdentifier}, address={startingAddress}");
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, data.Span);
 
     // 7MBAP 1功能码 2寄存器地址 2数据数量
@@ -70,7 +69,7 @@ public partial class ModbusTcpClient
     ReadOnlyMemory<byte> data,
     CancellationToken ct = default)
   {
-    logger?.LogDebug("WriteSingleRegister: unit={UnitId}, address={Address}", unitIdentifier, startingAddress);
+    Logger.Log(LogLevel.Debug, $"WriteSingleRegister: unit={unitIdentifier}, address={startingAddress}");
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, data.Span);
 
     // 7MBAP 1功能码 2寄存器地址 2数据数量
@@ -85,7 +84,7 @@ public partial class ModbusTcpClient
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     var l = data.Length;
-    logger?.LogDebug("WriteMultipleRegisters: unit={UnitId}, address={Address}, registers={RegisterCount}", unitIdentifier, startingAddress, l / 2);
+    Logger.Log(LogLevel.Debug, $"WriteMultipleRegisters: unit={unitIdentifier}, address={startingAddress}, registers={l / 2}");
     var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
       writer =>
       {
@@ -110,7 +109,7 @@ public partial class ModbusTcpClient
     ModbusFunctionCode functionCode,
     int startingAddress, int count, CancellationToken ct = default)
   {
-    logger?.LogDebug("ReadRegisters: unit={UnitId}, function=0x{FunctionCode:X2}, address={Address}, count={Count}", unitIdentifier, (int)functionCode, startingAddress, count);
+    Logger.Log(LogLevel.Debug, $"ReadRegisters: unit={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
     var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 2n数据
@@ -171,7 +170,7 @@ public partial class ModbusTcpClient
             if ((buffer[7] & 0x80) != 0)
             {
               length = 9; // 响应不正常时返回值长度变为9
-              logger?.LogWarning("TCP exception response detected, adjusting expected length to 9, bytesRead={BytesRead}", bytesRead);
+              Logger.Log(LogLevel.Warning, $"TCP exception response detected, adjusting expected length to 9, bytesRead={bytesRead}");
             }
             verificationFunctionCode = true;
           }
@@ -195,18 +194,18 @@ public partial class ModbusTcpClient
       // 用户取消 vs 超时
       if (ct.IsCancellationRequested)
       {
-        logger?.LogDebug("TCP operation cancelled by user, tid={Tid}", tid);
+        Logger.Log(LogLevel.Debug, $"TCP operation cancelled by user, tid={tid}");
         throw;
       }
 
-      logger?.LogError("TCP read timeout after {Timeout}ms, tid={Tid}, unit={UnitId}, function=0x{FunctionCode:X2}", readTimeout, tid, expectedUnitId, (int)expectedFunctionCode);
+      Logger.Log(LogLevel.Error, $"TCP read timeout after {readTimeout}ms, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
       SbModbusThrow.Timeout(readTimeout);
       // unreachable
       return default;
     }
     catch (EndOfStreamException)
     {
-      logger?.LogError("TCP end of stream, tid={Tid}, unit={UnitId}, function=0x{FunctionCode:X2}", tid, expectedUnitId, (int)expectedFunctionCode);
+      Logger.Log(LogLevel.Error, $"TCP end of stream, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
       SbModbusThrow.Timeout(readTimeout);
       // unreachable
       return default;
@@ -217,7 +216,7 @@ public partial class ModbusTcpClient
     }
     catch (Exception ex)
     {
-      logger?.LogError(ex, "Unexpected error during TCP communication, tid={Tid}, unit={UnitId}, function=0x{FunctionCode:X2}", tid, expectedUnitId, (int)expectedFunctionCode);
+      Logger.Error(ex, $"Unexpected error during TCP communication, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
       throw new SbModbusException("An unexpected error occurred during TCP communication.", ex);
     }
   }

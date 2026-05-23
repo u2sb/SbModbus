@@ -1,8 +1,6 @@
-﻿using System;
-using System.Linq;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Threading;
 using Sb.Extensions.System.Buffers.RingBuffers;
 using SbModbus.Utils;
@@ -12,14 +10,10 @@ namespace SbModbus.Models;
 /// <inheritdoc />
 public abstract class ModbusStream : IModbusStream
 {
-  private readonly ILogger? _logger;
-
   /// <summary>
   /// </summary>
-  /// <param name="logger"></param>
-  protected ModbusStream(ILogger? logger = null)
+  protected ModbusStream()
   {
-    _logger = logger;
   }
 
   /// <inheritdoc />
@@ -31,7 +25,7 @@ public abstract class ModbusStream : IModbusStream
     OnConnectStateChanged = null;
     _dataAvailable.Dispose();
     _disposeCts.Dispose();
-    _logger?.LogInformation("ModbusStream disposed");
+    Logger.Information("ModbusStream disposed");
   }
 
   /// <inheritdoc />
@@ -55,7 +49,10 @@ public abstract class ModbusStream : IModbusStream
   public abstract bool Disconnect();
 
   /// <inheritdoc />
-  public virtual string GetTransportInfo() => string.Empty;
+  public virtual string GetTransportInfo()
+  {
+    return string.Empty;
+  }
 
   /// <inheritdoc />
   public LockedModbusStream Lock()
@@ -110,11 +107,13 @@ public abstract class ModbusStream : IModbusStream
       if (ct.CanBeCanceled)
       {
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _disposeCts.Token);
+        // ReSharper disable once InconsistentlySynchronizedField
         await _dataAvailable.WaitAsync(linkedCts.Token).ConfigureAwait(false);
       }
       else
       {
         // dispose 时会 Cancel _disposeCts，WaitAsync 抛 OperationCanceledException 退出
+        // ReSharper disable once InconsistentlySynchronizedField
         await _dataAvailable.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
       }
     }
@@ -201,14 +200,14 @@ public abstract class ModbusStream : IModbusStream
   /// <param name="isConnected"></param>
   protected void ConnectStateChanged(bool isConnected)
   {
-    _logger?.LogInformation("Connection state changed: {State}", isConnected ? "Connected" : "Disconnected");
+    Logger.Log(LogLevel.Information, $"Connection state changed: {(isConnected ? "Connected" : "Disconnected")}");
     try
     {
       OnConnectStateChanged?.Invoke(isConnected);
     }
     catch (Exception ex)
     {
-      _logger?.LogError(ex, "OnConnectStateChanged callback threw an exception");
+      Logger.Error(ex, "OnConnectStateChanged callback threw an exception");
     }
   }
 
@@ -242,17 +241,14 @@ public abstract class ModbusStream : IModbusStream
     {
       if (_isDisposed)
       {
-        _logger?.LogWarning("Attempted to write buffer after dispose, ignoring");
+        Logger.Warning("Attempted to write buffer after dispose, ignoring");
         return;
       }
 
       Buffer.AddLastRange(buffer);
-      if (buffer.Length > 0 && _dataAvailable.CurrentCount == 0)
-      {
-        _dataAvailable.Release();
-      }
+      if (buffer.Length > 0 && _dataAvailable.CurrentCount == 0) _dataAvailable.Release();
 
-      _logger?.LogDebug("Buffer write: {Length} bytes, total buffered: {Total}", buffer.Length, Buffer.Count);
+      Logger.Log(LogLevel.Debug, $"Buffer write: {buffer.Length} bytes, total buffered: {Buffer.Count}");
     }
   }
 
@@ -265,9 +261,9 @@ public abstract class ModbusStream : IModbusStream
     {
       var cleared = Buffer.Count;
       Buffer.Clear();
-      while (_dataAvailable.CurrentCount > 0) _ = _dataAvailable.Wait(0);
+      while (_dataAvailable.CurrentCount > 0) _dataAvailable.Wait(0);
       if (cleared > 0)
-        _logger?.LogDebug("Buffer cleared, discarded {Count} bytes", cleared);
+        Logger.Log(LogLevel.Debug, $"Buffer cleared, discarded {cleared} bytes");
     }
   }
 
@@ -282,21 +278,16 @@ public abstract class ModbusStream : IModbusStream
     {
       if (Buffer.Count == 0)
       {
-        while (_dataAvailable.CurrentCount > 0)
-        {
-          _ = _dataAvailable.Wait(0);
-        }
+        while (_dataAvailable.CurrentCount > 0) _ = _dataAvailable.Wait(0);
         return 0;
       }
+
       var length = Math.Min(Buffer.Count, span.Length);
 
       Buffer.WrittenSpan[..length].CopyTo(span);
       Buffer.RemoveFirst(length);
 
-      if (Buffer.Count > 0 && _dataAvailable.CurrentCount == 0)
-      {
-        _dataAvailable.Release();
-      }
+      if (Buffer.Count > 0 && _dataAvailable.CurrentCount == 0) _dataAvailable.Release();
 
       return length;
     }

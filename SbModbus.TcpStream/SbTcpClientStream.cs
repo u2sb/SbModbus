@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NetCoreServer;
 using SbModbus.Models;
 
@@ -14,13 +13,11 @@ namespace SbModbus.TcpStream;
 public class SbTcpClientStream : ModbusStream, IModbusStream
 {
   private readonly SbTcpClient _tcpClient;
-  private readonly ILogger? _logger;
   private readonly string _transportInfo;
 
   /// <inheritdoc />
-  public SbTcpClientStream(IPAddress address, int port, ILogger<SbTcpClientStream>? logger = null) : base(logger)
+  public SbTcpClientStream(IPAddress address, int port)
   {
-    _logger = logger;
     _transportInfo = $"TCP:{address}:{port}";
     _tcpClient = new SbTcpClient(address, port)
     {
@@ -29,9 +26,8 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(string address, int port, ILogger<SbTcpClientStream>? logger = null) : base(logger)
+  public SbTcpClientStream(string address, int port)
   {
-    _logger = logger;
     _transportInfo = $"TCP:{address}:{port}";
     _tcpClient = new SbTcpClient(address, port)
     {
@@ -40,9 +36,8 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(DnsEndPoint endpoint, ILogger<SbTcpClientStream>? logger = null) : base(logger)
+  public SbTcpClientStream(DnsEndPoint endpoint)
   {
-    _logger = logger;
     _transportInfo = $"TCP:{endpoint.Host}:{endpoint.Port}";
     _tcpClient = new SbTcpClient(endpoint)
     {
@@ -51,9 +46,8 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
-  public SbTcpClientStream(IPEndPoint endpoint, ILogger<SbTcpClientStream>? logger = null) : base(logger)
+  public SbTcpClientStream(IPEndPoint endpoint)
   {
-    _logger = logger;
     _transportInfo = $"TCP:{endpoint.Address}:{endpoint.Port}";
     _tcpClient = new SbTcpClient(endpoint)
     {
@@ -82,7 +76,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Connect()
   {
-    _logger?.LogInformation("TCP client connecting...");
+    Logger.Information("TCP client connecting...");
     return _tcpClient.ConnectAsync();
   }
 
@@ -92,7 +86,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Disconnect()
   {
-    _logger?.LogInformation("TCP client disconnecting");
+    Logger.Information("TCP client disconnecting");
     return _tcpClient.Disconnect();
   }
 
@@ -132,19 +126,19 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
     protected override void OnConnected()
     {
-      ModbusStream._logger?.LogInformation("TCP client connected");
+      Logger.Information("TCP client connected");
       ModbusStream.ConnectStateChanged(true);
     }
 
     protected override void OnDisconnected()
     {
-      ModbusStream._logger?.LogWarning("TCP client disconnected");
+      Logger.Warning("TCP client disconnected");
       ModbusStream.ConnectStateChanged(false);
     }
 
     protected override void OnError(System.Net.Sockets.SocketError error)
     {
-      ModbusStream._logger?.LogError("TCP client socket error: {Error}", error);
+      Logger.Log(LogLevel.Error, $"TCP client socket error: {error}");
     }
   }
 }

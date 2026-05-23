@@ -11,6 +11,8 @@ using SbModbus.Tool.Services.RecordServices;
 using SbModbus.Tool.ViewModels;
 using SbModbus.Tool.Views.Windows;
 using ZeroMessenger.DependencyInjection;
+using MLogLevel = Microsoft.Extensions.Logging.LogLevel;
+using SLogLevel = SbModbus.LogLevel;
 
 namespace SbModbus.Tool;
 
@@ -23,6 +25,33 @@ public static class Startup
   {
     var logger = builder.Logging;
     logger.ClearProviders();
+  }
+
+  /// <summary>
+  ///   将 SbModbus 静态 Logger 桥接到 MEL（Microsoft.Extensions.Logging）
+  /// </summary>
+  private static void BridgeStaticLogger(IServiceProvider services)
+  {
+    var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+    var melLogger = loggerFactory.CreateLogger("SbModbus");
+
+    SbModbus.Logger.Output = (level, message) =>
+    {
+      var melLevel = level switch
+      {
+        SLogLevel.Trace => MLogLevel.Trace,
+        SLogLevel.Debug => MLogLevel.Debug,
+        SLogLevel.Information => MLogLevel.Information,
+        SLogLevel.Warning => MLogLevel.Warning,
+        SLogLevel.Error => MLogLevel.Error,
+        SLogLevel.Critical => MLogLevel.Critical,
+        _ => MLogLevel.Information
+      };
+      melLogger.Log(melLevel, message);
+    };
+
+    // 从配置文件读取日志等级（如有），否则默认 Information
+    SbModbus.Logger.Level = SLogLevel.Information;
   }
 
   private static void ConfigServices(HostApplicationBuilder builder)
@@ -53,6 +82,7 @@ public static class Startup
     _host = builder.Build();
     Ioc.Default.ConfigureServices(_host.Services);
     AddLang();
+    BridgeStaticLogger(_host.Services);
     _host.Start();
 
     if (sender is IClassicDesktopStyleApplicationLifetime desktop)

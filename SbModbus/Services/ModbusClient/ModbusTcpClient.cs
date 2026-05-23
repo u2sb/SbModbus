@@ -6,7 +6,6 @@ using System.Buffers;
 using System;
 using System.Threading;
 using CommunityToolkit.HighPerformance;
-using Microsoft.Extensions.Logging;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -16,8 +15,7 @@ namespace SbModbus.Services.ModbusClient;
 ///   ModbusTcp 类
 /// </summary>
 /// <param name="stream"></param>
-/// <param name="logger"></param>
-public partial class ModbusTcpClient(IModbusStream stream, ILogger<ModbusTcpClient>? logger = null) : BaseModbusClient(stream, logger), IModbusClient
+public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(stream), IModbusClient
 {
   /// <summary>
   ///   事务Id
@@ -116,41 +114,41 @@ public partial class ModbusTcpClient(IModbusStream stream, ILogger<ModbusTcpClie
   {
     if (data.Length < 9)
     {
-      logger?.LogError("TCP VerifyFrame: response too short ({Length} bytes), expected at least 9", data.Length);
+      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: response too short ({data.Length} bytes), expected at least 9");
       SbModbusThrow.InvalidResponseLength();
     }
 
     if (data[..2].ToUInt16() != tid)
     {
-      logger?.LogError("TCP VerifyFrame: transaction ID mismatch, expected={Expected}, actual={Actual}", tid, data[..2].ToUInt16());
+      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: transaction ID mismatch, expected={tid}, actual={data[..2].ToUInt16()}");
       SbModbusThrow.InvalidTransactionsId();
     }
 
     // 检查协议标识
     if (data[2] != 0 || data[3] != 0)
     {
-      logger?.LogError("TCP VerifyFrame: protocol identifier invalid (expected 0x0000, got 0x{Pi:X2}{Pi2:X2})", data[2], data[3]);
+      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: protocol identifier invalid (expected 0x0000, got 0x{data[2]:X2}{data[3]:X2})");
       SbModbusThrow.InvalidProtocolIdentifier();
     }
 
     // 检查单元标识符
     if (data[6] != expectedUnitId)
     {
-      logger?.LogError("TCP VerifyFrame: unit identifier mismatch, expected={Expected}, actual={Actual}", expectedUnitId, data[6]);
+      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: unit identifier mismatch, expected={expectedUnitId}, actual={data[6]}");
       SbModbusThrow.UnitIdentifierMismatch();
     }
 
     // 检查功能码（异常响应时高位会被置1，取低7位比较）
     if ((data[7] & 0x7F) != (byte)expectedFunctionCode)
     {
-      logger?.LogError("TCP VerifyFrame: function code mismatch, expected=0x{Expected:X2}, actual=0x{Actual:X2}", (int)expectedFunctionCode, data[7]);
+      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: function code mismatch, expected=0x{(int)expectedFunctionCode:X2}, actual=0x{data[7]:X2}");
       SbModbusThrow.FunctionCodeMismatch();
     }
 
     // 检查错误码
     if ((data[7] & 0x80) != 0)
     {
-      logger?.LogWarning("TCP exception response: unit={UnitId}, function=0x{FunctionCode:X2}, exceptionCode=0x{ExceptionCode:X2}", data[6], data[7], data[8]);
+      Logger.Log(LogLevel.Warning, $"TCP exception response: unit={data[6]}, function=0x{data[7]:X2}, exceptionCode=0x{data[8]:X2}");
       ProcessError((ModbusFunctionCode)data[7], (ModbusExceptionCode)data[8]);
     }
   }

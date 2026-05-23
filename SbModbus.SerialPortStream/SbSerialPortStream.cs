@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using SbModbus.Models;
 #if NETSTANDARD2_0 || NET462_OR_GREATER
 using CommunityToolkit.HighPerformance;
@@ -17,19 +16,15 @@ namespace SbModbus.SerialPortStream;
 /// </summary>
 public class SbSerialPortStream : ModbusStream, IModbusStream
 {
-  private readonly ILogger? _logger;
-
   /// <inheritdoc />
-  public SbSerialPortStream(ILogger<SbSerialPortStream>? logger = null) : base(logger)
+  public SbSerialPortStream() : base()
   {
-    _logger = logger;
     SerialPort = new SerialPort();
   }
 
   /// <inheritdoc />
-  public SbSerialPortStream(SerialPort serialPort, ILogger<SbSerialPortStream>? logger = null) : base(logger)
+  public SbSerialPortStream(SerialPort serialPort) : base()
   {
-    _logger = logger;
     SerialPort = serialPort;
   }
 
@@ -64,13 +59,13 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
 
     if (IsConnected)
     {
-      _logger?.LogInformation("Serial port {PortName} connected", SerialPort.PortName);
+      Logger.Log(LogLevel.Information, $"Serial port {SerialPort.PortName} connected");
       ConnectStateChanged(IsConnected);
       StartAutoReceive();
     }
     else
     {
-      _logger?.LogWarning("Serial port {PortName} failed to open", SerialPort.PortName);
+      Logger.Log(LogLevel.Warning, $"Serial port {SerialPort.PortName} failed to open");
     }
 
     return IsConnected;
@@ -109,7 +104,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     if (!IsConnected) return !IsConnected;
 
     SerialPort.Close();
-    _logger?.LogInformation("Serial port {PortName} disconnected", SerialPort.PortName);
+    Logger.Log(LogLevel.Information, $"Serial port {SerialPort.PortName} disconnected");
     ConnectStateChanged(IsConnected);
 
     return !IsConnected;
@@ -129,7 +124,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   {
     if (IsConnected) return SerialPort.BaseStream.WriteAsync(buffer, ct);
 
-    _logger?.LogWarning("Attempted to write to disconnected serial port");
+    Logger.Warning("Attempted to write to disconnected serial port");
 #if NET6_0_OR_GREATER
     return ValueTask.FromException(new IOException("Serial port is not connected"));
 #else
@@ -171,12 +166,12 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     catch (InvalidOperationException)
     {
       // 串口已关闭或设备已断开
-      _logger?.LogWarning("Serial port disconnected (InvalidOperationException in DataReceived)");
+      Logger.Warning("Serial port disconnected (InvalidOperationException in DataReceived)");
       ConnectStateChanged(false);
     }
     catch (Exception ex)
     {
-      _logger?.LogError(ex, "Unexpected error in SerialPort DataReceived");
+      Logger.Error(ex, "Unexpected error in SerialPort DataReceived");
     }
   }
 
