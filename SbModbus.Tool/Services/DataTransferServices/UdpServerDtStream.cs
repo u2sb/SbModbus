@@ -1,54 +1,97 @@
 ﻿using System.Buffers;
 using System.Net;
-using NetCoreServer;
+using System.Net.Sockets;
 
 namespace SbModbus.Tool.Services.DataTransferServices;
 
-public class UdpServerDtStream : UdpServer, IDtStream
+public class UdpServerDtStream : IDtStream
 {
-  public UdpServerDtStream(IPAddress address, int port) : base(address, port)
-  {
-  }
+  private readonly IPEndPoint _endPoint;
+  private UdpClient? _udpClient;
+  private CancellationTokenSource? _receiveCts;
+  private Task? _receiveTask;
+  private volatile bool _isDisposed;
+  private volatile bool _isListening;
 
-  public UdpServerDtStream(string address, int port) : base(address, port)
-  {
-  }
+  private readonly List<EndPoint> _sessions = [];
+  private readonly object _lock = new();
 
-  public UdpServerDtStream(DnsEndPoint endpoint) : base(endpoint)
-  {
-  }
+  public UdpServerDtStream(IPAddress address, int port)
+    => _endPoint = new IPEndPoint(address, port);
 
-  public UdpServerDtStream(IPEndPoint endpoint) : base(endpoint)
-  {
-  }
+  public UdpServerDtStream(string address, int port)
+    => _endPoint = new IPEndPoint(IPAddress.Parse(address), port);
+
+  public UdpServerDtStream(DnsEndPoint endpoint)
+    => _endPoint = new IPEndPoint(IPAddress.Any, endpoint.Port);
+
+  public UdpServerDtStream(IPEndPoint endpoint)
+    => _endPoint = endpoint;
 
   public Action<IEnumerable<string>>? OnSessionStateChanged { get; set; }
-
   public ReadOnlySpanAction<byte, IDtStream>? OnDataWrite { get; set; }
   public ReadOnlySpanAction<byte, IDtStream>? OnDataReceived { get; set; }
   public Action<bool>? OnConnectStateChanged { get; set; }
 
-
-  public bool IsConnected => IsStarted;
+  public bool IsConnected => _isListening;
+  public int SelectedSessionIndex { get; set; } = -1;
 
   public bool Connect()
   {
-    return Start();
+    if (_isDisposed || _isListening) return _isListening;
+
+    try
+    {
+      _udpClient = new UdpClient(_endPoint);
+      _isListening = true;
+      StartReceiveLoop();
+      OnConnectStateChanged?.Invoke(true);
+      return true;
+    }
+    catch
+    {
+      _udpClient?.Dispose();
+      _udpClient = null;
+      return false;
+    }
   }
 
   public void Disconnect()
   {
-    Stop();
+    CancelAndDispose(ref _receiveCts);
+    WaitTask(_receiveTask);
+    _receiveTask = null;
+
+    try { _udpClient?.Close(); } catch { }
+    _udpClient = null;
+    _isListening = false;
+
+    lock (_lock) { _sessions.Clear(); }
+
+    OnSessionStateChanged?.Invoke([]);
+    OnConnectStateChanged?.Invoke(false);
   }
 
   public void Write(ReadOnlySpan<byte> data)
   {
-    if (SelectedSessionIndex >= 0 && SelectedSessionIndex < Sessions.Count)
+    if (_udpClient == null) return;
+
+    EndPoint? target = null;
+    lock (_lock)
     {
-      var sessions = Sessions[SelectedSessionIndex];
-      Send(sessions, data);
+      if (SelectedSessionIndex >= 0 && SelectedSessionIndex < _sessions.Count)
+        target = _sessions[SelectedSessionIndex];
+    }
+
+    if (target == null || target is not IPEndPoint ipTarget) return;
+
+    try
+    {
+      var bytes = data.ToArray();
+      _udpClient.Send(bytes, bytes.Length, ipTarget);
       OnDataWrite?.Invoke(data, this);
     }
+    catch (SocketException) { }
   }
 
   public ValueTask WriteAsync(ReadOnlyMemory<byte> data)
@@ -57,46 +100,90 @@ public class UdpServerDtStream : UdpServer, IDtStream
     return ValueTask.CompletedTask;
   }
 
-  #region 管理客户端
-
-  protected override void OnStarted()
+  public void Dispose()
   {
-    OnConnectStateChanged?.Invoke(true);
-    ReceiveAsync();
+    if (_isDisposed) return;
+    _isDisposed = true;
+    Disconnect();
+    _udpClient?.Dispose();
+    _udpClient = null;
+    _receiveCts?.Dispose();
+    _receiveCts = null;
+    OnSessionStateChanged = null;
+    OnDataWrite = null;
+    OnDataReceived = null;
+    OnConnectStateChanged = null;
+    GC.SuppressFinalize(this);
   }
 
-  private List<EndPoint> Sessions { get; } = [];
-
-  public int SelectedSessionIndex { get; set; } = -1;
-
-  protected override void OnReceived(EndPoint endpoint, byte[] buffer, long offset, long size)
+  private void StartReceiveLoop()
   {
-    if (!Sessions.Contains(endpoint))
+    CancelAndDispose(ref _receiveCts);
+    WaitTask(_receiveTask);
+    _receiveTask = null;
+
+    _receiveCts = new CancellationTokenSource();
+    _receiveTask = Task.Factory.StartNew(
+      () => RunReceiveLoopAsync(_receiveCts.Token),
+      _receiveCts.Token,
+      TaskCreationOptions.LongRunning,
+      TaskScheduler.Default
+    ).Unwrap();
+  }
+
+  private async Task RunReceiveLoopAsync(CancellationToken ct)
+  {
+    try
     {
-      Sessions.Add(endpoint);
-      OnSessionStateChanged?.Invoke(Sessions.Where(w => w is IPEndPoint).Select(s =>
+      while (!ct.IsCancellationRequested)
       {
-        var ipEndPoint = s as IPEndPoint;
-        return $"{ipEndPoint!.Address}:{ipEndPoint!.Port}";
-      }));
+        var client = _udpClient;
+        if (client == null) break;
+
+        UdpReceiveResult result;
+        try { result = await client.ReceiveAsync(ct); }
+        catch (SocketException) { break; }
+        catch (OperationCanceledException) { break; }
+        catch (ObjectDisposedException) { break; }
+
+        lock (_lock)
+        {
+          if (!_sessions.Contains(result.RemoteEndPoint))
+          {
+            _sessions.Add(result.RemoteEndPoint);
+            NotifySessionStateChanged();
+          }
+        }
+
+        OnDataReceived?.Invoke(result.Buffer, this);
+      }
     }
-
-    var span = new ReadOnlySpan<byte>(buffer, (int)offset, (int)size);
-    OnDataReceived?.Invoke(span, this);
-    ReceiveAsync();
+    catch { /* receive loop ended */ }
   }
 
-  protected override void OnSent(EndPoint endpoint, long sent)
+  private void NotifySessionStateChanged()
   {
-    ReceiveAsync();
+    lock (_lock)
+    {
+      OnSessionStateChanged?.Invoke(
+        _sessions.OfType<IPEndPoint>().Select(s => $"{s.Address}:{s.Port}")
+      );
+    }
   }
 
-  protected override void OnStopped()
+  private static void CancelAndDispose(ref CancellationTokenSource? cts)
   {
-    OnSessionStateChanged?.Invoke([]);
-    OnConnectStateChanged?.Invoke(false);
-    base.OnStopped();
+    var s = Interlocked.Exchange(ref cts, null);
+    if (s == null) return;
+    try { s.Cancel(); } catch (ObjectDisposedException) { }
+    s.Dispose();
   }
 
-  #endregion
+  private static void WaitTask(Task? task)
+  {
+    if (task == null || task.IsCompleted) return;
+    try { task.Wait(TimeSpan.FromSeconds(2)); }
+    catch (AggregateException ae) { ae.Handle(_ => true); }
+    catch (OperationCanceledException) { }
+  }
 }

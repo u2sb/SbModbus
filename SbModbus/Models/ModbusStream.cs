@@ -29,6 +29,19 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <inheritdoc />
+  public virtual async ValueTask DisposeAsync()
+  {
+    if (_isDisposed) return;
+    _isDisposed = true;
+    _disposeCts.Cancel();
+    OnConnectStateChanged = null;
+    _dataAvailable.Dispose();
+    _disposeCts.Dispose();
+    Logger.Information("ModbusStream disposed async");
+    await Task.CompletedTask;
+  }
+
+  /// <inheritdoc />
   public abstract bool IsConnected { get; }
 
   /// <inheritdoc />
@@ -47,6 +60,18 @@ public abstract class ModbusStream : IModbusStream
 
   /// <inheritdoc />
   public abstract bool Disconnect();
+
+  /// <inheritdoc />
+  public virtual Task<bool> ConnectAsync(CancellationToken ct = default)
+  {
+    return Task.FromResult(Connect());
+  }
+
+  /// <inheritdoc />
+  public virtual Task<bool> DisconnectAsync(CancellationToken ct = default)
+  {
+    return Task.FromResult(Disconnect());
+  }
 
   /// <inheritdoc />
   public virtual string GetTransportInfo()

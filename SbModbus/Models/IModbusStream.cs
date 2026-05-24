@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 namespace SbModbus.Models;
 
 /// <summary>
-///   串口
+///   传输层抽象接口
 /// </summary>
-public interface IModbusStream : IDisposable
+public interface IModbusStream : IDisposable, IAsyncDisposable
 {
   /// <summary>
   ///   是否连接
@@ -33,6 +33,16 @@ public interface IModbusStream : IDisposable
   ///   断开连接
   /// </summary>
   public bool Disconnect();
+
+  /// <summary>
+  ///   异步连接
+  /// </summary>
+  public Task<bool> ConnectAsync(CancellationToken ct = default);
+
+  /// <summary>
+  ///   异步断开连接
+  /// </summary>
+  public Task<bool> DisconnectAsync(CancellationToken ct = default);
 
   /// <summary>
   ///   连接状态改变时触发

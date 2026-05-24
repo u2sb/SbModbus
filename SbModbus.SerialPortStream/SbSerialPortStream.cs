@@ -72,6 +72,12 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
+  public override Task<bool> ConnectAsync(CancellationToken ct = default)
+  {
+    return Task.FromResult(Connect());
+  }
+
+  /// <inheritdoc />
   public override string GetTransportInfo()
   {
     // 格式: COM3:9600-8-N-1
@@ -111,10 +117,25 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   }
 
   /// <inheritdoc />
+  public override Task<bool> DisconnectAsync(CancellationToken ct = default)
+  {
+    return Task.FromResult(Disconnect());
+  }
+
+  /// <inheritdoc />
   public override void Dispose()
   {
     Disconnect();
     base.Dispose();
+    StreamLock.Dispose();
+    GC.SuppressFinalize(this);
+  }
+
+  /// <inheritdoc />
+  public override async ValueTask DisposeAsync()
+  {
+    await DisconnectAsync().ConfigureAwait(false);
+    await base.DisposeAsync().ConfigureAwait(false);
     StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
