@@ -8,7 +8,7 @@ using SbModbus.Tool.ViewModels;
 namespace SbModbus.Tool.Views.Windows;
 
 [AutoInject(ServiceLifetime.Transient)]
-public partial class MainWindow : PipboyWindow
+public partial class MainWindow : Window
 {
   public MainWindow()
   {

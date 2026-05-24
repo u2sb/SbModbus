@@ -1,30 +1,29 @@
-<pipboy:PipboyWindow xmlns="https://github.com/avaloniaui"
-                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                     xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
-                     xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
-                     xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
-                     mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
-                     x:Class="SbModbus.Tool.Views.Windows.MainWindow"
-                     x:DataType="wvm:MainWindowViewModel"
-                     WindowStartupLocation="CenterScreen"
-                     Title="{StaticResource lang.title}">
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wvm="clr-namespace:SbModbus.Tool.ViewModels.Windows"
+        xmlns:pages="clr-namespace:SbModbus.Tool.Views.Pages"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+        x:Class="SbModbus.Tool.Views.Windows.MainWindow"
+        x:DataType="wvm:MainWindowViewModel"
+        WindowStartupLocation="CenterScreen"
+        Title="{StaticResource lang.title}">
 
   <Design.DataContext>
     <wvm:MainWindowViewModel />
   </Design.DataContext>
 
-  <pipboy:PipboyWindow.TitleBarContent>
-    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
-      <ComboBox
-        ItemsSource="{Binding ThemeColors}"
-        DisplayMemberBinding="{Binding Key}"
-        SelectedValueBinding="{Binding Value}"
-        SelectedIndex="0"
-        SelectedValue="{Binding SelectedTheme, Mode=OneWayToSource}" />
-    </StackPanel>
-  </pipboy:PipboyWindow.TitleBarContent>
+  <!-- <Window.TitleBarContent> -->
+  <!--   <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="10"> -->
+  <!--     <ComboBox -->
+  <!--       ItemsSource="{Binding ThemeColors}" -->
+  <!--       DisplayMemberBinding="{Binding Key}" -->
+  <!--       SelectedValueBinding="{Binding Value}" -->
+  <!--       SelectedIndex="0" -->
+  <!--       SelectedValue="{Binding SelectedTheme, Mode=OneWayToSource}" /> -->
+  <!--   </StackPanel> -->
+  <!-- </Window.TitleBarContent> -->
 
   <Grid>
     <TabControl>
@@ -51,4 +50,4 @@
                        Command="{Binding OpenLogDirectoryCommand}" />
     </StackPanel>
   </Grid>
-</pipboy:PipboyWindow>
+</Window>

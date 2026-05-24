@@ -5,6 +5,7 @@
              xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
              xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
              xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
+             xmlns:pb="https://github.com/NeverMorewd/Pipboy.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="SbModbus.Tool.Views.Pages.ModbusPage"
              x:DataType="pvm:ModbusPageViewModel">
@@ -222,7 +223,7 @@
             BorderThickness="1">
       <Grid RowDefinitions="*">
         <Grid Row="0">
-          <pipboy:CrtDisplay EnableScanBeam="False" NoiseOpacity="0.1">
+          <pb:CrtDisplay EnableScanBeam="False" NoiseOpacity="0.1">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                           bh:SmartScrollBehavior.IsEnabled="True">
               <ListBox Classes="logNoSelect" SelectionMode="Single" ItemsSource="{Binding DsLogs}">
@@ -242,7 +243,7 @@
                 </ListBox.ItemTemplate>
               </ListBox>
             </ScrollViewer>
-          </pipboy:CrtDisplay>
+          </pb:CrtDisplay>
         </Grid>
 
         <!-- <GridSplitter Grid.Row="1" Height="2" Margin="5,0" Background="{DynamicResource PipboyBorderBrush}" -->
