@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
-using Pipboy.Avalonia;
 using SbModbus.Tool.Utils;
 using SbModbus.Tool.ViewModels;
 

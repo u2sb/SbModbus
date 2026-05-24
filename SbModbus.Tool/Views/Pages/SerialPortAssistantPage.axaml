@@ -4,8 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
              xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
-             xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
-             xmlns:pb="https://github.com/NeverMorewd/Pipboy.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
              x:Class="SbModbus.Tool.Views.Pages.SerialPortAssistantPage"
              x:DataType="pvm:SerialPortAssistantPageViewModel"
@@ -51,7 +49,7 @@
                        Fill="{Binding IsConnected, Converter={StaticResource BoolToColorBrushConverter}}" />
           </Grid>
 
-          <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3" Fill="{DynamicResource PipboyBorderBrush}" />
+          <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3" Fill="#1890FF" />
 
           <Grid
             IsVisible="{Binding DataTransferType,
@@ -152,20 +150,22 @@
           </Grid>
 
           <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button Margin="10,0" Width="80" Content="{StaticResource lang.btnConnect}"
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnConnect}"
                     Command="{Binding ConnectCommand}" />
-            <Button Margin="10,0" Width="80" Content="{StaticResource lang.btnDisConnect}"
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnDisConnect}"
                     Command="{Binding DisconnectCommand}" />
           </StackPanel>
         </StackPanel>
         <UniformGrid Margin="5,10" Columns="3" VerticalAlignment="Bottom" HorizontalAlignment="Stretch">
-          <Button Margin="2"
+          <Button Margin="2" FontWeight="Bold"
                   Content="{StaticResource lang.btnClear}"
                   Command="{Binding CleanOutputCommand}" />
-          <Button Margin="2"
+          <Button Margin="2" FontWeight="Bold"
                   Content="{Binding InputMode}"
                   Command="{Binding ChangeInputModeCommand}" />
-          <Button Margin="2"
+          <Button Margin="2" FontWeight="Bold"
                   Content="{StaticResource lang.btnSend}"
                   Command="{Binding SendCommand}" />
         </UniformGrid>
@@ -175,13 +175,13 @@
             BorderThickness="1">
       <Grid RowDefinitions="*, 5, 180">
         <Grid Grid.Row="0">
-          <pb:CrtDisplay EnableScanBeam="False" NoiseOpacity="0.1">
+          <Border>
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                           bh:SmartScrollBehavior.IsEnabled="True">
-              <ListBox Classes="logNoSelect" SelectionMode="Single" ItemsSource="{Binding DsLogs}">
-                <ListBox.ItemTemplate>
+              <ItemsControl Classes="logNoSelect" ItemsSource="{Binding DsLogs}">
+                <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid Margin="2" ColumnDefinitions="Auto, 10, *">
+                    <Grid Margin="0" ColumnDefinitions="Auto, 10, *">
                       <SelectableTextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left"
                                  FontSize="18"
                                  Foreground="CornflowerBlue"
@@ -200,27 +200,35 @@
                                            Text="{Binding Utf8String}" />
                     </Grid>
                   </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </ScrollViewer>
-          </pb:CrtDisplay>
+          </Border>
         </Grid>
-        <GridSplitter Grid.Row="1" Height="2" Margin="5,0" Background="{DynamicResource PipboyBorderBrush}"
+        <GridSplitter Grid.Row="1" Height="2" MinHeight="1" Margin="5,0" Background="#1890FF"
                       HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" />
         <Grid Grid.Row="2" RowDefinitions="*, 5, 110">
           <Border Grid.Row="0" Margin="5,2,5,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                   BorderThickness="1">
-            <SelectableTextBlock Margin="5" TextAlignment="Left" HorizontalAlignment="Stretch"
-                                 VerticalAlignment="Stretch" TextWrapping="Wrap" FontSize="18"
-                                 Text="{Binding OutputString}" />
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <SelectableTextBlock Margin="5" TextAlignment="Left" HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch" TextWrapping="Wrap" FontSize="18"
+                                   Text="{Binding OutputString}" />
+            </ScrollViewer>
           </Border>
-          <GridSplitter Grid.Row="1" Height="2" Margin="5,0" Background="{DynamicResource PipboyBorderBrush}"
+          <GridSplitter Grid.Row="1" Height="2" MinHeight="1" Margin="5,0" Background="#1890FF"
                         HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" />
           <Border Grid.Row="2" Margin="5,2,5,5" BorderThickness="1" HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch">
-            <TextBox Margin="5" BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap"
-                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left"
-                     Text="{Binding InputString, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBox Margin="5" Padding="0" BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap" FontSize="18"
+                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextAlignment="Left" VerticalContentAlignment="Top"
+                     Text="{Binding InputString, UpdateSourceTrigger=PropertyChanged}">
+              <TextBox.Styles>
+                <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+                  <Setter Property="BorderThickness" Value="0" />
+                </Style>
+              </TextBox.Styles>
+            </TextBox>
           </Border>
         </Grid>
       </Grid>

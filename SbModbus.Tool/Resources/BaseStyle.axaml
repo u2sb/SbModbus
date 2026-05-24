@@ -45,32 +45,11 @@
   </Style>
 
   <Style Selector="Border">
-    <Setter Property="BorderBrush" Value="{DynamicResource PipboyBorderBrush}"></Setter>
+    <Setter Property="BorderBrush" Value="#D9D9D9"></Setter>
   </Style>
 
-
-  <!-- Only disable selection visuals for log list -->
-  <Style Selector="ListBox.logNoSelect > ListBoxItem">
+  <!-- log items control (no selection) -->
+  <Style Selector="ItemsControl.logNoSelect">
     <Setter Property="Cursor" Value="Arrow" />
-  </Style>
-
-  <Style Selector="ListBox.logNoSelect ListBoxItem:pointerover">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource PipboyTextBrush}" />
-  </Style>
-
-  <Style Selector="ListBox.logNoSelect ListBoxItem:selected">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{DynamicResource PipboyTextBrush}" />
-  </Style>
-
-  <Style Selector="ListBox.logNoSelect ListBoxItem:selected /template/ Border#PART_Border">
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-  </Style>
-
-  <Style Selector="ListBox.logNoSelect ListBoxItem:focus-visible /template/ Border#PART_Border">
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
   </Style>
 </Styles>

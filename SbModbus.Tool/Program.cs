@@ -1,3 +1,4 @@
+using AtomUI;
 using Avalonia;
 
 namespace SbModbus.Tool;
@@ -19,6 +20,7 @@ internal static class Program
   {
     var builder = AppBuilder.Configure<App>()
       .UsePlatformDetect()
+      .WithAtomUIDefaultOptions()
 #if DEBUG
       .WithDeveloperTools()
 #endif

@@ -4,12 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
              xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
-             xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
-             xmlns:pb="https://github.com/NeverMorewd/Pipboy.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="SbModbus.Tool.Views.Pages.ModbusPage"
              x:DataType="pvm:ModbusPageViewModel">
-
   <Design.DataContext>
     <pvm:ModbusPageViewModel />
   </Design.DataContext>
@@ -50,7 +47,7 @@
           </Grid>
 
           <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3"
-                     Fill="{DynamicResource PipboyBorderBrush}" />
+                     Fill="#1890FF" />
 
           <Grid
             IsVisible="{Binding ModbusClientType,
@@ -223,16 +220,15 @@
             BorderThickness="1">
       <Grid RowDefinitions="*">
         <Grid Row="0">
-          <pb:CrtDisplay EnableScanBeam="False" NoiseOpacity="0.1">
+          <Border>
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                           bh:SmartScrollBehavior.IsEnabled="True">
-              <ListBox Classes="logNoSelect" SelectionMode="Single" ItemsSource="{Binding DsLogs}">
-                <ListBox.ItemTemplate>
+              <ItemsControl Classes="logNoSelect" ItemsSource="{Binding DsLogs}">
+                <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Grid Margin="2" ColumnDefinitions="Auto, 10, *">
+                    <Grid Margin="0" ColumnDefinitions="Auto, 10, *">
                       <SelectableTextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left"
-                                           FontSize="18"
-                                           Foreground="CornflowerBlue"
+                                           FontSize="18" Foreground="CornflowerBlue"
                                            Text="{Binding DateTimeString}" />
                       <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
                                            TextWrapping="Wrap" FontSize="18"
@@ -240,177 +236,176 @@
                                            Text="{Binding HexString}" />
                     </Grid>
                   </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </ScrollViewer>
-          </pb:CrtDisplay>
+          </Border>
         </Grid>
 
-        <!-- <GridSplitter Grid.Row="1" Height="2" Margin="5,0" Background="{DynamicResource PipboyBorderBrush}" -->
+        <!-- <GridSplitter Grid.Row="1" Height="2" MinHeight="1" Margin="5,0" Background="#1890FF" -->
         <!--               HorizontalAlignment="Stretch" VerticalAlignment="Center" ShowsPreview="True" /> -->
         <!-- -->
         <!-- <Grid Row="2"> -->
-        <!--   <pipboy:CrtDisplay EnableScanBeam="False" NoiseOpacity="0.1"> -->
-        <!--     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" -->
-        <!--                   bh:SmartScrollBehavior.IsEnabled="True"> -->
-        <!--       <ListBox ItemsSource="{Binding MsLogs}"> -->
-        <!--         <ListBox.ItemTemplate> -->
-        <!--           <DataTemplate> -->
-        <!--             <Grid Margin="2" ColumnDefinitions="Auto, 10, *"> -->
-        <!--               <TextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left" FontSize="16" -->
-        <!--                          TextAlignment="Center" -->
-        <!--                          Text="{Binding DateTimeString}" /> -->
-        <!--               <Grid Column="2" RowDefinitions="25, Auto" -->
-        <!--                     ColumnDefinitions="80, 160, 80, 80, 100, 100, 100, 120, 120, 120"> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="0" Height="25" BorderBrush="Gray" BorderThickness="1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" -->
-        <!--                              Text="address" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="1" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="bit" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="2" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="short" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="3" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" -->
-        <!--                              Text="ushort" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="4" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="int" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="5" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="uint" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="6" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="float" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="7" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="long" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="8" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="ulong" /> -->
-        <!--                 </Border> -->
-        <!--                 <Border Grid.Row="0" Grid.Column="9" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
-        <!--                   <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" -->
-        <!--                              Text="double" /> -->
-        <!--                 </Border> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Address}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="25" BorderBrush="Gray" BorderThickness="1,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Cells}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="25" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding Shorts}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="25" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding UShorts}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="25" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding Ints}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="40" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="5" ItemsSource="{Binding UInts}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="40" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="6" ItemsSource="{Binding Floats}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="40" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="7" ItemsSource="{Binding Longs}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="100" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="8" ItemsSource="{Binding ULongs}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="100" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--                 <ListBox Grid.Row="1" Grid.Column="9" ItemsSource="{Binding Doubles}"> -->
-        <!--                   <ListBox.ItemTemplate> -->
-        <!--                     <DataTemplate> -->
-        <!--                       <Border Height="100" HorizontalAlignment="Stretch" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
-        <!--                         <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
-        <!--                                              FontSize="16" TextWrapping="Wrap" -->
-        <!--                                              Text="{Binding }" /> -->
-        <!--                       </Border> -->
-        <!--                     </DataTemplate> -->
-        <!--                   </ListBox.ItemTemplate> -->
-        <!--                 </ListBox> -->
-        <!--               </Grid> -->
+        <!--   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" -->
+        <!--                 bh:SmartScrollBehavior.IsEnabled="True"> -->
+        <!--     <ListBox ItemsSource="{Binding MsLogs}"> -->
+        <!--       <ListBox.ItemTemplate> -->
+        <!--         <DataTemplate> -->
+        <!--           <Grid Margin="2" ColumnDefinitions="Auto, 10, *"> -->
+        <!--             <TextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left" FontSize="16" -->
+        <!--                        TextAlignment="Center" -->
+        <!--                        Text="{Binding DateTimeString}" /> -->
+        <!--             <Grid Column="2" RowDefinitions="25, Auto" -->
+        <!--                   ColumnDefinitions="80, 160, 80, 80, 100, 100, 100, 120, 120, 120"> -->
+        <!--               <Border Grid.Row="0" Grid.Column="0" Height="25" BorderBrush="Gray" BorderThickness="1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" -->
+        <!--                            Text="address" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="1" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="bit" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="2" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="short" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="3" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" -->
+        <!--                            Text="ushort" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="4" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="int" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="5" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="uint" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="6" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="float" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="7" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="long" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="8" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Text="ulong" /> -->
+        <!--               </Border> -->
+        <!--               <Border Grid.Row="0" Grid.Column="9" Height="25" BorderBrush="Gray" BorderThickness="0,1,1,1"> -->
+        <!--                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" -->
+        <!--                            Text="double" /> -->
+        <!--               </Border> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Address}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="25" BorderBrush="Gray" BorderThickness="1,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Cells}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="25" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding Shorts}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="25" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding UShorts}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="25" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding Ints}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="40" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="5" ItemsSource="{Binding UInts}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="40" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="6" ItemsSource="{Binding Floats}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="40" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="7" ItemsSource="{Binding Longs}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="100" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="8" ItemsSource="{Binding ULongs}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="100" BorderBrush="Gray" BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
+        <!--               <ListBox Grid.Row="1" Grid.Column="9" ItemsSource="{Binding Doubles}"> -->
+        <!--                 <ListBox.ItemTemplate> -->
+        <!--                   <DataTemplate> -->
+        <!--                     <Border Height="100" HorizontalAlignment="Stretch" BorderBrush="Gray" -->
+        <!--                             BorderThickness="0,0,1,1"> -->
+        <!--                       <SelectableTextBlock HorizontalAlignment="Center" VerticalAlignment="Center" -->
+        <!--                                            FontSize="16" TextWrapping="Wrap" -->
+        <!--                                            Text="{Binding }" /> -->
+        <!--                     </Border> -->
+        <!--                   </DataTemplate> -->
+        <!--                 </ListBox.ItemTemplate> -->
+        <!--               </ListBox> -->
         <!--             </Grid> -->
-        <!--           </DataTemplate> -->
-        <!--         </ListBox.ItemTemplate> -->
-        <!--       </ListBox> -->
-        <!--     </ScrollViewer> -->
-        <!--   </pipboy:CrtDisplay> -->
+        <!--           </Grid> -->
+        <!--         </DataTemplate> -->
+        <!--       </ListBox.ItemTemplate> -->
+        <!--     </ListBox> -->
+        <!--   </ScrollViewer> -->
         <!-- </Grid> -->
       </Grid>
     </Border>

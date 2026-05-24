@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Pipboy.Avalonia;
 using R3;
 using SbModbus.Tool.Services.RecordServices;
 
@@ -12,29 +11,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
   private DisposableBag _disposableBag;
 
-  public Dictionary<string, string> ThemeColors { get; } = new()
-  {
-    { "PIPBOY GREEN", "#15FF52" },
-    { "AMBER", "#FFA500" },
-    { "BLUE", "#00BFFF" },
-    { "RED", "#FF3030" },
-    { "CYAN", "#00FFEE" },
-    { "GOLD", "#FFD700" },
-    { "PURPLE", "#BB44FF" },
-    { "ORANGE", "#FF8C00" }
-  };
-
-  [ObservableProperty] public partial string SelectedTheme { get; set; } = "#15FF52";
-
   public void Dispose()
   {
     _disposableBag.Dispose();
     GC.SuppressFinalize(this);
-  }
-
-  partial void OnSelectedThemeChanged(string value)
-  {
-    PipboyThemeManager.Instance.TrySetPrimaryColor(value);
   }
 
   [RelayCommand]

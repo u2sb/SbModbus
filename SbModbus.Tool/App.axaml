@@ -1,7 +1,6 @@
 <Application x:Class="SbModbus.Tool.App"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:pipboy="clr-namespace:Pipboy.Avalonia;assembly=Pipboy.Avalonia"
              xmlns:utils="clr-namespace:SbModbus.Tool.Utils"
              RequestedThemeVariant="Light">
 
@@ -12,7 +11,6 @@
   <Application.Resources>
     <ResourceDictionary>
       <FontFamily x:Key="SarasaFonts">/Assets/Fonts#Sarasa Mono SC</FontFamily>
-      <FontFamily x:Key="PipboyFontFamily">/Assets/Fonts#Sarasa Mono SC</FontFamily>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="/Resources/ValueConverter.axaml" />
         <ResourceInclude Source="/Resources/Language.axaml" />
@@ -21,7 +19,7 @@
   </Application.Resources>
 
   <Application.Styles>
-    <pipboy:PipboyTheme />
+    <FluentTheme />
     <StyleInclude Source="/Resources/BaseStyle.axaml" />
   </Application.Styles>
 </Application>

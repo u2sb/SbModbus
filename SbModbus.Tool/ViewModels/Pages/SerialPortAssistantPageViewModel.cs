@@ -28,11 +28,6 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   private AppSettings? _appSettings;
 
-  /// <summary>
-  ///   传输类型
-  /// </summary>
-  [ObservableProperty] public partial DataTransferType DataTransferType { get; set; } = DataTransferType.SerialPort;
-
   private DisposableBag _disposableBag;
 
   /// <summary>
@@ -50,6 +45,12 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       LoadSettings();
     }
   }
+
+  /// <summary>
+  ///   传输类型
+  /// </summary>
+  [ObservableProperty]
+  public partial DataTransferType DataTransferType { get; set; } = DataTransferType.SerialPort;
 
   /// <summary>
   ///   连接状态
@@ -176,7 +177,8 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   波特率
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
   public partial string? BaudRateString { get; set; } = "9600";
 
   partial void OnBaudRateStringChanged(string? value)
@@ -216,11 +218,14 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
 
   partial void OnDtrButtonChanged(bool value)
   {
-    if (_dtStream is SerialPortDtStream sps) sps.SerialPort.DtrEnable = value;
+    if (_dtStream is SerialPortDtStream sps)
+      sps.SerialPort.DtrEnable = value;
+    else
+      DtrButton = false;
   }
 
   /// <summary>
-  ///   DTR状态
+  ///   RTS状态
   /// </summary>
   [ObservableProperty]
   public partial bool RtsButton { get; set; }
@@ -228,10 +233,12 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   partial void OnRtsButtonChanged(bool value)
   {
     if (_dtStream is SerialPortDtStream sps) sps.SerialPort.RtsEnable = value;
+    else
+      RtsButton = false;
   }
 
   /// <summary>
-  ///   DTR状态
+  ///   Break状态
   /// </summary>
   [ObservableProperty]
   public partial bool BreakButton { get; set; }
@@ -239,6 +246,8 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   partial void OnBreakButtonChanged(bool value)
   {
     if (_dtStream is SerialPortDtStream sps) sps.SerialPort.BreakState = value;
+    else
+      BreakButton = false;
   }
 
 
