@@ -126,6 +126,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   public override void Dispose()
   {
     Disconnect();
+    SerialPort.Dispose();
     base.Dispose();
     StreamLock.Dispose();
     GC.SuppressFinalize(this);
@@ -135,22 +136,33 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   public override async ValueTask DisposeAsync()
   {
     await DisconnectAsync().ConfigureAwait(false);
+    SerialPort.Dispose();
     await base.DisposeAsync().ConfigureAwait(false);
     StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
   /// <inheritdoc />
-  protected override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    if (IsConnected) return SerialPort.BaseStream.WriteAsync(buffer, ct);
+    if (!IsConnected)
+    {
+      Logger.Warning("Attempted to write to disconnected serial port");
+      throw new SbModbusException("Serial port is not connected");
+    }
 
-    Logger.Warning("Attempted to write to disconnected serial port");
-#if NET6_0_OR_GREATER
-    return ValueTask.FromException(new IOException("Serial port is not connected"));
-#else
-    return new ValueTask(Task.FromException(new IOException("Serial port is not connected")));
-#endif
+    try
+    {
+      await SerialPort.BaseStream.WriteAsync(buffer, ct).ConfigureAwait(false);
+    }
+    catch (InvalidOperationException ex)
+    {
+      throw new SbModbusException("Serial port is not connected", ex);
+    }
+    catch (IOException ex)
+    {
+      throw new SbModbusIOException("Serial port write failed", ex);
+    }
   }
 
   #region 自动接收

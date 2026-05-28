@@ -10,6 +10,11 @@ namespace SbModbus.Models;
 public interface IModbusStream : IDisposable, IAsyncDisposable
 {
   /// <summary>
+  ///   是否已销毁
+  /// </summary>
+  public bool IsDisposed { get; }
+
+  /// <summary>
   ///   是否连接
   /// </summary>
   public bool IsConnected { get; }

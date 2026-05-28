@@ -39,7 +39,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   private const int SocketBufferSize = 65536;
   private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
   private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
-  private static readonly LingerOption NoLinger = new(true, 0);
+  private static readonly LingerOption NoLinger = new(false, 0);
 
   #region 构造函数
 
@@ -606,7 +606,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 #if NET6_0_OR_GREATER
       await task.WaitAsync(TaskWaitTimeout).ConfigureAwait(false);
 #else
-      var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
+      using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
       try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }

@@ -92,7 +92,7 @@ public class SbTcpServerStream : IDisposable
   /// </summary>
   public void Start()
   {
-    if (_isDisposed) throw new ObjectDisposedException(nameof(SbTcpServerStream));
+    if (_isDisposed) throw new SbModbusException("TCP server stream has been disposed");
     if (_isListening) return;
 
     try
@@ -335,7 +335,7 @@ public class SbTcpServerStream : IDisposable
 #if NET6_0_OR_GREATER
       await task.WaitAsync(TaskWaitTimeout).ConfigureAwait(false);
 #else
-      var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
+      using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
       try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }
@@ -685,7 +685,7 @@ public class SbTcpSessionStream : ModbusStream, IModbusStream
 #if NET6_0_OR_GREATER
       await task.WaitAsync(TaskWaitTimeout).ConfigureAwait(false);
 #else
-      var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
+      using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
       try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }

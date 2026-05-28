@@ -14,6 +14,8 @@ public class VirtualModbusStream : ModbusStream
 
   public override void Dispose()
   {
+    base.Dispose();
+    StreamLock.Dispose();
   }
 
   public override bool Connect()

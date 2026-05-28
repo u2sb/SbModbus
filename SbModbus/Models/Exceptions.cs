@@ -39,6 +39,21 @@ public class SbModbusException : Exception
 }
 
 /// <summary>
+///   用于包裹 IO 相关异常，统一对外暴露为 <see cref="SbModbusException"/>。
+/// </summary>
+public class SbModbusIOException : SbModbusException
+{
+  /// <summary>
+  /// </summary>
+  /// <param name="message">错误描述</param>
+  /// <param name="innerException">底层 IO 异常</param>
+  public SbModbusIOException(string message, Exception? innerException = null)
+    : base(message, innerException)
+  {
+  }
+}
+
+/// <summary>
 ///   SbModbusException 静态帮助类，避免重复创建异常
 /// </summary>
 internal static class SbModbusThrow

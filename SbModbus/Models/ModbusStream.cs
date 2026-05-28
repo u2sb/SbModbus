@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.Threading;
 using Sb.Extensions.System.Buffers.RingBuffers;
+using Sb.Extensions.System.Threading;
 using SbModbus.Utils;
 
 namespace SbModbus.Models;
@@ -19,8 +19,7 @@ public abstract class ModbusStream : IModbusStream
   /// <inheritdoc />
   public virtual void Dispose()
   {
-    if (_isDisposed) return;
-    _isDisposed = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
     _disposeCts.Cancel();
     OnConnectStateChanged = null;
     _dataAvailable.Dispose();
@@ -31,8 +30,7 @@ public abstract class ModbusStream : IModbusStream
   /// <inheritdoc />
   public virtual async ValueTask DisposeAsync()
   {
-    if (_isDisposed) return;
-    _isDisposed = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
     _disposeCts.Cancel();
     OnConnectStateChanged = null;
     _dataAvailable.Dispose();
@@ -40,6 +38,9 @@ public abstract class ModbusStream : IModbusStream
     Logger.Information("ModbusStream disposed async");
     await Task.CompletedTask;
   }
+
+  /// <inheritdoc />
+  public bool IsDisposed => _isDisposedInt != 0;
 
   /// <inheritdoc />
   public abstract bool IsConnected { get; }
@@ -53,7 +54,7 @@ public abstract class ModbusStream : IModbusStream
   /// <summary>
   ///   异步锁
   /// </summary>
-  public AsyncSemaphore StreamLock { get; } = new(1);
+  public AsyncLock StreamLock { get; } = new();
 
   /// <inheritdoc />
   public abstract bool Connect();
@@ -122,7 +123,7 @@ public abstract class ModbusStream : IModbusStream
   /// <returns></returns>
   protected virtual async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
-    if (_isDisposed) throw new ObjectDisposedException(nameof(ModbusStream));
+    if (_isDisposedInt != 0) throw new SbModbusException("Stream has been disposed");
 
     while (true)
     {
@@ -147,13 +148,13 @@ public abstract class ModbusStream : IModbusStream
   /// <summary>
   ///   锁定的读写流
   /// </summary>
-  public readonly struct LockedModbusStream : IDisposable
+  public struct LockedModbusStream : IDisposable
   {
-    private readonly AsyncSemaphore.Releaser _lock;
+    private AsyncLock.InnerLock _lock;
 
     private readonly ModbusStream _modbusStream;
 
-    private LockedModbusStream(ModbusStream modbusStream, AsyncSemaphore.Releaser l)
+    private LockedModbusStream(ModbusStream modbusStream, AsyncLock.InnerLock l)
     {
       _modbusStream = modbusStream;
       _lock = l;
@@ -167,7 +168,7 @@ public abstract class ModbusStream : IModbusStream
     internal static async Task<LockedModbusStream> LockAsync(ModbusStream modbusStream,
       CancellationToken ct = default)
     {
-      var l = await modbusStream.StreamLock.EnterAsync(ct);
+      var l = await modbusStream.StreamLock.LockAsync(ct);
       return new LockedModbusStream(modbusStream, l);
     }
 
@@ -248,7 +249,8 @@ public abstract class ModbusStream : IModbusStream
 
   private readonly SemaphoreSlim _dataAvailable = new(0);
   private readonly CancellationTokenSource _disposeCts = new();
-  private volatile bool _isDisposed;
+  private int _isDisposedInt;
+  private bool _dataAvailableSignaled;
 
 
   /// <summary>
@@ -264,14 +266,14 @@ public abstract class ModbusStream : IModbusStream
   {
     lock (_locker)
     {
-      if (_isDisposed)
+      if (_isDisposedInt != 0)
       {
         Logger.Warning("Attempted to write buffer after dispose, ignoring");
         return;
       }
 
       Buffer.AddLastRange(buffer);
-      if (buffer.Length > 0 && _dataAvailable.CurrentCount == 0) _dataAvailable.Release();
+      if (buffer.Length > 0 && !_dataAvailableSignaled) { _dataAvailable.Release(); _dataAvailableSignaled = true; }
 
       Logger.Log(LogLevel.Debug, $"Buffer write: {buffer.Length} bytes, total buffered: {Buffer.Count}");
     }
@@ -286,7 +288,8 @@ public abstract class ModbusStream : IModbusStream
     {
       var cleared = Buffer.Count;
       Buffer.Clear();
-      while (_dataAvailable.CurrentCount > 0) _dataAvailable.Wait(0);
+      while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0)) { }
+      _dataAvailableSignaled = false;
       if (cleared > 0)
         Logger.Log(LogLevel.Debug, $"Buffer cleared, discarded {cleared} bytes");
     }
@@ -303,7 +306,8 @@ public abstract class ModbusStream : IModbusStream
     {
       if (Buffer.Count == 0)
       {
-        while (_dataAvailable.CurrentCount > 0) _ = _dataAvailable.Wait(0);
+        while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0)) { }
+        _dataAvailableSignaled = false;
         return 0;
       }
 
@@ -312,7 +316,7 @@ public abstract class ModbusStream : IModbusStream
       Buffer.WrittenSpan[..length].CopyTo(span);
       Buffer.RemoveFirst(length);
 
-      if (Buffer.Count > 0 && _dataAvailable.CurrentCount == 0) _dataAvailable.Release();
+      if (Buffer.Count > 0 && !_dataAvailableSignaled) { _dataAvailable.Release(); _dataAvailableSignaled = true; }
 
       return length;
     }

@@ -56,13 +56,16 @@ public abstract class BaseModbusClient : IModbusClient
   /// <inheritdoc />
   public void Dispose()
   {
-    try
+    if (!ModbusStream.IsDisposed)
     {
-      ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
-    }
-    catch (Exception ex)
-    {
-      Logger.Error(ex, "Failed to unsubscribe OnConnectStateChanged during Dispose");
+      try
+      {
+        ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error(ex, "Failed to unsubscribe OnConnectStateChanged during Dispose");
+      }
     }
 
     OnConnectStateChanged = null;
@@ -165,20 +168,21 @@ public abstract class BaseModbusClient : IModbusClient
   {
     var tasks = handler.GetInvocationList()
       .Cast<ModbusClientAsyncHandler>()
-      .Select(h =>
-        Task.Run(async () =>
-        {
-          try
-          {
-            await h.Invoke(this, data, ct);
-          }
-          catch (Exception ex)
-          {
-            Logger.Error(ex, "Async event handler threw an exception");
-          }
-        }, ct));
+      .Select(h => InvokeHandlerAsync(h, this, data, ct));
 
     await Task.WhenAll(tasks);
+  }
+
+  private static async Task InvokeHandlerAsync(ModbusClientAsyncHandler handler, IModbusClient sender, ReadOnlyMemory<byte> data, CancellationToken ct)
+  {
+    try
+    {
+      await handler.Invoke(sender, data, ct).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      Logger.Error(ex, "Async event handler threw an exception");
+    }
   }
 
   #endregion

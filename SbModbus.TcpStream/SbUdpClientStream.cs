@@ -331,7 +331,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
 #if NET6_0_OR_GREATER
       await task.WaitAsync(TaskWaitTimeout).ConfigureAwait(false);
 #else
-      var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
+      using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
       try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }
