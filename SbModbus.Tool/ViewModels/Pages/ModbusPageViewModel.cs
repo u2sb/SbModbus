@@ -237,6 +237,17 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     }
   }
 
+  private void CreateModbusRtuOverUdpClient()
+  {
+    Disconnect();
+
+    if (IPAddress.TryParse(TargetIp, out var targetIp) && TargetPort.TryParseToUInt16(out var targetPort))
+    {
+      _modbusStream = new SbUdpClientStream(targetIp, targetPort);
+      _modbusClient = new ModbusRtuClient(_modbusStream);
+    }
+  }
+
   #endregion
 
   #region Modbus读写
@@ -555,6 +566,9 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
         break;
       case ModbusClientType.ModbusRTUOverTcp:
         CreateModbusRtuOverTcpClient();
+        break;
+      case ModbusClientType.ModbusRTUOverUdp:
+        CreateModbusRtuOverUdpClient();
         break;
     }
 

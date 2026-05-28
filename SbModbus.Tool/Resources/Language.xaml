@@ -28,6 +28,7 @@
   <s:String x:Key="lang.modbusRtuType">ModbusRTU</s:String>
   <s:String x:Key="lang.modbusTcpType">ModbusTCP</s:String>
   <s:String x:Key="lang.modbusRtuOverTcpType">ModbusRtuOverTcp</s:String>
+  <s:String x:Key="lang.modbusRtuOverUdpType">ModbusRtuOverUdp</s:String>
   <s:String x:Key="lang.modbusInterface">连接方式</s:String>
   <s:String x:Key="lang.modbusStationId">站号</s:String>
   <s:String x:Key="lang.modbusEncodeMode">编码方式</s:String>

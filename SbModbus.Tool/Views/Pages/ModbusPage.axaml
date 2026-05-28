@@ -36,6 +36,7 @@
               <ComboBoxItem Content="{StaticResource lang.modbusRtuType}" />
               <ComboBoxItem Content="{StaticResource lang.modbusTcpType}" />
               <ComboBoxItem Content="{StaticResource lang.modbusRtuOverTcpType}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusRtuOverUdpType}" />
             </ComboBox>
 
           </Grid>
@@ -97,7 +98,7 @@
           <Grid
             IsVisible="{Binding ModbusClientType,
                             Converter={StaticResource EnumToBoolConverter},
-                            ConverterParameter=ModbusTCP;ModbusRTUOverTcp }">
+                            ConverterParameter=ModbusTCP;ModbusRTUOverTcp;ModbusRTUOverUdp }">
 
             <StackPanel>
               <Grid Height="40">

@@ -5,7 +5,8 @@ public enum ModbusClientType
   ModbusVirtual,
   ModbusRTU,
   ModbusTCP,
-  ModbusRTUOverTcp
+  ModbusRTUOverTcp,
+  ModbusRTUOverUdp
 }
 
 public enum ModbusValueType

@@ -25,6 +25,7 @@
   "modbusRtuType": "ModbusRTU",
   "modbusTcpType": "ModbusTCP",
   "modbusRtuOverTcpType": "ModbusRtuOverTcp",
+  "modbusRtuOverUdpType": "ModbusRtuOverUdp",
   "modbusInterface": "连接方式",
   "modbusStationId": "站号",
   "modbusEncodeMode": "编码方式",
