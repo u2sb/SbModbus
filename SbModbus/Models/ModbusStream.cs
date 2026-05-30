@@ -22,6 +22,8 @@ public abstract class ModbusStream : IModbusStream
     if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
     _disposeCts.Cancel();
     OnConnectStateChanged = null;
+    OnDataReceived = null;
+    OnDataSent = null;
     _dataAvailable.Dispose();
     _disposeCts.Dispose();
     Logger.Information("ModbusStream disposed");
@@ -33,6 +35,8 @@ public abstract class ModbusStream : IModbusStream
     if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
     _disposeCts.Cancel();
     OnConnectStateChanged = null;
+    OnDataReceived = null;
+    OnDataSent = null;
     _dataAvailable.Dispose();
     _disposeCts.Dispose();
     Logger.Information("ModbusStream disposed async");
@@ -41,6 +45,9 @@ public abstract class ModbusStream : IModbusStream
 
   /// <inheritdoc />
   public bool IsDisposed => _isDisposedInt != 0;
+
+  /// <inheritdoc />
+  public bool AutoReceive { get; set; }
 
   /// <inheritdoc />
   public abstract bool IsConnected { get; }
@@ -218,7 +225,13 @@ public abstract class ModbusStream : IModbusStream
   #region 事件
 
   /// <inheritdoc />
-  public Action<bool>? OnConnectStateChanged { get; set; }
+  public event ModbusStreamDataHandler? OnDataReceived;
+
+  /// <inheritdoc />
+  public event ModbusStreamDataHandler? OnDataSent;
+
+  /// <inheritdoc />
+  public event Action<IModbusStream, bool>? OnConnectStateChanged;
 
   /// <summary>
   ///   连接状态发生变化时
@@ -229,11 +242,43 @@ public abstract class ModbusStream : IModbusStream
     Logger.Log(LogLevel.Information, $"Connection state changed: {(isConnected ? "Connected" : "Disconnected")}");
     try
     {
-      OnConnectStateChanged?.Invoke(isConnected);
+      OnConnectStateChanged?.Invoke(this, isConnected);
     }
     catch (Exception ex)
     {
       Logger.Error(ex, "OnConnectStateChanged callback threw an exception");
+    }
+  }
+
+  /// <summary>
+  ///   收到数据时触发（子类在 WriteBuffer 后可调用此方法让外部感知）
+  /// </summary>
+  protected void DataReceived(ReadOnlyMemory<byte> data)
+  {
+    Logger.Log(LogLevel.Debug, $"Data received: {SbModbusLogger.ToHexString(data.Span)}");
+    try
+    {
+      OnDataReceived?.Invoke(this, data);
+    }
+    catch (Exception ex)
+    {
+      Logger.Error(ex, "OnDataReceived callback threw an exception");
+    }
+  }
+
+  /// <summary>
+  ///   发送数据时触发
+  /// </summary>
+  protected void DataSent(ReadOnlyMemory<byte> data)
+  {
+    Logger.Log(LogLevel.Debug, $"Data sent: {SbModbusLogger.ToHexString(data.Span)}");
+    try
+    {
+      OnDataSent?.Invoke(this, data);
+    }
+    catch (Exception ex)
+    {
+      Logger.Error(ex, "OnDataSent callback threw an exception");
     }
   }
 
@@ -259,10 +304,10 @@ public abstract class ModbusStream : IModbusStream
   protected readonly FixedSizeRingBuffer<byte> Buffer = new(2048);
 
   /// <summary>
-  ///   向缓冲区内写数据
+  ///   向缓冲区内写数据，若 AutoReceive 为 true 则触发 OnDataReceived
   /// </summary>
-  /// <param name="buffer"></param>
-  protected void WriteBuffer(ReadOnlySpan<byte> buffer)
+  /// <param name="source">原始接收数据</param>
+  protected void WriteBuffer(ReadOnlySpan<byte> source)
   {
     lock (_locker)
     {
@@ -272,10 +317,16 @@ public abstract class ModbusStream : IModbusStream
         return;
       }
 
-      Buffer.AddLastRange(buffer);
-      if (buffer.Length > 0 && !_dataAvailableSignaled) { _dataAvailable.Release(); _dataAvailableSignaled = true; }
+      Buffer.AddLastRange(source);
+      if (source.Length > 0 && !_dataAvailableSignaled) { _dataAvailable.Release(); _dataAvailableSignaled = true; }
 
-      Logger.Log(LogLevel.Debug, $"Buffer write: {buffer.Length} bytes, total buffered: {Buffer.Count}");
+      Logger.Log(LogLevel.Debug, $"Buffer write: {source.Length} bytes, total buffered: {Buffer.Count}");
+    }
+
+    // AutoReceive 模式下触发数据事件
+    if (AutoReceive && source.Length > 0)
+    {
+      DataReceived(source.ToArray());
     }
   }
 

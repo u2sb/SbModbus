@@ -76,7 +76,7 @@ public abstract class BaseModbusClient : IModbusClient
     Logger.Information("ModbusClient disposed");
   }
 
-  private void StreamOnConnectStateChanged(bool b)
+  private void StreamOnConnectStateChanged(IModbusStream sender, bool b)
   {
     OnConnectStateChanged?.Invoke(this, b);
   }

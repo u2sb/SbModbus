@@ -107,16 +107,16 @@ public readonly struct ModbusRegistersHandlerArgs
   public ModbusRegistersHandlerArgs(ModbusRegisters.LockedModbusRegisters data, int offset, int count)
   {
     Data = data;
-    _oldData = data.Data.Slice(offset, count).ToArray();
+    // offset 和 count 是寄存器索引，需 ×2 转为字节偏移
+    _oldData = data.Data.Slice(offset * 2, count * 2).ToArray();
   }
 
   private readonly byte[] _oldData;
 
   /// <summary>
-  ///   旧数据
-  ///   注意旧数据是做过偏移的 0 就是 offset
+  ///   旧数据（字节视图，已做偏移，索引 0 对应寄存器 offset）
   /// </summary>
-  public BitSpan OldSpan => new(_oldData);
+  public ReadOnlySpan<byte> OldData => _oldData;
 
   /// <summary>
   ///   数据

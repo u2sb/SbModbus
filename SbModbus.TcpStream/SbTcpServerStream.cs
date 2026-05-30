@@ -3,15 +3,17 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using SbModbus.Models;
+using SbModbus.Services.ModbusServer;
 
 namespace SbModbus.TcpStream;
 
 /// <summary>
 ///   TCP 服务器流 — 基于 .NET 原生 Socket，管理监听和会话生命周期
 /// </summary>
-public class SbTcpServerStream : IDisposable
+public class SbTcpServerStream : IModbusStreamServer
 {
   private readonly IPEndPoint _endPoint;
   private readonly int _backlog;
@@ -21,6 +23,13 @@ public class SbTcpServerStream : IDisposable
   private Task? _acceptTask;
 
   private readonly ConcurrentDictionary<Guid, SbTcpSessionStream> _sessions = new();
+  private readonly ConcurrentDictionary<Guid, SessionByteBuffer> _sessionBuffers = new();
+
+  /// <summary>
+  ///   帧 Channel
+  /// </summary>
+  private readonly Channel<ModbusFrameMessage> _frameChannel =
+    Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
 
   private static readonly LingerOption NoLinger = new(true, 0);
   private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
@@ -39,14 +48,22 @@ public class SbTcpServerStream : IDisposable
   public bool IsListening => _isListening && _listenSocket?.IsBound == true;
 
   /// <summary>
+  ///   实际监听的本地端点（含端口号，port=0 自动分配时有用）
+  /// </summary>
+  public IPEndPoint? LocalEndPoint => _listenSocket?.LocalEndPoint as IPEndPoint;
+
+  /// <inheritdoc />
+  public ChannelReader<ModbusFrameMessage> FrameReader => _frameChannel.Reader;
+
+  /// <summary>
   ///   新会话连接时触发。调用方应在此事件中为每个会话创建 <see cref="Services.ModbusServer.BaseModbusServer" />
   /// </summary>
-  public event Action<SbTcpSessionStream>? OnSessionConnected;
+  public event Action<IModbusStream>? OnSessionConnected;
 
   /// <summary>
   ///   会话断开时触发
   /// </summary>
-  public event Action<SbTcpSessionStream>? OnSessionDisconnected;
+  public event Action<IModbusStream>? OnSessionDisconnected;
 
   #region 构造函数
 
@@ -175,6 +192,9 @@ public class SbTcpServerStream : IDisposable
     }
 
     _sessions.Clear();
+    _sessionBuffers.Clear();
+
+    _frameChannel.Writer.TryComplete();
 
     OnSessionConnected = null;
     OnSessionDisconnected = null;
@@ -253,6 +273,11 @@ public class SbTcpServerStream : IDisposable
 
     session.Start();
 
+    // 设置 AutoReceive：数据到达时触发 OnDataReceived，再解析帧写入 Channel
+    session.AutoReceive = true;
+    var sessionId = session.SessionId;
+    session.OnDataReceived += (_, data) => OnSessionDataReceived(sessionId, session, data);
+
     try
     {
       OnSessionConnected?.Invoke(session);
@@ -268,6 +293,9 @@ public class SbTcpServerStream : IDisposable
   /// </summary>
   internal void RemoveSession(Guid sessionId, SbTcpSessionStream session)
   {
+    session.AutoReceive = false;
+    _sessionBuffers.TryRemove(sessionId, out _);
+
     if (_sessions.TryRemove(sessionId, out _))
     {
       try
@@ -278,6 +306,26 @@ public class SbTcpServerStream : IDisposable
       {
         Logger.Error(ex, "OnSessionDisconnected callback threw an exception");
       }
+    }
+  }
+
+  /// <summary>
+  ///   会话数据到达 → 累积并解析 TCP 帧，写入 Channel
+  /// </summary>
+  private void OnSessionDataReceived(Guid sessionId, SbTcpSessionStream session, ReadOnlyMemory<byte> data)
+  {
+    var buf = _sessionBuffers.GetOrAdd(sessionId, _ => new SessionByteBuffer());
+    lock (buf)
+    {
+      buf.Append(data.Span);
+
+      ReadOnlySpan<byte> span = buf.Span;
+      while (FrameParser.TryParseTcp(session, ref span, out var message))
+      {
+        _frameChannel.Writer.TryWrite(message);
+      }
+
+      buf.CompactTo(span);
     }
   }
 

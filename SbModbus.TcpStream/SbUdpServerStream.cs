@@ -3,15 +3,17 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using SbModbus.Models;
+using SbModbus.Services.ModbusServer;
 
 namespace SbModbus.TcpStream;
 
 /// <summary>
 ///   UDP 服务器流 — 基于 .NET 原生 UdpClient，绑定端口监听并管理远程端点会话
 /// </summary>
-public class SbUdpServerStream : IDisposable
+public class SbUdpServerStream : IModbusStreamServer
 {
   private readonly IPEndPoint _localEndPoint;
 
@@ -20,6 +22,10 @@ public class SbUdpServerStream : IDisposable
   private Task? _receiveTask;
 
   private readonly ConcurrentDictionary<IPEndPoint, SbUdpSessionStream> _sessions = new();
+  private readonly ConcurrentDictionary<IPEndPoint, SessionByteBuffer> _sessionBuffers = new();
+
+  private readonly Channel<ModbusFrameMessage> _frameChannel =
+    Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
 
   private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
 
@@ -36,15 +42,18 @@ public class SbUdpServerStream : IDisposable
   /// </summary>
   public bool IsListening => _isListening;
 
+  /// <inheritdoc />
+  public ChannelReader<ModbusFrameMessage> FrameReader => _frameChannel.Reader;
+
   /// <summary>
   ///   新会话（远程端点首次发来数据）时触发。调用方应在此事件中为每个会话创建 <see cref="Services.ModbusServer.BaseModbusServer" />
   /// </summary>
-  public event Action<SbUdpSessionStream>? OnSessionConnected;
+  public event Action<IModbusStream>? OnSessionConnected;
 
   /// <summary>
   ///   会话断开时触发
   /// </summary>
-  public event Action<SbUdpSessionStream>? OnSessionDisconnected;
+  public event Action<IModbusStream>? OnSessionDisconnected;
 
   #region 构造函数
 
@@ -154,6 +163,9 @@ public class SbUdpServerStream : IDisposable
       try { kv.Value.Dispose(); } catch { /* ignore */ }
     }
     _sessions.Clear();
+    _sessionBuffers.Clear();
+
+    _frameChannel.Writer.TryComplete();
 
     OnSessionConnected = null;
     OnSessionDisconnected = null;
@@ -195,6 +207,9 @@ public class SbUdpServerStream : IDisposable
   /// </summary>
   internal void RemoveSession(IPEndPoint endpoint, SbUdpSessionStream session)
   {
+    session.AutoReceive = false;
+    _sessionBuffers.TryRemove(endpoint, out _);
+
     if (_sessions.TryRemove(endpoint, out _))
     {
       try
@@ -205,6 +220,23 @@ public class SbUdpServerStream : IDisposable
       {
         Logger.Error(ex, "OnSessionDisconnected callback threw an exception");
       }
+    }
+  }
+
+  private void OnSessionDataReceived(IPEndPoint ep, SbUdpSessionStream session, ReadOnlyMemory<byte> data)
+  {
+    var buf = _sessionBuffers.GetOrAdd(ep, _ => new SessionByteBuffer());
+    lock (buf)
+    {
+      buf.Append(data.Span);
+
+      ReadOnlySpan<byte> span = buf.Span;
+      while (FrameParser.TryParseTcp(session, ref span, out var message))
+      {
+        _frameChannel.Writer.TryWrite(message);
+      }
+
+      buf.CompactTo(span);
     }
   }
 
@@ -259,6 +291,8 @@ public class SbUdpServerStream : IDisposable
           var newSession = new SbUdpSessionStream(this, remoteEp);
           if (_sessions.TryAdd(remoteEp, newSession))
           {
+            newSession.AutoReceive = true;
+            newSession.OnDataReceived += (_, d) => OnSessionDataReceived(remoteEp, newSession, d);
             newSession.EnqueueReceivedData(result.Buffer);
             Logger.Information($"UDP new session from {remoteEp}");
 
