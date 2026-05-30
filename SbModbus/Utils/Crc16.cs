@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 #if NETSTANDARD2_0
 using Sb.Extensions.System.Buffers;
 #endif
+using Sb.Extensions.System.Buffers.RingBuffers;
 
 namespace SbModbus.Utils;
 
@@ -195,6 +196,20 @@ public static class Crc16
 
       return crc;
     }
+  }
+
+  /// <summary>
+  ///   计算CRC16 (RingBufferSpan重载，零拷贝)
+  /// </summary>
+  public static ushort CalculateCrc16(RingBufferSpan<byte> data)
+  {
+    if (data.Second.IsEmpty)
+      return CalculateCrc16(data.First);
+
+    // 跨段时拷贝到栈上（Modbus RTU帧≤256字节）
+    Span<byte> temp = stackalloc byte[data.Length];
+    data.CopyTo(temp);
+    return CalculateCrc16((ReadOnlySpan<byte>)temp);
   }
 
   /// <summary>

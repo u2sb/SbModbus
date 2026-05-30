@@ -14,7 +14,6 @@ namespace SbModbus.SerialPortStream;
 public class SbSerialPortServerStream : IModbusStreamServer
 {
   private readonly SbSerialPortStream _stream;
-  private readonly SessionByteBuffer _frameBuffer = new();
   private readonly Channel<ModbusFrameMessage> _frameChannel =
     Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
@@ -76,7 +75,6 @@ public class SbSerialPortServerStream : IModbusStreamServer
     _stream.Disconnect();
     _isListening = false;
   }
-  }
 
   /// <inheritdoc />
   public void Dispose()
@@ -105,18 +103,18 @@ public class SbSerialPortServerStream : IModbusStreamServer
 
   private void OnStreamDataReceived(IModbusStream sender, ReadOnlyMemory<byte> data)
   {
-    lock (_frameBuffer)
+    using var lb = _stream.GetLockedBuffer();
+    if (lb.Buffer.Count == 0) return;
+    var remaining = lb.Buffer.WrittenSpan;
+    var len = remaining.Length;
+    while (FrameParser.TryParseRtu(_stream, ref remaining, out var message))
     {
-      _frameBuffer.Append(data.Span);
-
-      ReadOnlySpan<byte> span = _frameBuffer.Span;
-      while (FrameParser.TryParseRtu(_stream, ref span, out var message))
-      {
-        _frameChannel.Writer.TryWrite(message);
-      }
-
-      _frameBuffer.CompactTo(span);
+      _frameChannel.Writer.TryWrite(message);
     }
+
+    var consumed = len - remaining.Length;
+    if (consumed > 0)
+      lb.Buffer.RemoveFirst(consumed);
   }
 
   /// <summary>

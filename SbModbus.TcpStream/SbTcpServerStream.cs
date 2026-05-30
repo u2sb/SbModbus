@@ -23,7 +23,6 @@ public class SbTcpServerStream : IModbusStreamServer
   private Task? _acceptTask;
 
   private readonly ConcurrentDictionary<Guid, SbTcpSessionStream> _sessions = new();
-  private readonly ConcurrentDictionary<Guid, SessionByteBuffer> _sessionBuffers = new();
 
   /// <summary>
   ///   帧 Channel
@@ -192,7 +191,6 @@ public class SbTcpServerStream : IModbusStreamServer
     }
 
     _sessions.Clear();
-    _sessionBuffers.Clear();
 
     _frameChannel.Writer.TryComplete();
 
@@ -294,7 +292,6 @@ public class SbTcpServerStream : IModbusStreamServer
   internal void RemoveSession(Guid sessionId, SbTcpSessionStream session)
   {
     session.AutoReceive = false;
-    _sessionBuffers.TryRemove(sessionId, out _);
 
     if (_sessions.TryRemove(sessionId, out _))
     {
@@ -310,23 +307,22 @@ public class SbTcpServerStream : IModbusStreamServer
   }
 
   /// <summary>
-  ///   会话数据到达 → 累积并解析 TCP 帧，写入 Channel
+  ///   会话数据到达 → 直接在 RingBuffer 上解析 TCP 帧，写入 Channel
   /// </summary>
   private void OnSessionDataReceived(Guid sessionId, SbTcpSessionStream session, ReadOnlyMemory<byte> data)
   {
-    var buf = _sessionBuffers.GetOrAdd(sessionId, _ => new SessionByteBuffer());
-    lock (buf)
+    using var lb = session.GetLockedBuffer();
+    if (lb.Buffer.Count == 0) return;
+    var remaining = lb.Buffer.WrittenSpan;
+    var len = remaining.Length;
+    while (FrameParser.TryParseTcp(session, ref remaining, out var message))
     {
-      buf.Append(data.Span);
-
-      ReadOnlySpan<byte> span = buf.Span;
-      while (FrameParser.TryParseTcp(session, ref span, out var message))
-      {
-        _frameChannel.Writer.TryWrite(message);
-      }
-
-      buf.CompactTo(span);
+      _frameChannel.Writer.TryWrite(message);
     }
+
+    var consumed = len - remaining.Length;
+    if (consumed > 0)
+      lb.Buffer.RemoveFirst(consumed);
   }
 
   /// <summary>

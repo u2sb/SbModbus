@@ -22,7 +22,6 @@ public class SbUdpServerStream : IModbusStreamServer
   private Task? _receiveTask;
 
   private readonly ConcurrentDictionary<IPEndPoint, SbUdpSessionStream> _sessions = new();
-  private readonly ConcurrentDictionary<IPEndPoint, SessionByteBuffer> _sessionBuffers = new();
 
   private readonly Channel<ModbusFrameMessage> _frameChannel =
     Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
@@ -163,7 +162,6 @@ public class SbUdpServerStream : IModbusStreamServer
       try { kv.Value.Dispose(); } catch { /* ignore */ }
     }
     _sessions.Clear();
-    _sessionBuffers.Clear();
 
     _frameChannel.Writer.TryComplete();
 
@@ -208,7 +206,6 @@ public class SbUdpServerStream : IModbusStreamServer
   internal void RemoveSession(IPEndPoint endpoint, SbUdpSessionStream session)
   {
     session.AutoReceive = false;
-    _sessionBuffers.TryRemove(endpoint, out _);
 
     if (_sessions.TryRemove(endpoint, out _))
     {
@@ -225,19 +222,18 @@ public class SbUdpServerStream : IModbusStreamServer
 
   private void OnSessionDataReceived(IPEndPoint ep, SbUdpSessionStream session, ReadOnlyMemory<byte> data)
   {
-    var buf = _sessionBuffers.GetOrAdd(ep, _ => new SessionByteBuffer());
-    lock (buf)
+    using var lb = session.GetLockedBuffer();
+    if (lb.Buffer.Count == 0) return;
+    var remaining = lb.Buffer.WrittenSpan;
+    var len = remaining.Length;
+    while (FrameParser.TryParseTcp(session, ref remaining, out var message))
     {
-      buf.Append(data.Span);
-
-      ReadOnlySpan<byte> span = buf.Span;
-      while (FrameParser.TryParseTcp(session, ref span, out var message))
-      {
-        _frameChannel.Writer.TryWrite(message);
-      }
-
-      buf.CompactTo(span);
+      _frameChannel.Writer.TryWrite(message);
     }
+
+    var consumed = len - remaining.Length;
+    if (consumed > 0)
+      lb.Buffer.RemoveFirst(consumed);
   }
 
   #endregion

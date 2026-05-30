@@ -373,5 +373,67 @@ public abstract class ModbusStream : IModbusStream
     }
   }
 
+  /// <summary>
+  ///   获取锁定后的缓冲区，用于外部直接解析帧（对齐 ITransport.GetLockedBuffer 模式）。
+  ///   在 using 块内可安全操作 <see cref="FixedSizeRingBuffer{T}" />。
+  /// </summary>
+  public LockedBuffer GetLockedBuffer()
+  {
+#if NET10_0_OR_GREATER
+    return new LockedBuffer(Buffer, _locker);
+#else
+    Monitor.Enter(_locker);
+    return new LockedBuffer(Buffer, _locker);
+#endif
+  }
+
+  /// <summary>
+  ///   带锁保护的缓冲区句柄（ref struct，确保栈上分配）。
+  ///   持有 <see cref="FixedSizeRingBuffer{T}" /> 引用，Dispose 时自动释放锁。
+  /// </summary>
+  public ref struct LockedBuffer : IDisposable
+  {
+    /// <summary>
+    ///   受锁保护的环形缓冲区
+    /// </summary>
+    public readonly FixedSizeRingBuffer<byte> Buffer;
+
+#if NET10_0_OR_GREATER
+    private Lock.Scope _scope;
+
+    internal LockedBuffer(FixedSizeRingBuffer<byte> buffer, Lock locker)
+    {
+      Buffer = buffer;
+      _scope = locker.EnterScope();
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+      _scope.Dispose();
+    }
+#else
+    private readonly object _locker;
+    private bool _disposed;
+
+    internal LockedBuffer(FixedSizeRingBuffer<byte> buffer, object locker)
+    {
+      Buffer = buffer;
+      _locker = locker;
+      _disposed = false;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+      if (!_disposed)
+      {
+        Monitor.Exit(_locker);
+        _disposed = true;
+      }
+    }
+#endif
+  }
+
   #endregion
 }

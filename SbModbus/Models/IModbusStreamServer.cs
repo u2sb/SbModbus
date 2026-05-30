@@ -13,35 +13,35 @@ public interface IModbusStreamServer : IDisposable
   /// <summary>
   ///   是否正在监听
   /// </summary>
-  bool IsListening { get; }
+  public bool IsListening { get; }
 
   /// <summary>
   ///   当前活跃会话数
   /// </summary>
-  int SessionCount { get; }
+  public int SessionCount { get; }
 
   /// <summary>
   ///   已解析的 Modbus 请求帧 Channel（上层从此读取）
   /// </summary>
-  ChannelReader<ModbusFrameMessage> FrameReader { get; }
+  public ChannelReader<ModbusFrameMessage> FrameReader { get; }
 
   /// <summary>
   ///   启动监听
   /// </summary>
-  void Start();
+  public void Start();
 
   /// <summary>
   ///   停止监听并断开所有会话
   /// </summary>
-  void Stop();
+  public void Stop();
 
   /// <summary>
   ///   新会话连接时触发
   /// </summary>
-  event Action<IModbusStream>? OnSessionConnected;
+  public event Action<IModbusStream>? OnSessionConnected;
 
   /// <summary>
   ///   会话断开时触发
   /// </summary>
-  event Action<IModbusStream>? OnSessionDisconnected;
+  public event Action<IModbusStream>? OnSessionDisconnected;
 }
