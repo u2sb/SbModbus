@@ -1,9 +1,4 @@
 using System;
-#if NETSTANDARD2_0
-using Sb.Extensions.System.Buffers;
-#else
-using System.Buffers;
-#endif
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
@@ -28,10 +23,10 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   /// <param name="data"></param>
   /// <param name="extendFrame"></param>
   /// <returns></returns>
-  protected ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
-    int startingAddress, ReadOnlySpan<byte> data, Action<ArrayBufferWriter<byte>>? extendFrame = null)
+  protected RentedBuffer CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
+    int startingAddress, ReadOnlySpan<byte> data, Action<RentedBuffer>? extendFrame = null)
   {
-    var buffer = new ArrayBufferWriter<byte>(256);
+    var buffer = new RentedBuffer(300);
 
     // 设备地址
     buffer.Write(ConvertByte(unitIdentifier).WithEndianness());
@@ -62,10 +57,10 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
   /// <param name="data"></param>
   /// <param name="extendFrame"></param>
   /// <returns></returns>
-  protected ArrayBufferWriter<byte> CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
-    int startingAddress, ushort data, Action<ArrayBufferWriter<byte>>? extendFrame = null)
+  protected RentedBuffer CreateFrame(int unitIdentifier, ModbusFunctionCode functionCode,
+    int startingAddress, ushort data, Action<RentedBuffer>? extendFrame = null)
   {
-    var buffer = new ArrayBufferWriter<byte>(256);
+    var buffer = new RentedBuffer(300);
 
     // 设备地址
     buffer.Write(ConvertByte(unitIdentifier).WithEndianness());

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
+using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -15,7 +16,7 @@ public partial class ModbusRtuClient
     CancellationToken ct = default)
   {
     Logger.Log(LogLevel.Debug, $"ReadCoils: slave={unitIdentifier}, address={startingAddress}, count={count}");
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadCoils, startingAddress,
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
@@ -32,7 +33,7 @@ public partial class ModbusRtuClient
     int count, CancellationToken ct = default)
   {
     Logger.Log(LogLevel.Debug, $"ReadDiscreteInputs: slave={unitIdentifier}, address={startingAddress}, count={count}");
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.ReadDiscreteInputs, startingAddress,
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
@@ -51,7 +52,7 @@ public partial class ModbusRtuClient
   {
     ValidateSingleCoilData(data);
     Logger.Log(LogLevel.Debug, $"WriteSingleCoil: slave={unitIdentifier}, address={startingAddress}");
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, data.Span);
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleCoil, startingAddress, data.Span);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -63,7 +64,7 @@ public partial class ModbusRtuClient
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     Logger.Log(LogLevel.Debug, $"WriteSingleRegister: slave={unitIdentifier}, address={startingAddress}");
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, data.Span);
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteSingleRegister, startingAddress, data.Span);
 
     // 1设备地址 1功能码 2寄存器地址 2数据数量 2校验
     const int length = 1 + 1 + 2 + 2 + 2;
@@ -76,7 +77,7 @@ public partial class ModbusRtuClient
   {
     var l = data.Length;
     Logger.Log(LogLevel.Debug, $"WriteMultipleRegisters: slave={unitIdentifier}, address={startingAddress}, registers={l / 2}");
-    var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
       writer =>
       {
         // 写寄存器数量
@@ -207,7 +208,7 @@ public partial class ModbusRtuClient
     ModbusFunctionCode functionCode, int startingAddress, int count, CancellationToken ct = default)
   {
     Logger.Log(LogLevel.Debug, $"ReadRegisters: slave={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
-    var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
+    using var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
     {
       // 写长度
       writer.Write(ConvertUshort(count).WithEndianness(true));

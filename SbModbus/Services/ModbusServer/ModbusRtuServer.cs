@@ -1,9 +1,4 @@
 using System;
-#if NETSTANDARD2_0
-using Sb.Extensions.System.Buffers;
-#else
-using System.Buffers;
-#endif
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
@@ -26,7 +21,7 @@ public class ModbusRtuServer : BaseModbusServer
     ModbusFunctionCode functionCode, ReadOnlyMemory<byte> pduBody, CancellationToken ct)
   {
     // RTU 正常响应: slaveId(1) + fc(1) + pduBody + CRC16(2)
-    var buffer = new ArrayBufferWriter<byte>(256);
+    using var buffer = new RentedBuffer(300);
 
     buffer.Write(unitId);
     buffer.Write(functionCode);
@@ -46,7 +41,7 @@ public class ModbusRtuServer : BaseModbusServer
     ModbusFunctionCode functionCode, ModbusExceptionCode exceptionCode, CancellationToken ct)
   {
     // RTU 错误响应: slaveId(1) + (fc | 0x80)(1) + exceptionCode(1) + CRC16(2)
-    var buffer = new ArrayBufferWriter<byte>(5);
+    using var buffer = new RentedBuffer(16);
 
     buffer.Write(unitId);
     buffer.Write((byte)((byte)functionCode | 0x80));

@@ -128,7 +128,6 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     Disconnect();
     SerialPort.Dispose();
     base.Dispose();
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -138,7 +137,6 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     await DisconnectAsync().ConfigureAwait(false);
     SerialPort.Dispose();
     await base.DisposeAsync().ConfigureAwait(false);
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 

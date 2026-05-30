@@ -26,6 +26,7 @@ public abstract class ModbusStream : IModbusStream
     OnDataSent = null;
     _dataAvailable.Dispose();
     _disposeCts.Dispose();
+    StreamLock.Dispose();
     Logger.Information("ModbusStream disposed");
   }
 
@@ -39,6 +40,7 @@ public abstract class ModbusStream : IModbusStream
     OnDataSent = null;
     _dataAvailable.Dispose();
     _disposeCts.Dispose();
+    StreamLock.Dispose();
     Logger.Information("ModbusStream disposed async");
     await Task.CompletedTask;
   }
@@ -327,8 +329,8 @@ public abstract class ModbusStream : IModbusStream
       Logger.Log(LogLevel.Debug, $"Buffer write: {source.Length} bytes, total buffered: {Buffer.Count}");
     }
 
-    // AutoReceive 模式下触发数据事件
-    if (AutoReceive && source.Length > 0) DataReceived(source.ToArray());
+    // AutoReceive 模式下触发数据事件（仅在有订阅者时分配）
+    if (AutoReceive && source.Length > 0 && OnDataReceived != null) DataReceived(source.ToArray());
   }
 
   /// <summary>

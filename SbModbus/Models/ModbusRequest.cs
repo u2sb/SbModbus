@@ -213,7 +213,8 @@ public class ModbusRequest
   /// <returns>已校验的请求对象。</returns>
   public static ModbusRequest CreateWriteSingleCoil(ushort startingAddress, bool value, byte slaveId = 1)
   {
-    return CreateWriteSingleCoil(startingAddress, value ? [0xFF, 0x00] : "\0\0"u8.ToArray(), slaveId);
+    ReadOnlySpan<byte> offData = stackalloc byte[] { 0x00, 0x00 };
+    return CreateWriteSingleCoil(startingAddress, value ? [0xFF, 0x00] : offData, slaveId);
   }
 
   /// <summary>

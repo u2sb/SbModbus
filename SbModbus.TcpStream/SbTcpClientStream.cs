@@ -272,7 +272,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     _receiveCts = null;
 
     base.Dispose();
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -293,7 +292,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     _receiveCts = null;
 
     await base.DisposeAsync().ConfigureAwait(false);
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 

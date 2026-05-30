@@ -1,14 +1,10 @@
 using System;
-#if NETSTANDARD2_0
-using Sb.Extensions.System.Buffers;
-#else
-using System.Buffers;
-#endif
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
+using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusServer;
 
@@ -27,7 +23,7 @@ public class ModbusTcpServer : BaseModbusServer
     // TCP 正常响应: MBAP(tid, 0x0000, length) + unitId(1) + fc(1) + pduBody
     var pduLength = (ushort)(1 + 1 + pduBody.Length); // unitId + fc + pduBody
 
-    var buffer = new ArrayBufferWriter<byte>(256);
+    using var buffer = new RentedBuffer(300);
 
     buffer.Write(tid);
     buffer.Write((ushort)0); // protocolId = 0
@@ -50,7 +46,7 @@ public class ModbusTcpServer : BaseModbusServer
     ModbusFunctionCode functionCode, ModbusExceptionCode exceptionCode, CancellationToken ct)
   {
     // TCP 错误响应: MBAP(tid, 0x0000, length=3) + unitId(1) + (fc|0x80)(1) + exceptionCode(1)
-    var buffer = new ArrayBufferWriter<byte>(12);
+    using var buffer = new RentedBuffer(16);
 
     buffer.Write(tid);
     buffer.Write((ushort)0);

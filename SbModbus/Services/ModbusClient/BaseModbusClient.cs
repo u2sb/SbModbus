@@ -166,11 +166,18 @@ public abstract class BaseModbusClient : IModbusClient
   protected virtual async ValueTask OnDataTransportAsync(ModbusClientAsyncHandler handler, ReadOnlyMemory<byte> data,
     CancellationToken ct = default)
   {
-    var tasks = handler.GetInvocationList()
-      .Cast<ModbusClientAsyncHandler>()
-      .Select(h => InvokeHandlerAsync(h, this, data, ct));
-
-    await Task.WhenAll(tasks);
+    foreach (var d in handler.GetInvocationList())
+    {
+      var h = (ModbusClientAsyncHandler)d;
+      try
+      {
+        await h.Invoke(this, data, ct).ConfigureAwait(false);
+      }
+      catch (Exception ex)
+      {
+        Logger.Error(ex, "Async event handler threw an exception");
+      }
+    }
   }
 
   private static async Task InvokeHandlerAsync(ModbusClientAsyncHandler handler, IModbusClient sender, ReadOnlyMemory<byte> data, CancellationToken ct)

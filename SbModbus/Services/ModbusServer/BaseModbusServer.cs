@@ -408,24 +408,21 @@ public abstract class BaseModbusServer : IModbusServer
   {
     var writeEnd = writeStart + writeCount;
 
-    ModbusCoilsWriteHandler[] handlers;
     lock (CoilsWriteHandlersLocker)
     {
-      handlers = CoilsWriteHandlers.ToArray();
-    }
-
-    foreach (var handler in handlers)
-    {
-      var handlerEnd = handler.Start + handler.Count;
-      if (handler.Start < writeEnd && handlerEnd > writeStart)
-        try
-        {
-          handler.Action(args);
-        }
-        catch (Exception ex)
-        {
-          Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
-        }
+      foreach (var handler in CoilsWriteHandlers)
+      {
+        var handlerEnd = handler.Start + handler.Count;
+        if (handler.Start < writeEnd && handlerEnd > writeStart)
+          try
+          {
+            handler.Action(args);
+          }
+          catch (Exception ex)
+          {
+            Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
+          }
+      }
     }
   }
 
@@ -493,24 +490,21 @@ public abstract class BaseModbusServer : IModbusServer
   {
     var writeEnd = writeStart + writeCount;
 
-    ModbusRegistersWriteHandler[] handlers;
     lock (RegistersWriteHandlersLocker)
     {
-      handlers = RegistersWriteHandlers.ToArray();
-    }
-
-    foreach (var handler in handlers)
-    {
-      var handlerEnd = handler.Start + handler.Count;
-      if (handler.Start < writeEnd && handlerEnd > writeStart)
-        try
-        {
-          handler.Action(args);
-        }
-        catch (Exception ex)
-        {
-          Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
-        }
+      foreach (var handler in RegistersWriteHandlers)
+      {
+        var handlerEnd = handler.Start + handler.Count;
+        if (handler.Start < writeEnd && handlerEnd > writeStart)
+          try
+          {
+            handler.Action(args);
+          }
+          catch (Exception ex)
+          {
+            Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
+          }
+      }
     }
   }
 
