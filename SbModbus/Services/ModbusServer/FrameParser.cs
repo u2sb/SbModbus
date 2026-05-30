@@ -1,7 +1,6 @@
 using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
-using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System.Buffers.RingBuffers;
 using SbModbus.Models;
 using SbModbus.Utils;
@@ -15,11 +14,15 @@ public static class FrameParser
 {
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static ushort ReadU16BE(RingBufferSpan<byte> buf, int offset)
-    => (ushort)((buf[offset] << 8) | buf[offset + 1]);
+  {
+    return (ushort)((buf[offset] << 8) | buf[offset + 1]);
+  }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static ushort ReadU16LE(RingBufferSpan<byte> buf, int offset)
-    => (ushort)(buf[offset] | (buf[offset + 1] << 8));
+  {
+    return (ushort)(buf[offset] | (buf[offset + 1] << 8));
+  }
 
   /// <summary>
   ///   尝试解析 TCP/MBAP 帧（RingBufferSpan 重载，零拷贝）。
@@ -42,7 +45,7 @@ public static class FrameParser
     var length = ReadU16BE(buffer, 4);
 
     // PDU 最小 2 字节（unitId+fc），最大 253 字节
-    if (length < 2 || length > 253)
+    if (length is < 2 or > 253)
     {
       Logger.Log(LogLevel.Error, $"TCP PDU length out of range: {length}");
       buffer = default;
@@ -54,7 +57,7 @@ public static class FrameParser
     if (buffer.Length < totalLength) return false; // PDU 不完整
 
     // 完整帧已就绪
-    var frame = buffer.Slice(0, totalLength);
+    var frame = buffer[..totalLength];
 
     var tid = ReadU16LE(frame, 0);
     var pdu = frame.Slice(6, length);
@@ -65,7 +68,7 @@ public static class FrameParser
     var startingAddress = ReadU16BE(pdu, 2);
 
     ushort quantity = 0;
-    ReadOnlyMemory<byte> data = ReadOnlyMemory<byte>.Empty;
+    var data = ReadOnlyMemory<byte>.Empty;
 
     switch (functionCode)
     {
@@ -88,10 +91,6 @@ public static class FrameParser
         var byteCount = pdu[6];
         data = pdu.Slice(6, 1 + byteCount).ToArray();
         break;
-
-      default:
-        // 未知功能码 — 仍产生消息，由上层返回错误
-        break;
     }
 
     message = new ModbusFrameMessage
@@ -106,7 +105,7 @@ public static class FrameParser
     };
 
     // 消费已解析的帧
-    buffer = buffer.Slice(totalLength);
+    buffer = buffer[totalLength..];
     return true;
   }
 
@@ -156,18 +155,18 @@ public static class FrameParser
     if (buffer.Length < totalLength) return false;
 
     // CRC 校验
-    var frame = buffer.Slice(0, totalLength);
-    var crc = Crc16.CalculateCrc16(frame.Slice(0, totalLength - 2));
+    var frame = buffer[..totalLength];
+    var crc = Crc16.CalculateCrc16(frame[..(totalLength - 2)]);
     var receivedCrc = ReadU16LE(frame, totalLength - 2);
     if (crc != receivedCrc)
     {
       Logger.Log(LogLevel.Error, $"RTU CRC error: calculated=0x{crc:X4}, received=0x{receivedCrc:X4}");
-      buffer = buffer.Slice(totalLength); // 消费错误帧，丢弃
+      buffer = buffer[totalLength..]; // 消费错误帧，丢弃
       return false;
     }
 
     ushort quantity = 0;
-    ReadOnlyMemory<byte> data = ReadOnlyMemory<byte>.Empty;
+    var data = ReadOnlyMemory<byte>.Empty;
 
     switch (functionCode)
     {
@@ -203,7 +202,7 @@ public static class FrameParser
       Data = data
     };
 
-    buffer = buffer.Slice(totalLength);
+    buffer = buffer[totalLength..];
     return true;
   }
 
@@ -228,7 +227,7 @@ public static class FrameParser
     var length = BinaryPrimitives.ReadUInt16BigEndian(buffer.Slice(4, 2));
 
     // PDU 最小 2 字节（unitId+fc），最大 253 字节
-    if (length < 2 || length > 253)
+    if (length is < 2 or > 253)
     {
       Logger.Log(LogLevel.Error, $"TCP PDU length out of range: {length}");
       buffer = default;
@@ -240,9 +239,9 @@ public static class FrameParser
     if (buffer.Length < totalLength) return false; // PDU 不完整
 
     // 完整帧已就绪
-    var frame = buffer.Slice(0, totalLength);
+    var frame = buffer[..totalLength];
 
-    var tid = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(0, 2));
+    var tid = BinaryPrimitives.ReadUInt16LittleEndian(frame[..2]);
     var pdu = frame.Slice(6, length);
 
     var unitId = pdu[0];
@@ -251,7 +250,7 @@ public static class FrameParser
     var startingAddress = BinaryPrimitives.ReadUInt16BigEndian(pdu.Slice(2, 2));
 
     ushort quantity = 0;
-    ReadOnlyMemory<byte> data = ReadOnlyMemory<byte>.Empty;
+    var data = ReadOnlyMemory<byte>.Empty;
 
     switch (functionCode)
     {
@@ -274,10 +273,6 @@ public static class FrameParser
         var byteCount = pdu[6];
         data = pdu.Slice(6, 1 + byteCount).ToArray();
         break;
-
-      default:
-        // 未知功能码 — 仍产生消息，由上层返回错误
-        break;
     }
 
     message = new ModbusFrameMessage
@@ -292,7 +287,7 @@ public static class FrameParser
     };
 
     // 消费已解析的帧
-    buffer = buffer.Slice(totalLength);
+    buffer = buffer[totalLength..];
     return true;
   }
 
@@ -342,18 +337,18 @@ public static class FrameParser
     if (buffer.Length < totalLength) return false;
 
     // CRC 校验
-    var frame = buffer.Slice(0, totalLength);
-    var crc = Crc16.CalculateCrc16(frame.Slice(0, totalLength - 2));
+    var frame = buffer[..totalLength];
+    var crc = Crc16.CalculateCrc16(frame[..(totalLength - 2)]);
     var receivedCrc = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(totalLength - 2, 2));
     if (crc != receivedCrc)
     {
       Logger.Log(LogLevel.Error, $"RTU CRC error: calculated=0x{crc:X4}, received=0x{receivedCrc:X4}");
-      buffer = buffer.Slice(totalLength); // 消费错误帧，丢弃
+      buffer = buffer[totalLength..]; // 消费错误帧，丢弃
       return false;
     }
 
     ushort quantity = 0;
-    ReadOnlyMemory<byte> data = ReadOnlyMemory<byte>.Empty;
+    var data = ReadOnlyMemory<byte>.Empty;
 
     switch (functionCode)
     {
@@ -389,7 +384,7 @@ public static class FrameParser
       Data = data
     };
 
-    buffer = buffer.Slice(totalLength);
+    buffer = buffer[totalLength..];
     return true;
   }
 }

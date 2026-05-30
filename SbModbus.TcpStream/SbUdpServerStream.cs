@@ -15,21 +15,22 @@ namespace SbModbus.TcpStream;
 /// </summary>
 public class SbUdpServerStream : IModbusStreamServer
 {
-  private readonly IPEndPoint _localEndPoint;
+  private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
 
-  private UdpClient? _udpClient;
-  private CancellationTokenSource? _receiveCts;
-  private Task? _receiveTask;
+  private readonly Channel<ModbusFrameMessage> _frameChannel =
+    Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions
+      { SingleReader = true, SingleWriter = false });
+
+  private readonly IPEndPoint _localEndPoint;
 
   private readonly ConcurrentDictionary<IPEndPoint, SbUdpSessionStream> _sessions = new();
 
-  private readonly Channel<ModbusFrameMessage> _frameChannel =
-    Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
-
-  private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
-
   private volatile bool _isDisposed;
   private volatile bool _isListening;
+  private CancellationTokenSource? _receiveCts;
+  private Task? _receiveTask;
+
+  private UdpClient? _udpClient;
 
   /// <summary>
   ///   当前活跃会话数
@@ -53,6 +54,86 @@ public class SbUdpServerStream : IModbusStreamServer
   ///   会话断开时触发
   /// </summary>
   public event Action<IModbusStream>? OnSessionDisconnected;
+
+  #region 接收循环
+
+  /// <summary>
+  ///   后台接收循环 — 接收数据并路由到对应的会话
+  /// </summary>
+  private async Task RunReceiveLoopAsync(CancellationToken ct)
+  {
+    try
+    {
+      while (!ct.IsCancellationRequested)
+      {
+        var client = _udpClient;
+        if (client == null) break;
+
+        UdpReceiveResult result;
+        try
+        {
+#if NET6_0_OR_GREATER
+          result = await client.ReceiveAsync(ct).ConfigureAwait(false);
+#else
+          result = await client.ReceiveAsync().ConfigureAwait(false);
+#endif
+        }
+        catch (SocketException ex)
+        {
+          Logger.Log(LogLevel.Warning, $"UDP server receive error: {ex.SocketErrorCode} - {ex.Message}");
+          break;
+        }
+        catch (OperationCanceledException)
+        {
+          break;
+        }
+        catch (ObjectDisposedException)
+        {
+          break;
+        }
+
+        var remoteEp = result.RemoteEndPoint;
+
+        // 路由到已有会话或创建新会话
+        if (_sessions.TryGetValue(remoteEp, out var existingSession))
+        {
+          existingSession.EnqueueReceivedData(result.Buffer);
+        }
+        else
+        {
+          var newSession = new SbUdpSessionStream(this, remoteEp);
+          if (_sessions.TryAdd(remoteEp, newSession))
+          {
+            newSession.AutoReceive = true;
+            newSession.OnDataReceived += (_, d) => OnSessionDataReceived(remoteEp, newSession, d);
+            newSession.EnqueueReceivedData(result.Buffer);
+            Logger.Information($"UDP new session from {remoteEp}");
+
+            try
+            {
+              OnSessionConnected?.Invoke(newSession);
+            }
+            catch (Exception ex)
+            {
+              Logger.Error(ex, "OnSessionConnected callback threw an exception");
+            }
+          }
+          else
+          {
+            // 并发添加失败，使用已有会话
+            await newSession.DisposeAsync();
+            if (_sessions.TryGetValue(remoteEp, out var retrySession)) retrySession.EnqueueReceivedData(result.Buffer);
+          }
+        }
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.Error(ex, "UDP server receive loop unexpected error");
+    }
+  }
+
+  #endregion
 
   #region 构造函数
 
@@ -135,7 +216,15 @@ public class SbUdpServerStream : IModbusStreamServer
     _receiveTask = null;
 
     // 关闭 UDP 客户端
-    try { _udpClient?.Close(); } catch (Exception ex) { Logger.Log(LogLevel.Debug, $"UDP close warning: {ex.Message}"); }
+    try
+    {
+      _udpClient?.Close();
+    }
+    catch (Exception ex)
+    {
+      Logger.Log(LogLevel.Debug, $"UDP close warning: {ex.Message}");
+    }
+
     _udpClient?.Dispose();
     _udpClient = null;
     _isListening = false;
@@ -158,9 +247,15 @@ public class SbUdpServerStream : IModbusStreamServer
     _receiveCts = null;
 
     foreach (var kv in _sessions)
-    {
-      try { kv.Value.Dispose(); } catch { /* ignore */ }
-    }
+      try
+      {
+        kv.Value.Dispose();
+      }
+      catch
+      {
+        /* ignore */
+      }
+
     _sessions.Clear();
 
     _frameChannel.Writer.TryComplete();
@@ -208,7 +303,6 @@ public class SbUdpServerStream : IModbusStreamServer
     session.AutoReceive = false;
 
     if (_sessions.TryRemove(endpoint, out _))
-    {
       try
       {
         OnSessionDisconnected?.Invoke(session);
@@ -217,7 +311,6 @@ public class SbUdpServerStream : IModbusStreamServer
       {
         Logger.Error(ex, "OnSessionDisconnected callback threw an exception");
       }
-    }
   }
 
   private void OnSessionDataReceived(IPEndPoint ep, SbUdpSessionStream session, ReadOnlyMemory<byte> data)
@@ -226,97 +319,11 @@ public class SbUdpServerStream : IModbusStreamServer
     if (lb.Buffer.Count == 0) return;
     var remaining = lb.Buffer.WrittenSpan;
     var len = remaining.Length;
-    while (FrameParser.TryParseTcp(session, ref remaining, out var message))
-    {
-      _frameChannel.Writer.TryWrite(message);
-    }
+    while (FrameParser.TryParseTcp(session, ref remaining, out var message)) _frameChannel.Writer.TryWrite(message);
 
     var consumed = len - remaining.Length;
     if (consumed > 0)
       lb.Buffer.RemoveFirst(consumed);
-  }
-
-  #endregion
-
-  #region 接收循环
-
-  /// <summary>
-  ///   后台接收循环 — 接收数据并路由到对应的会话
-  /// </summary>
-  private async Task RunReceiveLoopAsync(CancellationToken ct)
-  {
-    try
-    {
-      while (!ct.IsCancellationRequested)
-      {
-        var client = _udpClient;
-        if (client == null) break;
-
-        UdpReceiveResult result;
-        try
-        {
-#if NET6_0_OR_GREATER
-          result = await client.ReceiveAsync(ct).ConfigureAwait(false);
-#else
-          result = await client.ReceiveAsync().ConfigureAwait(false);
-#endif
-        }
-        catch (SocketException ex)
-        {
-          Logger.Log(LogLevel.Warning, $"UDP server receive error: {ex.SocketErrorCode} - {ex.Message}");
-          break;
-        }
-        catch (OperationCanceledException)
-        {
-          break;
-        }
-        catch (ObjectDisposedException)
-        {
-          break;
-        }
-
-        var remoteEp = (IPEndPoint)result.RemoteEndPoint;
-
-        // 路由到已有会话或创建新会话
-        if (_sessions.TryGetValue(remoteEp, out var existingSession))
-        {
-          existingSession.EnqueueReceivedData(result.Buffer);
-        }
-        else
-        {
-          var newSession = new SbUdpSessionStream(this, remoteEp);
-          if (_sessions.TryAdd(remoteEp, newSession))
-          {
-            newSession.AutoReceive = true;
-            newSession.OnDataReceived += (_, d) => OnSessionDataReceived(remoteEp, newSession, d);
-            newSession.EnqueueReceivedData(result.Buffer);
-            Logger.Information($"UDP new session from {remoteEp}");
-
-            try
-            {
-              OnSessionConnected?.Invoke(newSession);
-            }
-            catch (Exception ex)
-            {
-              Logger.Error(ex, "OnSessionConnected callback threw an exception");
-            }
-          }
-          else
-          {
-            // 并发添加失败，使用已有会话
-            newSession.Dispose();
-            if (_sessions.TryGetValue(remoteEp, out var retrySession))
-            {
-              retrySession.EnqueueReceivedData(result.Buffer);
-            }
-          }
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      Logger.Error(ex, "UDP server receive loop unexpected error");
-    }
   }
 
   #endregion
@@ -326,16 +333,28 @@ public class SbUdpServerStream : IModbusStreamServer
   private void DisconnectAllSessions()
   {
     foreach (var kv in _sessions)
-    {
-      try { kv.Value.Disconnect(); } catch (Exception ex) { Logger.Log(LogLevel.Debug, $"Session disconnect warning: {ex.Message}"); }
-    }
+      try
+      {
+        kv.Value.Disconnect();
+      }
+      catch (Exception ex)
+      {
+        Logger.Log(LogLevel.Debug, $"Session disconnect warning: {ex.Message}");
+      }
   }
 
   private static void CancelAndDispose(ref CancellationTokenSource? cts)
   {
     var source = Interlocked.Exchange(ref cts, null);
     if (source == null) return;
-    try { source.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      source.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     source.Dispose();
   }
 
@@ -352,7 +371,9 @@ public class SbUdpServerStream : IModbusStreamServer
     {
       ae.Handle(ex => ex is OperationCanceledException or ObjectDisposedException);
     }
-    catch (OperationCanceledException) { }
+    catch (OperationCanceledException)
+    {
+    }
   }
 
   private static async Task WaitTaskAsync(Task? task, string name)
@@ -366,12 +387,27 @@ public class SbUdpServerStream : IModbusStreamServer
       using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
-      try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }
+      try
+      {
+        await task.ConfigureAwait(false);
+      }
+      catch (OperationCanceledException)
+      {
+      }
+      catch (ObjectDisposedException)
+      {
+      }
 #endif
     }
-    catch (TimeoutException) { }
-    catch (OperationCanceledException) { }
-    catch (ObjectDisposedException) { }
+    catch (TimeoutException)
+    {
+    }
+    catch (OperationCanceledException)
+    {
+    }
+    catch (ObjectDisposedException)
+    {
+    }
   }
 
   #endregion
@@ -383,21 +419,43 @@ public class SbUdpServerStream : IModbusStreamServer
 public class SbUdpSessionStream : ModbusStream, IModbusStream
 {
   private readonly SbUdpServerStream _server;
-  private readonly IPEndPoint _remoteEndPoint;
   private readonly string _transportInfo;
 
   private volatile bool _isDisposedLocal;
 
-  /// <summary>
-  ///   会话的远程端点
-  /// </summary>
-  public IPEndPoint RemoteEndPoint => _remoteEndPoint;
-
   internal SbUdpSessionStream(SbUdpServerStream server, IPEndPoint remoteEndPoint)
   {
     _server = server;
-    _remoteEndPoint = remoteEndPoint;
+    RemoteEndPoint = remoteEndPoint;
     _transportInfo = $"UDP-Session:{remoteEndPoint.Address}:{remoteEndPoint.Port}";
+  }
+
+  /// <summary>
+  ///   会话的远程端点
+  /// </summary>
+  public IPEndPoint RemoteEndPoint { get; }
+
+  /// <inheritdoc />
+  public override string GetTransportInfo()
+  {
+    return _transportInfo;
+  }
+
+  /// <inheritdoc />
+  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  {
+    if (_isDisposedLocal)
+      throw new SbModbusException("UDP session is disconnected");
+
+    await _server.SendAsync(buffer, RemoteEndPoint, ct).ConfigureAwait(false);
+  }
+
+  /// <summary>
+  ///   将接收到的数据写入缓冲区（由 SbUdpServerStream 接收循环调用）
+  /// </summary>
+  internal void EnqueueReceivedData(byte[] buffer)
+  {
+    WriteBuffer(buffer.AsSpan());
   }
 
   #region 属性
@@ -438,7 +496,7 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
     Logger.Information($"UDP session {RemoteEndPoint} disconnecting");
 
     _isDisposedLocal = true;
-    _server.RemoveSession(_remoteEndPoint, this);
+    _server.RemoveSession(RemoteEndPoint, this);
     ConnectStateChanged(false);
     return true;
   }
@@ -476,24 +534,4 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
   }
 
   #endregion
-
-  /// <inheritdoc />
-  public override string GetTransportInfo() => _transportInfo;
-
-  /// <inheritdoc />
-  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
-  {
-    if (_isDisposedLocal)
-      throw new SbModbusException("UDP session is disconnected");
-
-    await _server.SendAsync(buffer, _remoteEndPoint, ct).ConfigureAwait(false);
-  }
-
-  /// <summary>
-  ///   将接收到的数据写入缓冲区（由 SbUdpServerStream 接收循环调用）
-  /// </summary>
-  internal void EnqueueReceivedData(byte[] buffer)
-  {
-    WriteBuffer(buffer.AsSpan());
-  }
 }

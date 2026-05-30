@@ -398,7 +398,7 @@ public class SbTcpServerStream : IModbusStreamServer
 /// </summary>
 public class SbTcpSessionStream : ModbusStream, IModbusStream
 {
-  private Socket _socket;
+  private readonly Socket _socket;
   private readonly SbTcpServerStream _server;
   private readonly string _transportInfo;
 
@@ -553,7 +553,7 @@ public class SbTcpSessionStream : ModbusStream, IModbusStream
         sent = await _socket.SendAsync(buffer.Slice(totalSent), SocketFlags.None, ct).ConfigureAwait(false);
 #else
         var arr = buffer.ToArray();
-        sent = await SocketTaskExtensions.SendAsync(_socket, new ArraySegment<byte>(arr, totalSent, arr.Length - totalSent), SocketFlags.None).ConfigureAwait(false);
+        sent = await _socket.SendAsync(new ArraySegment<byte>(arr, totalSent, arr.Length - totalSent), SocketFlags.None).ConfigureAwait(false);
 #endif
       }
       catch (SocketException ex)
@@ -606,7 +606,7 @@ public class SbTcpSessionStream : ModbusStream, IModbusStream
 #if NET6_0_OR_GREATER
           received = await _socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct).ConfigureAwait(false);
 #else
-          received = await SocketTaskExtensions.ReceiveAsync(_socket, new ArraySegment<byte>(buffer), SocketFlags.None).ConfigureAwait(false);
+          received = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None).ConfigureAwait(false);
 #endif
         }
         catch (SocketException)

@@ -13,33 +13,75 @@ namespace SbModbus.TcpStream;
 /// </summary>
 public class SbTcpClientStream : ModbusStream, IModbusStream
 {
-  private readonly EndPoint _endPoint;
-  private readonly string _transportInfo;
-
-  private Socket? _socket;
-  private CancellationTokenSource? _receiveCts;
-  private CancellationTokenSource? _reconnectCts;
-  private Task? _receiveTask;
-  private Task? _reconnectTask;
-
-  // 重连退避
-  private int _backoffMs = InitialBackoffMs;
   private const int InitialBackoffMs = 100;
   private const int MaxBackoffMs = 30000;
-
-  // 缓存 DNS 解析结果，避免每次重连都解析
-  private IPEndPoint? _cachedResolvedEndPoint;
-
-  // 用户是否主动断开（区分主动/被动断开，决定是否触发自动重连）
-  private volatile bool _isUserDisconnect;
-  private volatile bool _isDisposedLocal;
-  private volatile bool _isConnected;
 
   private const int ReceiveBufferSize = 4096;
   private const int SocketBufferSize = 65536;
   private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
   private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
   private static readonly LingerOption NoLinger = new(false, 0);
+  private readonly EndPoint _endPoint;
+  private readonly string _transportInfo;
+
+  // 重连退避
+  private int _backoffMs = InitialBackoffMs;
+
+  // 缓存 DNS 解析结果，避免每次重连都解析
+  private IPEndPoint? _cachedResolvedEndPoint;
+  private volatile bool _isConnected;
+  private volatile bool _isDisposedLocal;
+
+  // 用户是否主动断开（区分主动/被动断开，决定是否触发自动重连）
+  private volatile bool _isUserDisconnect;
+  private CancellationTokenSource? _receiveCts;
+  private Task? _receiveTask;
+  private CancellationTokenSource? _reconnectCts;
+  private Task? _reconnectTask;
+
+  private Socket? _socket;
+
+  /// <inheritdoc />
+  public override string GetTransportInfo()
+  {
+    return _transportInfo;
+  }
+
+  /// <inheritdoc />
+  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  {
+    var socket = _socket;
+    if (socket == null || !_isConnected)
+      throw new SbModbusException("Not connected");
+
+    var totalSent = 0;
+    while (totalSent < buffer.Length)
+    {
+      ct.ThrowIfCancellationRequested();
+
+      int sent;
+      try
+      {
+#if NET6_0_OR_GREATER
+        sent = await socket.SendAsync(buffer.Slice(totalSent), SocketFlags.None, ct).ConfigureAwait(false);
+#else
+        var arr = buffer.ToArray();
+        sent = await socket.SendAsync(new ArraySegment<byte>(arr, totalSent, arr.Length - totalSent), SocketFlags.None)
+          .ConfigureAwait(false);
+#endif
+      }
+      catch (SocketException ex)
+      {
+        HandleSocketError(ex);
+        throw new SbModbusException("Send failed - connection may be lost", ex);
+      }
+
+      if (sent == 0)
+        throw new SbModbusException("Connection closed during send");
+
+      totalSent += sent;
+    }
+  }
 
   #region 构造函数
 
@@ -257,44 +299,6 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
   #endregion
 
-  /// <inheritdoc />
-  public override string GetTransportInfo() => _transportInfo;
-
-  /// <inheritdoc />
-  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
-  {
-    var socket = _socket;
-    if (socket == null || !_isConnected)
-      throw new SbModbusException("Not connected");
-
-    var totalSent = 0;
-    while (totalSent < buffer.Length)
-    {
-      ct.ThrowIfCancellationRequested();
-
-      int sent;
-      try
-      {
-#if NET6_0_OR_GREATER
-        sent = await socket.SendAsync(buffer.Slice(totalSent), SocketFlags.None, ct).ConfigureAwait(false);
-#else
-        var arr = buffer.ToArray();
-        sent = await SocketTaskExtensions.SendAsync(socket, new ArraySegment<byte>(arr, totalSent, arr.Length - totalSent), SocketFlags.None).ConfigureAwait(false);
-#endif
-      }
-      catch (SocketException ex)
-      {
-        HandleSocketError(ex);
-        throw new SbModbusException("Send failed - connection may be lost", ex);
-      }
-
-      if (sent == 0)
-        throw new SbModbusException("Connection closed during send");
-
-      totalSent += sent;
-    }
-  }
-
   #region 内部实现
 
   /// <summary>
@@ -348,11 +352,10 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
       {
         if (_cachedResolvedEndPoint != null) return _cachedResolvedEndPoint;
 
-        IPAddress[] addresses;
 #if NET6_0_OR_GREATER
-        addresses = await Dns.GetHostAddressesAsync(dnsEp.Host, ct).ConfigureAwait(false);
+        IPAddress[] addresses = await Dns.GetHostAddressesAsync(dnsEp.Host, ct).ConfigureAwait(false);
 #else
-        addresses = await Dns.GetHostAddressesAsync(dnsEp.Host).ConfigureAwait(false);
+        IPAddress[] addresses = await Dns.GetHostAddressesAsync(dnsEp.Host).ConfigureAwait(false);
 #endif
         var ipv4 = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
         if (ipv4 != null) return _cachedResolvedEndPoint = new IPEndPoint(ipv4, dnsEp.Port);
@@ -403,7 +406,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 #if NET6_0_OR_GREATER
           received = await socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct).ConfigureAwait(false);
 #else
-          received = await SocketTaskExtensions.ReceiveAsync(socket, new ArraySegment<byte>(buffer), SocketFlags.None).ConfigureAwait(false);
+          received = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None).ConfigureAwait(false);
 #endif
         }
         catch (SocketException)
@@ -431,10 +434,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     finally
     {
       // 非用户主动断开 → 触发重连
-      if (!_isUserDisconnect && !_isDisposedLocal)
-      {
-        HandleDisconnected();
-      }
+      if (!_isUserDisconnect && !_isDisposedLocal) HandleDisconnected();
     }
   }
 
@@ -447,10 +447,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     _isConnected = false;
     CloseSocket();
 
-    if (wasConnected)
-    {
-      ConnectStateChanged(false);
-    }
+    if (wasConnected) ConnectStateChanged(false);
 
     if (_isUserDisconnect || _isDisposedLocal) return;
 
@@ -516,10 +513,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
     try
     {
-      if (socket.Connected)
-      {
-        socket.Shutdown(SocketShutdown.Both);
-      }
+      if (socket.Connected) socket.Shutdown(SocketShutdown.Both);
     }
     catch (Exception ex)
     {
@@ -572,7 +566,14 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   {
     var source = Interlocked.Exchange(ref cts, null);
     if (source == null) return;
-    try { source.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      source.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     source.Dispose();
   }
 
@@ -592,7 +593,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     {
       ae.Handle(ex => ex is OperationCanceledException or ObjectDisposedException);
     }
-    catch (OperationCanceledException) { }
+    catch (OperationCanceledException)
+    {
+    }
   }
 
   /// <summary>
@@ -609,12 +612,27 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
       using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
-      try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }
+      try
+      {
+        await task.ConfigureAwait(false);
+      }
+      catch (OperationCanceledException)
+      {
+      }
+      catch (ObjectDisposedException)
+      {
+      }
 #endif
     }
-    catch (TimeoutException) { }
-    catch (OperationCanceledException) { }
-    catch (ObjectDisposedException) { }
+    catch (TimeoutException)
+    {
+    }
+    catch (OperationCanceledException)
+    {
+    }
+    catch (ObjectDisposedException)
+    {
+    }
   }
 
   #endregion

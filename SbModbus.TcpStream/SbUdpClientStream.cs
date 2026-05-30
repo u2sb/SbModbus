@@ -12,18 +12,46 @@ namespace SbModbus.TcpStream;
 /// </summary>
 public class SbUdpClientStream : ModbusStream, IModbusStream
 {
+  private const int ReceiveBufferSize = 4096;
+  private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
   private readonly EndPoint _endPoint;
   private readonly string _transportInfo;
+  private volatile bool _isConnected;
 
-  private UdpClient? _udpClient;
+  private volatile bool _isDisposedLocal;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
 
-  private volatile bool _isDisposedLocal;
-  private volatile bool _isConnected;
+  private UdpClient? _udpClient;
 
-  private const int ReceiveBufferSize = 4096;
-  private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
+  /// <inheritdoc />
+  public override string GetTransportInfo()
+  {
+    return _transportInfo;
+  }
+
+  /// <inheritdoc />
+  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
+  {
+    var client = _udpClient;
+    if (client == null)
+      throw new SbModbusException("Not connected");
+
+    try
+    {
+#if NET6_0_OR_GREATER
+      await client.SendAsync(buffer, ct).ConfigureAwait(false);
+#else
+      var bytes = buffer.ToArray();
+      await client.SendAsync(bytes, bytes.Length).ConfigureAwait(false);
+#endif
+    }
+    catch (SocketException ex)
+    {
+      Logger.Log(LogLevel.Error, $"UDP send error: {ex.SocketErrorCode} - {ex.Message}");
+      throw new SbModbusException("UDP send failed", ex);
+    }
+  }
 
   #region 构造函数
 
@@ -204,32 +232,6 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
 
   #endregion
 
-  /// <inheritdoc />
-  public override string GetTransportInfo() => _transportInfo;
-
-  /// <inheritdoc />
-  protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
-  {
-    var client = _udpClient;
-    if (client == null)
-      throw new SbModbusException("Not connected");
-
-    try
-    {
-#if NET6_0_OR_GREATER
-      await client.SendAsync(buffer, ct).ConfigureAwait(false);
-#else
-      var bytes = buffer.ToArray();
-      await client.SendAsync(bytes, bytes.Length).ConfigureAwait(false);
-#endif
-    }
-    catch (SocketException ex)
-    {
-      Logger.Log(LogLevel.Error, $"UDP send error: {ex.SocketErrorCode} - {ex.Message}");
-      throw new SbModbusException("UDP send failed", ex);
-    }
-  }
-
   #region 内部实现
 
   /// <summary>
@@ -301,7 +303,14 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   {
     var source = Interlocked.Exchange(ref cts, null);
     if (source == null) return;
-    try { source.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      source.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     source.Dispose();
   }
 
@@ -321,8 +330,11 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     {
       ae.Handle(ex => ex is OperationCanceledException or ObjectDisposedException);
     }
-    catch (OperationCanceledException) { }
+    catch (OperationCanceledException)
+    {
+    }
   }
+
   private static async Task WaitTaskAsync(Task? task, string name)
   {
     if (task == null || task.IsCompleted) return;
@@ -334,12 +346,28 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
       using var timeoutCts = new CancellationTokenSource(TaskWaitTimeout);
       await Task.WhenAny(task, Task.Delay(Timeout.Infinite, timeoutCts.Token)).ConfigureAwait(false);
       timeoutCts.Cancel();
-      try { await task.ConfigureAwait(false); } catch (OperationCanceledException) { } catch (ObjectDisposedException) { }
+      try
+      {
+        await task.ConfigureAwait(false);
+      }
+      catch (OperationCanceledException)
+      {
+      }
+      catch (ObjectDisposedException)
+      {
+      }
 #endif
     }
-    catch (TimeoutException) { }
-    catch (OperationCanceledException) { }
-    catch (ObjectDisposedException) { }
+    catch (TimeoutException)
+    {
+    }
+    catch (OperationCanceledException)
+    {
+    }
+    catch (ObjectDisposedException)
+    {
+    }
   }
+
   #endregion
 }

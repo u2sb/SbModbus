@@ -65,9 +65,13 @@ public class ModbusTcpE2ETests : IAsyncLifetime
     {
         {
             using var reg = await _server.HoldingRegisters.LockAsync();
-            reg[0] = 0x1234;
-            reg[1] = 0x5678;
-            reg[2] = 0xABCD;
+            // 原样写入原始字节（不做字节序转换）
+            reg.Data[0] = 0x12;
+            reg.Data[1] = 0x34;
+            reg.Data[2] = 0x56;
+            reg.Data[3] = 0x78;
+            reg.Data[4] = 0xAB;
+            reg.Data[5] = 0xCD;
         }
 
         var result = await _client.ReadHoldingRegistersAsync(1, 0, 3);

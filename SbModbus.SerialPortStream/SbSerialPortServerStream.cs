@@ -1,7 +1,5 @@
 using System;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using SbModbus.Models;
 using SbModbus.Services.ModbusServer;
 
@@ -13,9 +11,9 @@ namespace SbModbus.SerialPortStream;
 /// </summary>
 public class SbSerialPortServerStream : IModbusStreamServer
 {
-  private readonly SbSerialPortStream _stream;
   private readonly Channel<ModbusFrameMessage> _frameChannel =
-    Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+    Channel.CreateUnbounded<ModbusFrameMessage>(
+      new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
   private volatile bool _isDisposed;
   private volatile bool _isListening;
@@ -26,15 +24,20 @@ public class SbSerialPortServerStream : IModbusStreamServer
   /// <param name="stream">底层串口流</param>
   public SbSerialPortServerStream(SbSerialPortStream stream)
   {
-    _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-    _stream.OnConnectStateChanged += OnStreamConnectStateChanged;
+    Stream = stream ?? throw new ArgumentNullException(nameof(stream));
+    Stream.OnConnectStateChanged += OnStreamConnectStateChanged;
   }
+
+  /// <summary>
+  ///   获取底层串口流（用于直接访问串口配置）
+  /// </summary>
+  public SbSerialPortStream Stream { get; }
 
   /// <inheritdoc />
   public bool IsListening => _isListening;
 
   /// <inheritdoc />
-  public int SessionCount => _stream.IsConnected ? 1 : 0;
+  public int SessionCount => Stream.IsConnected ? 1 : 0;
 
   /// <inheritdoc />
   public ChannelReader<ModbusFrameMessage> FrameReader => _frameChannel.Reader;
@@ -51,13 +54,13 @@ public class SbSerialPortServerStream : IModbusStreamServer
     if (_isDisposed) throw new SbModbusException("Serial port server stream has been disposed");
     if (_isListening) return;
 
-    _stream.Connect();
-    _isListening = _stream.IsConnected;
+    Stream.Connect();
+    _isListening = Stream.IsConnected;
 
     if (_isListening)
     {
-      _stream.AutoReceive = true;
-      _stream.OnDataReceived += OnStreamDataReceived;
+      Stream.AutoReceive = true;
+      Stream.OnDataReceived += OnStreamDataReceived;
     }
   }
 
@@ -69,10 +72,10 @@ public class SbSerialPortServerStream : IModbusStreamServer
     // 先关闭 Channel，让 ProcessLoopAsync 退出
     _frameChannel.Writer.TryComplete();
 
-    _stream.AutoReceive = false;
-    _stream.OnDataReceived -= OnStreamDataReceived;
+    Stream.AutoReceive = false;
+    Stream.OnDataReceived -= OnStreamDataReceived;
 
-    _stream.Disconnect();
+    Stream.Disconnect();
     _isListening = false;
   }
 
@@ -83,8 +86,8 @@ public class SbSerialPortServerStream : IModbusStreamServer
     _isDisposed = true;
 
     Stop();
-    _stream.OnConnectStateChanged -= OnStreamConnectStateChanged;
-    _stream.Dispose();
+    Stream.OnConnectStateChanged -= OnStreamConnectStateChanged;
+    Stream.Dispose();
 
     _frameChannel.Writer.TryComplete();
 
@@ -94,23 +97,15 @@ public class SbSerialPortServerStream : IModbusStreamServer
     GC.SuppressFinalize(this);
   }
 
-  /// <summary>
-  ///   获取底层串口流（用于直接访问串口配置）
-  /// </summary>
-  public SbSerialPortStream Stream => _stream;
-
   #region 内部实现
 
   private void OnStreamDataReceived(IModbusStream sender, ReadOnlyMemory<byte> data)
   {
-    using var lb = _stream.GetLockedBuffer();
+    using var lb = Stream.GetLockedBuffer();
     if (lb.Buffer.Count == 0) return;
     var remaining = lb.Buffer.WrittenSpan;
     var len = remaining.Length;
-    while (FrameParser.TryParseRtu(_stream, ref remaining, out var message))
-    {
-      _frameChannel.Writer.TryWrite(message);
-    }
+    while (FrameParser.TryParseRtu(Stream, ref remaining, out var message)) _frameChannel.Writer.TryWrite(message);
 
     var consumed = len - remaining.Length;
     if (consumed > 0)
@@ -129,7 +124,7 @@ public class SbSerialPortServerStream : IModbusStreamServer
       _isListening = true;
       try
       {
-        OnSessionConnected?.Invoke(_stream);
+        OnSessionConnected?.Invoke(Stream);
       }
       catch (Exception ex)
       {
@@ -141,7 +136,7 @@ public class SbSerialPortServerStream : IModbusStreamServer
       _isListening = false;
       try
       {
-        OnSessionDisconnected?.Invoke(_stream);
+        OnSessionDisconnected?.Invoke(Stream);
       }
       catch (Exception ex)
       {

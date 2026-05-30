@@ -1,13 +1,10 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -24,7 +21,7 @@ public abstract class BaseModbusServer : IModbusServer
   public IReadOnlyList<IModbusStream> Sessions => _sessions.Values.Select(s => s.Stream).ToList().AsReadOnly();
 
   /// <inheritdoc />
-  public bool IsRunning => _runningCts != null && !_runningCts.IsCancellationRequested;
+  public bool IsRunning => _runningCts is { IsCancellationRequested: false };
 
   /// <inheritdoc />
   public ModbusCoils Coils { get; } = new();
@@ -89,7 +86,14 @@ public abstract class BaseModbusServer : IModbusServer
   /// <inheritdoc />
   public virtual void Dispose()
   {
-    try { StopAsync().GetAwaiter().GetResult(); } catch { }
+    try
+    {
+      StopAsync().GetAwaiter().GetResult();
+    }
+    catch
+    {
+    }
+
     CancelAndDispose(ref _runningCts);
 
     _sessions.Clear();
@@ -109,25 +113,35 @@ public abstract class BaseModbusServer : IModbusServer
     _sessions.TryAdd(Guid.NewGuid().ToString(), new SessionState(stream));
     Logger.Log(LogLevel.Information, $"Session connected ({stream.GetTransportInfo()})");
 
-    try { OnSessionConnected?.Invoke(stream); }
-    catch (Exception ex) { Logger.Error(ex, "OnSessionConnected callback threw an exception"); }
+    try
+    {
+      OnSessionConnected?.Invoke(stream);
+    }
+    catch (Exception ex)
+    {
+      Logger.Error(ex, "OnSessionConnected callback threw an exception");
+    }
   }
 
   private void OnServerSessionDisconnected(IModbusStream stream)
   {
     foreach (var kv in _sessions)
-    {
       if (ReferenceEquals(kv.Value.Stream, stream))
       {
         _sessions.TryRemove(kv.Key, out _);
         break;
       }
-    }
 
     Logger.Log(LogLevel.Information, $"Session disconnected ({stream.GetTransportInfo()})");
 
-    try { OnSessionDisconnected?.Invoke(stream); }
-    catch (Exception ex) { Logger.Error(ex, "OnSessionDisconnected callback threw an exception"); }
+    try
+    {
+      OnSessionDisconnected?.Invoke(stream);
+    }
+    catch (Exception ex)
+    {
+      Logger.Error(ex, "OnSessionDisconnected callback threw an exception");
+    }
   }
 
   #endregion
@@ -140,7 +154,6 @@ public abstract class BaseModbusServer : IModbusServer
   private async Task ProcessLoopAsync(ChannelReader<ModbusFrameMessage> reader, CancellationToken ct)
   {
     await foreach (var message in reader.ReadAllAsync(ct).ConfigureAwait(false))
-    {
       try
       {
         var response = await ProcessRequestAsync(
@@ -154,20 +167,24 @@ public abstract class BaseModbusServer : IModbusServer
         using var mt = await message.Session.LockAsync(ct).ConfigureAwait(false);
 
         if (response.IsError)
-        {
           await SendErrorResponseFrameAsync(mt, message.Tid, message.UnitId,
             message.FunctionCode, response.ExceptionCode!.Value, ct).ConfigureAwait(false);
-        }
         else
-        {
           await SendResponseFrameAsync(mt, message.Tid, message.UnitId,
             message.FunctionCode, response.Data!.Value, ct).ConfigureAwait(false);
-        }
       }
-      catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-      catch (SbModbusException ex) { Logger.Log(LogLevel.Warning, $"Processing error: {ex.Message}"); }
-      catch (Exception ex) { Logger.Error(ex, "Unexpected processing error"); }
-    }
+      catch (OperationCanceledException) when (ct.IsCancellationRequested)
+      {
+        break;
+      }
+      catch (SbModbusException ex)
+      {
+        Logger.Log(LogLevel.Warning, $"Processing error: {ex.Message}");
+      }
+      catch (Exception ex)
+      {
+        Logger.Error(ex, "Unexpected processing error");
+      }
   }
 
   #endregion
@@ -175,10 +192,10 @@ public abstract class BaseModbusServer : IModbusServer
   /// <summary>
   ///   检查地址范围是否超出可访问区域
   /// </summary>
-  private static bool IsAddressOutOfRange(ModbusFunctionCode fc, ushort addr, ushort qty)
+  private static bool IsAddressOutOfRange(ushort addr, ushort qty)
   {
     if (qty == 0) return true;
-    return (int)addr + qty > ushort.MaxValue + 1;
+    return addr + qty > ushort.MaxValue + 1;
   }
 
   #region 抽象响应方法
@@ -215,7 +232,7 @@ public abstract class BaseModbusServer : IModbusServer
       return ModbusResponseResult.SilentlyIgnore();
 
     // 地址边界检查
-    if (IsAddressOutOfRange(functionCode, startingAddress, quantity))
+    if (IsAddressOutOfRange(startingAddress, quantity))
       return ModbusResponseResult.Error(ModbusExceptionCode.IllegalDataAddress);
 
     try
@@ -256,7 +273,8 @@ public abstract class BaseModbusServer : IModbusServer
     }
     catch (SbModbusException ex) when (ex.ExceptionCode != SbModbusException.NoSpecificCode)
     {
-      Logger.Log(LogLevel.Warning, $"Modbus exception: FC=0x{(int)functionCode:X2}, code=0x{(int)ex.ExceptionCode:X2}, {ex.Message}");
+      Logger.Log(LogLevel.Warning,
+        $"Modbus exception: FC=0x{(int)functionCode:X2}, code=0x{(int)ex.ExceptionCode:X2}, {ex.Message}");
       return ModbusResponseResult.Error(ex.ExceptionCode);
     }
     catch (Exception ex)
@@ -280,7 +298,7 @@ public abstract class BaseModbusServer : IModbusServer
     var result = new byte[1 + byteCount]; // byteCount + data
     result[0] = (byte)byteCount;
 
-    using (var locked = await coils.LockAsync(ct).ConfigureAwait(false))
+    await using (var locked = await coils.LockAsync(ct).ConfigureAwait(false))
     {
       locked.Data.CopyTo(result.AsSpan(1), startingAddress, quantity);
     }
@@ -298,15 +316,9 @@ public abstract class BaseModbusServer : IModbusServer
     var result = new byte[1 + byteCount]; // byteCount + data
     result[0] = (byte)byteCount;
 
-    using (var locked = await registers.LockAsync(ct).ConfigureAwait(false))
+    await using (var locked = await registers.LockAsync(ct).ConfigureAwait(false))
     {
-      // 寄存器内部存储为主机字节序，响应需转换为大端
-      for (var i = 0; i < quantity; i++)
-      {
-        var offset = (startingAddress + i) * 2;
-        var value = MemoryMarshal.Read<ushort>(locked.Data.Slice(offset, 2));
-        BinaryPrimitives.WriteUInt16BigEndian(result.AsSpan(1 + i * 2, 2), value);
-      }
+      locked.Data.Slice(startingAddress * 2, quantity * 2).CopyTo(result.AsSpan(1));
     }
 
     return new ModbusResponseResult { Data = result };
@@ -335,7 +347,7 @@ public abstract class BaseModbusServer : IModbusServer
     var d0 = s[0];
     var d1 = s[1];
 
-    using var locked = await Coils.LockAsync(ct).ConfigureAwait(false);
+    await using var locked = await Coils.LockAsync(ct).ConfigureAwait(false);
     var args = new ModbusCoilsHandlerArgs(locked, startingAddress, 1);
     locked.Data.Set(startingAddress, isOn);
     FireCoilsWriteHandlers(in args, startingAddress, 1);
@@ -366,7 +378,7 @@ public abstract class BaseModbusServer : IModbusServer
 
     var coilBytesMemory = requestData.Slice(1, byteCount);
 
-    using var locked = await Coils.LockAsync(ct).ConfigureAwait(false);
+    await using var locked = await Coils.LockAsync(ct).ConfigureAwait(false);
     var args = new ModbusCoilsHandlerArgs(locked, startingAddress, quantity);
     var coilBytes = coilBytesMemory.Span;
 
@@ -406,7 +418,6 @@ public abstract class BaseModbusServer : IModbusServer
     {
       var handlerEnd = handler.Start + handler.Count;
       if (handler.Start < writeEnd && handlerEnd > writeStart)
-      {
         try
         {
           handler.Action(args);
@@ -415,7 +426,6 @@ public abstract class BaseModbusServer : IModbusServer
         {
           Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
         }
-      }
     }
   }
 
@@ -432,26 +442,15 @@ public abstract class BaseModbusServer : IModbusServer
     if (requestData.Length != 2)
       return ModbusResponseResult.Error(ModbusExceptionCode.IllegalDataValue);
 
-    // 在 await 之前提取（Span 不能跨 await）
-    var dataMemory = requestData;
-
-    using var locked = await HoldingRegisters.LockAsync(ct).ConfigureAwait(false);
+    await using var locked = await HoldingRegisters.LockAsync(ct).ConfigureAwait(false);
     var args = new ModbusRegistersHandlerArgs(locked, startingAddress, 1);
-    // Modbus 协议为大端，需转换为主机字节序存储
-    var value = BinaryPrimitives.ReadUInt16BigEndian(dataMemory.Span);
-    MemoryMarshal.Write(locked.Data.Slice(startingAddress * 2, 2),
-#if NET8_0_OR_GREATER
-      in
-#else
-      ref
-#endif
-      value);
+    requestData.Span.CopyTo(locked.Data.Slice(startingAddress * 2, 2));
     FireRegistersWriteHandlers(in args, startingAddress, 1);
 
     // 回显: startingAddress(2, BE) + data(2)
     var echo = new byte[4];
     startingAddress.WriteTo(echo.AsSpan(), BigAndSmallEndianEncodingMode.ABCD);
-    dataMemory.Span.CopyTo(echo.AsSpan(2));
+    requestData.Span.CopyTo(echo.AsSpan(2));
 
     return new ModbusResponseResult { Data = echo };
   }
@@ -473,21 +472,10 @@ public abstract class BaseModbusServer : IModbusServer
 
     var registerBytesMemory = requestData.Slice(1, byteCount);
 
-    using var locked = await HoldingRegisters.LockAsync(ct).ConfigureAwait(false);
+    await using var locked = await HoldingRegisters.LockAsync(ct).ConfigureAwait(false);
     var args = new ModbusRegistersHandlerArgs(locked, startingAddress, quantity);
-    // 逐寄存器转换为大端→主机字节序
-    var span = registerBytesMemory.Span;
-    for (var i = 0; i < quantity; i++)
-    {
-      var val = BinaryPrimitives.ReadUInt16BigEndian(span.Slice(i * 2, 2));
-      MemoryMarshal.Write(locked.Data.Slice((startingAddress + i) * 2, 2),
-#if NET8_0_OR_GREATER
-        in
-#else
-        ref
-#endif
-        val);
-    }
+    registerBytesMemory.Span.CopyTo(locked.Data.Slice(startingAddress * 2, quantity * 2));
+
     FireRegistersWriteHandlers(in args, startingAddress, quantity);
 
     // 回显: startingAddress(2, BE) + quantity(2, BE)
@@ -515,7 +503,6 @@ public abstract class BaseModbusServer : IModbusServer
     {
       var handlerEnd = handler.Start + handler.Count;
       if (handler.Start < writeEnd && handlerEnd > writeStart)
-      {
         try
         {
           handler.Action(args);
@@ -524,7 +511,6 @@ public abstract class BaseModbusServer : IModbusServer
         {
           Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
         }
-      }
     }
   }
 
@@ -628,10 +614,16 @@ public abstract class BaseModbusServer : IModbusServer
     public bool SuppressResponse { get; init; }
 
     /// <summary>创建错误结果</summary>
-    public static ModbusResponseResult Error(ModbusExceptionCode code) => new() { ExceptionCode = code };
+    public static ModbusResponseResult Error(ModbusExceptionCode code)
+    {
+      return new ModbusResponseResult { ExceptionCode = code };
+    }
 
     /// <summary>创建静默忽略结果（不发任何响应）</summary>
-    public static ModbusResponseResult SilentlyIgnore() => new() { SuppressResponse = true };
+    public static ModbusResponseResult SilentlyIgnore()
+    {
+      return new ModbusResponseResult { SuppressResponse = true };
+    }
   }
 
   /// <summary>
@@ -639,13 +631,17 @@ public abstract class BaseModbusServer : IModbusServer
   /// </summary>
   protected sealed class SessionState
   {
-    /// <summary>会话流</summary>
-    public IModbusStream Stream { get; }
-
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="stream"></param>
     public SessionState(IModbusStream stream)
     {
       Stream = stream;
     }
+
+    /// <summary>会话流</summary>
+    public IModbusStream Stream { get; }
   }
 
   #endregion
@@ -659,7 +655,14 @@ public abstract class BaseModbusServer : IModbusServer
   {
     var source = Interlocked.Exchange(ref cts, null);
     if (source == null) return;
-    try { source.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      source.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     source.Dispose();
   }
 

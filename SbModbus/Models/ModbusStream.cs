@@ -157,7 +157,7 @@ public abstract class ModbusStream : IModbusStream
   /// </summary>
   public struct LockedModbusStream : IDisposable
   {
-    private AsyncLock.InnerLock _lock;
+    private readonly AsyncLock.InnerLock _lock;
 
     private readonly ModbusStream _modbusStream;
 
@@ -318,16 +318,17 @@ public abstract class ModbusStream : IModbusStream
       }
 
       Buffer.AddLastRange(source);
-      if (source.Length > 0 && !_dataAvailableSignaled) { _dataAvailable.Release(); _dataAvailableSignaled = true; }
+      if (source.Length > 0 && !_dataAvailableSignaled)
+      {
+        _dataAvailable.Release();
+        _dataAvailableSignaled = true;
+      }
 
       Logger.Log(LogLevel.Debug, $"Buffer write: {source.Length} bytes, total buffered: {Buffer.Count}");
     }
 
     // AutoReceive 模式下触发数据事件
-    if (AutoReceive && source.Length > 0)
-    {
-      DataReceived(source.ToArray());
-    }
+    if (AutoReceive && source.Length > 0) DataReceived(source.ToArray());
   }
 
   /// <summary>
@@ -339,7 +340,10 @@ public abstract class ModbusStream : IModbusStream
     {
       var cleared = Buffer.Count;
       Buffer.Clear();
-      while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0)) { }
+      while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0))
+      {
+      }
+
       _dataAvailableSignaled = false;
       if (cleared > 0)
         Logger.Log(LogLevel.Debug, $"Buffer cleared, discarded {cleared} bytes");
@@ -357,7 +361,10 @@ public abstract class ModbusStream : IModbusStream
     {
       if (Buffer.Count == 0)
       {
-        while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0)) { }
+        while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0))
+        {
+        }
+
         _dataAvailableSignaled = false;
         return 0;
       }
@@ -367,24 +374,23 @@ public abstract class ModbusStream : IModbusStream
       Buffer.WrittenSpan[..length].CopyTo(span);
       Buffer.RemoveFirst(length);
 
-      if (Buffer.Count > 0 && !_dataAvailableSignaled) { _dataAvailable.Release(); _dataAvailableSignaled = true; }
+      if (Buffer.Count > 0 && !_dataAvailableSignaled)
+      {
+        _dataAvailable.Release();
+        _dataAvailableSignaled = true;
+      }
 
       return length;
     }
   }
 
   /// <summary>
-  ///   获取锁定后的缓冲区，用于外部直接解析帧（对齐 ITransport.GetLockedBuffer 模式）。
+  ///   获取锁定后的缓冲区，用于外部直接解析帧。
   ///   在 using 块内可安全操作 <see cref="FixedSizeRingBuffer{T}" />。
   /// </summary>
   public LockedBuffer GetLockedBuffer()
   {
-#if NET10_0_OR_GREATER
     return new LockedBuffer(Buffer, _locker);
-#else
-    Monitor.Enter(_locker);
-    return new LockedBuffer(Buffer, _locker);
-#endif
   }
 
   /// <summary>
@@ -421,6 +427,7 @@ public abstract class ModbusStream : IModbusStream
       Buffer = buffer;
       _locker = locker;
       _disposed = false;
+      Monitor.Enter(_locker);
     }
 
     /// <inheritdoc />
