@@ -1,155 +1,113 @@
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using Sb.Extensions.System;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusServer;
 
 /// <inheritdoc />
-public class BaseModbusServer : IModbusServer
+public abstract class BaseModbusServer : IModbusServer
 {
-  /// <summary>
-  ///   线圈
-  /// </summary>
-  protected readonly byte[] _coils = new byte[2000 / 8];
-
-  /// <summary>
-  ///   离散
-  /// </summary>
-  protected readonly byte[] _discreteInputs = new byte[2000 / 8];
-
-  /// <summary>
-  ///   寄存器
-  /// </summary>
-  protected readonly byte[] _registers = new byte[65536 * 2];
-
-  /// <summary>
-  ///   清除读缓存
-  /// </summary>
-  public Func<Stream, CancellationToken, Task>? ClearReadBufferAsync;
-
-
-  /// <summary>
-  /// </summary>
-  /// <param name="stream"></param>
-  /// <param name="unitIdentifier"></param>
-  public BaseModbusServer(IModbusStream stream, byte unitIdentifier)
-  {
-    Stream = stream;
-    UnitIdentifier = unitIdentifier;
-
-    ReadTimeout = Stream.ReadTimeout;
-    WriteTimeout = Stream.WriteTimeout;
-
-    CheckIsConnected = s => s.CanRead;
-
-
-    _looperTask = Task.Factory.StartNew(
-      async () => await LooperAsync(_looperCts.Token),
-      _looperCts.Token,
-      TaskCreationOptions.LongRunning,
-      TaskScheduler.Default
-    ).Unwrap();
-  }
-
-
-  /// <summary>
-  ///   读超时时间
-  /// </summary>
-  public int ReadTimeout { get; set; }
-
-  /// <summary>
-  ///   写超时时间
-  /// </summary>
-  public int WriteTimeout { get; set; }
-
-  /// <summary>
-  ///   检查是否已连接
-  /// </summary>
-  public Func<Stream, bool> CheckIsConnected { private get; set; }
+  /// <inheritdoc />
+  public IModbusStream? Stream { get; set; }
 
   /// <inheritdoc />
-  public IModbusStream Stream { get; }
+  public bool IsConnected => Stream?.IsConnected ?? false;
 
   /// <inheritdoc />
-  public bool IsConnected { get; }
+  public ModbusCoils Coils { get; } = new();
 
   /// <inheritdoc />
-  public BigAndSmallEndianEncodingMode EncodingMode { get; set; }
+  public ModbusCoils DiscreteInputs { get; } = new();
 
   /// <inheritdoc />
-  public BitSpan Coils => new(_coils);
+  public ModbusRegisters HoldingRegisters { get; } = new();
 
   /// <inheritdoc />
-  public BitSpan DiscreteInputs => new(_discreteInputs);
+  public ModbusRegisters InputRegisters { get; } = new();
 
   /// <inheritdoc />
-  public Span<byte> Registers => new(_registers);
+  public SortedSet<byte> UnitIdentifier { get; } = [];
 
-  /// <inheritdoc />
-  public byte UnitIdentifier { get; }
-
-  /// <inheritdoc />
-  public Action? OnCoilsWritten { get; set; }
-
-  /// <inheritdoc />
-  public Action? OnRegistersWritten { get; set; }
-
-  /// <inheritdoc />
-  public Span<T> GetRegisters<T>() where T : struct
-  {
-    return MemoryMarshal.Cast<byte, T>(Registers);
-  }
 
   /// <inheritdoc />
   public void Dispose()
   {
-    _looperCts.Cancel();
-    try
-    {
-      _looperTask.Wait();
-    }
-    catch (AggregateException ae)
-    {
-      ae.Handle(ex => ex is OperationCanceledException);
-    }
-
-    _looperCts.Dispose();
-    _looperTask.Dispose();
   }
 
-  #region 循环执行
-
-  private readonly CancellationTokenSource _looperCts = new();
-  private readonly Task _looperTask;
-
-  private async Task LooperAsync(CancellationToken ct)
-  {
-    try
-    {
-      while (true)
-      {
-        ct.ThrowIfCancellationRequested();
-        await LoopAsync(ct).ConfigureAwait(false);
-      }
-    }
-    catch (OperationCanceledException)
-    {
-      // 正常取消时忽略异常
-    }
-    // ReSharper disable once FunctionNeverReturns
-  }
+  #region 写事件
 
   /// <summary>
-  ///   循环执行
+  ///   线圈写事件锁
   /// </summary>
-  /// <returns></returns>
-  protected virtual async Task LoopAsync(CancellationToken ct)
+  protected readonly
+#if NET10_0_OR_GREATER
+    Lock
+#else
+    object
+#endif
+    CoilsWriteHandlersLocker = new();
+
+  /// <summary>
+  ///   寄存器写事件锁
+  /// </summary>
+  protected readonly
+#if NET10_0_OR_GREATER
+    Lock
+#else
+    object
+#endif
+    RegistersWriteHandlersLocker = new();
+
+  /// <summary>
+  ///   线圈写事件
+  /// </summary>
+  protected List<ModbusCoilsWriteHandler> CoilsWriteHandlers { get; } = [];
+
+  /// <summary>
+  ///   寄存器写事件
+  /// </summary>
+  protected List<ModbusRegistersWriteHandler> RegistersWriteHandlers { get; } = [];
+
+  /// <inheritdoc />
+  public void AddHandler(ModbusCoilsWriteHandler handler)
   {
-    await Task.CompletedTask;
+    lock (CoilsWriteHandlersLocker)
+    {
+      if (CoilsWriteHandlers.Contains(handler)) return;
+
+      CoilsWriteHandlers.Add(handler);
+      CoilsWriteHandlers.Sort((p1, p2) => p1.Start.CompareTo(p2.Start));
+    }
+  }
+
+  /// <inheritdoc />
+  public void RemoveHandler(ModbusCoilsWriteHandler handler)
+  {
+    lock (CoilsWriteHandlersLocker)
+    {
+      CoilsWriteHandlers.Remove(handler);
+    }
+  }
+
+  /// <inheritdoc />
+  public void AddHandler(ModbusRegistersWriteHandler handler)
+  {
+    lock (RegistersWriteHandlersLocker)
+    {
+      if (RegistersWriteHandlers.Contains(handler)) return;
+
+      RegistersWriteHandlers.Add(handler);
+      RegistersWriteHandlers.Sort((p1, p2) => p1.Start.CompareTo(p2.Start));
+    }
+  }
+
+  /// <inheritdoc />
+  public void RemoveHandler(ModbusRegistersWriteHandler handler)
+  {
+    lock (RegistersWriteHandlersLocker)
+    {
+      RegistersWriteHandlers.Remove(handler);
+    }
   }
 
   #endregion

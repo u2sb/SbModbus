@@ -42,6 +42,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="SbBitConverter" Version="0.8.0" />
+    <PackageReference Include="SbBitConverter" Version="0.8.2" />
   </ItemGroup>
 </Project>

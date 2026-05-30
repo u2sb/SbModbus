@@ -1,5 +1,5 @@
 using System;
-using Sb.Extensions.System;
+using System.Collections.Generic;
 using SbModbus.Models;
 
 namespace SbModbus.Services.ModbusServer;
@@ -12,7 +12,7 @@ public interface IModbusServer : IDisposable
   /// <summary>
   ///   流
   /// </summary>
-  public IModbusStream Stream { get; }
+  public IModbusStream? Stream { get; set; }
 
   /// <summary>
   ///   是否连接
@@ -20,44 +20,53 @@ public interface IModbusServer : IDisposable
   public bool IsConnected { get; }
 
   /// <summary>
-  ///   编码方式 未启用
-  /// </summary>
-  public BigAndSmallEndianEncodingMode EncodingMode { get; set; }
-
-  /// <summary>
   ///   线圈
   /// </summary>
-  public BitSpan Coils { get; }
+  public ModbusCoils Coils { get; }
 
   /// <summary>
   ///   离散输入
   /// </summary>
-  public BitSpan DiscreteInputs { get; }
+  public ModbusCoils DiscreteInputs { get; }
 
   /// <summary>
-  ///   寄存器
+  ///   保持寄存器
+  ///   读/ 写
   /// </summary>
-  public Span<byte> Registers { get; }
+  public ModbusRegisters HoldingRegisters { get; }
+
+  /// <summary>
+  ///   输入寄存器
+  ///   读
+  /// </summary>
+  public ModbusRegisters InputRegisters { get; }
 
   /// <summary>
   ///   站号列表
   /// </summary>
-  public byte UnitIdentifier { get; }
+  public SortedSet<byte> UnitIdentifier { get; }
 
   /// <summary>
-  ///   当线圈被写时
+  ///   注册事件
   /// </summary>
-  public Action? OnCoilsWritten { get; set; }
+  /// <param name="handler"></param>
+  public void AddHandler(ModbusCoilsWriteHandler handler);
 
   /// <summary>
-  ///   当寄存器被写时
+  ///   取消事件
   /// </summary>
-  public Action? OnRegistersWritten { get; set; }
+  /// <param name="handler"></param>
+  public void RemoveHandler(ModbusCoilsWriteHandler handler);
 
   /// <summary>
-  ///   获取寄存器
+  ///   注册事件
   /// </summary>
-  /// <typeparam name="T"></typeparam>
-  /// <returns></returns>
-  public Span<T> GetRegisters<T>() where T : struct;
+  /// <param name="handler"></param>
+  public void AddHandler(ModbusRegistersWriteHandler handler);
+
+  /// <summary>
+  ///   取消事件
+  /// </summary>
+  /// <param name="handler"></param>
+  public void RemoveHandler(ModbusRegistersWriteHandler handler);
 }
