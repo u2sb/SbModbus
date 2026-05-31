@@ -171,7 +171,8 @@ public abstract class ModbusStream : IModbusStream
 
     internal static LockedModbusStream Lock(ModbusStream modbusStream)
     {
-      return SbThreading.Jtf.Run(() => LockAsync(modbusStream));
+      var l = modbusStream.StreamLock.Lock();
+      return new LockedModbusStream(modbusStream, l);
     }
 
     internal static async Task<LockedModbusStream> LockAsync(ModbusStream modbusStream,

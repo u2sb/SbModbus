@@ -5,6 +5,13 @@ using SbModbus.Services.ModbusClient;
 
 namespace SbModbus.Models;
 
+/// <remarks>
+///   此文件中的委托被 <see cref="SbModbus.Services.ModbusClient.IModbusClient"/> 的事件
+///   和 <see cref="SbModbus.Models.IModbusStream"/> 的 OnConnectStateChanged 事件共同使用。
+///   <see cref="ModbusStreamStateHandler{T}"/> 的 sender 参数固定为 IModbusClient，
+///   在用于 IModbusStream 场景时调用者负责传递正确的发送方。
+/// </remarks>
+
 /// <summary>
 ///   表示当通信通道传输数据时触发的回调方法
 /// </summary>

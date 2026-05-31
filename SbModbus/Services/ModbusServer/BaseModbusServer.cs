@@ -77,10 +77,11 @@ public abstract class BaseModbusServer : IModbusServer
   }
 
   /// <inheritdoc />
-  public async Task StopAsync(CancellationToken ct = default)
+  public Task StopAsync(CancellationToken ct = default)
   {
-    if (!IsRunning) return;
-    CancelAndDispose(ref _runningCts);
+    if (IsRunning) CancelAndDispose(ref _runningCts);
+
+    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
@@ -626,7 +627,6 @@ public abstract class BaseModbusServer : IModbusServer
   protected sealed class SessionState
   {
     /// <summary>
-    /// 
     /// </summary>
     /// <param name="stream"></param>
     public SessionState(IModbusStream stream)

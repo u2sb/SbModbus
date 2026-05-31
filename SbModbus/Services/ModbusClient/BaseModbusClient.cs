@@ -74,6 +74,7 @@ public abstract class BaseModbusClient : IModbusClient
     OnDataSent = null;
     OnDataSentAsync = null;
     Logger.Information("ModbusClient disposed");
+    GC.SuppressFinalize(this);
   }
 
   private void StreamOnConnectStateChanged(IModbusStream sender, bool b)
@@ -177,18 +178,6 @@ public abstract class BaseModbusClient : IModbusClient
       {
         Logger.Error(ex, "Async event handler threw an exception");
       }
-    }
-  }
-
-  private static async Task InvokeHandlerAsync(ModbusClientAsyncHandler handler, IModbusClient sender, ReadOnlyMemory<byte> data, CancellationToken ct)
-  {
-    try
-    {
-      await handler.Invoke(sender, data, ct).ConfigureAwait(false);
-    }
-    catch (Exception ex)
-    {
-      Logger.Error(ex, "Async event handler threw an exception");
     }
   }
 

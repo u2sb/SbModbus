@@ -19,75 +19,75 @@ public interface IModbusStream : IDisposable, IAsyncDisposable
   /// <summary>
   ///   是否已销毁
   /// </summary>
-  bool IsDisposed { get; }
+  public bool IsDisposed { get; }
 
   /// <summary>
   ///   是否连接
   /// </summary>
-  bool IsConnected { get; }
+  public bool IsConnected { get; }
 
   /// <summary>
   ///   自动接收模式 — 设为 true 时，收到数据会触发 OnDataReceived 事件
   /// </summary>
-  bool AutoReceive { get; set; }
+  public bool AutoReceive { get; set; }
 
   /// <summary>
   ///   读取超时时间 ms
   /// </summary>
-  int ReadTimeout { get; set; }
+  public int ReadTimeout { get; set; }
 
   /// <summary>
   ///   写入超时时间 ms
   /// </summary>
-  int WriteTimeout { get; set; }
+  public int WriteTimeout { get; set; }
 
   /// <summary>
   ///   连接
   /// </summary>
-  bool Connect();
+  public bool Connect();
 
   /// <summary>
   ///   断开连接
   /// </summary>
-  bool Disconnect();
+  public bool Disconnect();
 
   /// <summary>
   ///   异步连接
   /// </summary>
-  Task<bool> ConnectAsync(CancellationToken ct = default);
+  public Task<bool> ConnectAsync(CancellationToken ct = default);
 
   /// <summary>
   ///   异步断开连接
   /// </summary>
-  Task<bool> DisconnectAsync(CancellationToken ct = default);
+  public Task<bool> DisconnectAsync(CancellationToken ct = default);
 
   /// <summary>
   ///   接收到数据时触发（同步）
   /// </summary>
-  event ModbusStreamDataHandler? OnDataReceived;
+  public event ModbusStreamDataHandler? OnDataReceived;
 
   /// <summary>
   ///   发送数据时触发（同步）
   /// </summary>
-  event ModbusStreamDataHandler? OnDataSent;
+  public event ModbusStreamDataHandler? OnDataSent;
 
   /// <summary>
   ///   连接状态改变时触发
   /// </summary>
-  event Action<IModbusStream, bool>? OnConnectStateChanged;
+  public event Action<IModbusStream, bool>? OnConnectStateChanged;
 
   /// <summary>
   ///   锁
   /// </summary>
-  ModbusStream.LockedModbusStream Lock();
+  public ModbusStream.LockedModbusStream Lock();
 
   /// <summary>
   ///   异步锁
   /// </summary>
-  Task<ModbusStream.LockedModbusStream> LockAsync(CancellationToken ct = default);
+  public Task<ModbusStream.LockedModbusStream> LockAsync(CancellationToken ct = default);
 
   /// <summary>
   ///   获取传输层描述信息，用于日志记录
   /// </summary>
-  string GetTransportInfo();
+  public string GetTransportInfo();
 }
