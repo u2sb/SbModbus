@@ -158,4 +158,15 @@ public interface IModbusClient : IDisposable
   /// <param name="ct"></param>
   public ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress, ReadOnlyMemory<byte> data,
     CancellationToken ct = default);
+
+  /// <summary>
+  ///   写入多个线圈 FC15
+  /// </summary>
+  /// <param name="unitIdentifier"></param>
+  /// <param name="startingAddress"></param>
+  /// <param name="quantity">线圈数量</param>
+  /// <param name="data">线圈位打包字节数据</param>
+  /// <param name="ct"></param>
+  public ValueTask WriteMultipleCoilsAsync(int unitIdentifier, int startingAddress, int quantity, ReadOnlyMemory<byte> data,
+    CancellationToken ct = default);
 }

@@ -99,6 +99,30 @@ public partial class ModbusTcpClient
   }
 
   /// <inheritdoc />
+  public override async ValueTask WriteMultipleCoilsAsync(int unitIdentifier, int startingAddress, int quantity,
+    ReadOnlyMemory<byte> data, CancellationToken ct = default)
+  {
+    var l = data.Length;
+    Logger.Log(LogLevel.Debug, $"WriteMultipleCoils: unit={unitIdentifier}, address={startingAddress}, coils={quantity}");
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleCoils, startingAddress, data.Span,
+      writer =>
+      {
+        // 写线圈数量
+        writer.Write(ConvertUshort(quantity).WithEndianness(true));
+
+        // 写字节数
+        writer.Write(ConvertByte(l));
+      });
+
+
+    // 7MBAP 1功能码 2起始地址 2线圈数量
+    const int length = 7 + 1 + 2 + 2;
+    ((ushort)(buffer.WrittenCount - 6)).WriteTo(buffer.RawBuffer.AsSpan(4, 2), BigAndSmallEndianEncodingMode.ABCD);
+
+    await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
+  }
+
+  /// <inheritdoc />
   protected override async ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier,
     ModbusFunctionCode functionCode,
     int startingAddress, int count, CancellationToken ct = default)

@@ -92,6 +92,27 @@ public partial class ModbusRtuClient
     _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
   }
 
+  /// <inheritdoc />
+  public override async ValueTask WriteMultipleCoilsAsync(int unitIdentifier, int startingAddress, int quantity,
+    ReadOnlyMemory<byte> data, CancellationToken ct = default)
+  {
+    var l = data.Length;
+    Logger.Log(LogLevel.Debug, $"WriteMultipleCoils: slave={unitIdentifier}, address={startingAddress}, coils={quantity}");
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleCoils, startingAddress, data.Span,
+      writer =>
+      {
+        // 写线圈数量
+        writer.Write(ConvertUshort(quantity).WithEndianness(true));
+
+        // 写字节数
+        writer.Write(ConvertByte(l));
+      });
+
+    // 1设备地址 1功能码 2起始地址 2线圈数量 2校验
+    const int length = 1 + 1 + 2 + 2 + 2;
+    _ = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
+  }
+
   #region 通用方法
 
   /// <exception cref="SbModbusException"></exception>

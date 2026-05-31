@@ -116,8 +116,8 @@ public class ModbusRequest
           await client.WriteMultipleRegistersAsync(SlaveId, StartingAddress, Data, ct).ConfigureAwait(false);
           break;
         case ModbusFunctionCode.WriteMultipleCoils:
-          throw new SbModbusException(
-            $"Function code '{FunctionCode}' is not supported by {nameof(IModbusClient)} currently.");
+          await client.WriteMultipleCoilsAsync(SlaveId, StartingAddress, Quantity, Data, ct).ConfigureAwait(false);
+          break;
         default:
           throw new SbModbusException(
             $"Function code '{FunctionCode}' is not supported by {nameof(ModbusRequest)}.{nameof(SendAsync)}().");

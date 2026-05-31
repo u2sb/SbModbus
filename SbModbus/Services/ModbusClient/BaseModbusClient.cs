@@ -421,5 +421,9 @@ public abstract class BaseModbusClient : IModbusClient
   public abstract ValueTask WriteMultipleRegistersAsync(int unitIdentifier, int startingAddress,
     ReadOnlyMemory<byte> data, CancellationToken ct = default);
 
+  /// <inheritdoc />
+  public abstract ValueTask WriteMultipleCoilsAsync(int unitIdentifier, int startingAddress, int quantity,
+    ReadOnlyMemory<byte> data, CancellationToken ct = default);
+
   #endregion
 }
