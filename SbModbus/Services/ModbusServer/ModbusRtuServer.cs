@@ -13,6 +13,9 @@ namespace SbModbus.Services.ModbusServer;
 /// </summary>
 public class ModbusRtuServer : BaseModbusServer
 {
+  /// <inheritdoc />
+  protected override TryParseFrameDelegate FrameParser => SbModbus.Services.ModbusServer.FrameParser.TryParseRtu;
+
   #region 响应构建
 
   /// <inheritdoc />

@@ -6,7 +6,7 @@ namespace SbModbus.Models;
 /// <summary>
 ///   Modbus 传输层服务器抽象 — 管理监听和会话生命周期。
 ///   串口/ TCP/ UDP 各自实现此接口。
-///   内部通过 Channel 传递解析后的请求帧给上层协议处理。
+///   StreamServer 负责解析帧并按 StationId 路由到已注册的 Channel。
 /// </summary>
 public interface IModbusStreamServer : IDisposable
 {
@@ -21,9 +21,25 @@ public interface IModbusStreamServer : IDisposable
   public int SessionCount { get; }
 
   /// <summary>
-  ///   已解析的 Modbus 请求帧 Channel（上层从此读取）
+  ///   帧解析器 — 由 <see cref="SbModbus.Services.ModbusServer.BaseModbusServer"/> 在 <c>StartAsync</c> 时注入。
+  ///   <see cref="SbModbus.Services.ModbusServer.ModbusRtuServer"/> 注入 RTU 解析；
+  ///   <see cref="SbModbus.Services.ModbusServer.ModbusTcpServer"/> 注入 TCP 解析。
   /// </summary>
-  public ChannelReader<ModbusFrameMessage> FrameReader { get; }
+  public TryParseFrameDelegate FrameParser { set; }
+
+  /// <summary>
+  ///   注册站号 — ModbusServer 调用此方法注册其关心的站号。
+  ///   注册后，StreamServer 只将匹配 StationId 的帧写入对应的 ChannelWriter。
+  /// </summary>
+  /// <param name="stationId">从站地址</param>
+  /// <param name="writer">对应 ModbusServer 的帧 Channel Writer</param>
+  public void RegisterStation(byte stationId, ChannelWriter<ModbusFrameMessage> writer);
+
+  /// <summary>
+  ///   取消注册站号
+  /// </summary>
+  /// <param name="stationId">从站地址</param>
+  public void UnregisterStation(byte stationId);
 
   /// <summary>
   ///   启动监听

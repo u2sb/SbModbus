@@ -15,7 +15,12 @@ public abstract class BaseModbusServer : IModbusServer
 {
   private readonly ConcurrentDictionary<string, SessionState> _sessions = new();
 
+  private readonly Channel<ModbusFrameMessage> _frameChannel =
+    Channel.CreateUnbounded<ModbusFrameMessage>(
+      new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+
   private CancellationTokenSource? _runningCts;
+  private IModbusStreamServer? _server;
 
   /// <inheritdoc />
   public IReadOnlyList<IModbusStream> Sessions => _sessions.Values.Select(s => s.Stream).ToList().AsReadOnly();
@@ -36,7 +41,7 @@ public abstract class BaseModbusServer : IModbusServer
   public ModbusRegisters InputRegisters { get; } = new();
 
   /// <inheritdoc />
-  public SortedSet<byte> UnitIdentifier { get; } = [];
+  public SortedSet<byte> UnitIdentifier { get; } = [1];
 
   /// <inheritdoc />
   public event Action<IModbusStream>? OnSessionConnected;
@@ -49,21 +54,28 @@ public abstract class BaseModbusServer : IModbusServer
   /// <inheritdoc />
   public async Task StartAsync(IModbusStreamServer server, CancellationToken ct = default)
   {
-    if (IsRunning)
-      throw new SbModbusException("Server is already running");
+    if (IsRunning) return;
 
+    _server = server;
     _runningCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+    // 注入帧解析器（由子类决定 RTU / TCP 解析策略）
+    server.FrameParser = FrameParser;
 
     // 订阅会话事件（用于跟踪 Sessions 列表）
     server.OnSessionConnected += OnServerSessionConnected;
     server.OnSessionDisconnected += OnServerSessionDisconnected;
 
-    server.Start();
+    // 注册所有站号到 StreamServer，让 StreamServer 按 StationId 路由帧
+    foreach (var unitId in UnitIdentifier)
+      server.RegisterStation(unitId, _frameChannel.Writer);
+
+    if (!server.IsListening) server.Start();
 
     try
     {
-      // 从 Channel 读取解析后的帧并处理
-      await ProcessLoopAsync(server.FrameReader, _runningCts.Token).ConfigureAwait(false);
+      // 从自己的 Channel 读取解析后的帧并处理
+      await ProcessLoopAsync(_runningCts.Token).ConfigureAwait(false);
     }
     catch (OperationCanceledException)
     {
@@ -71,15 +83,26 @@ public abstract class BaseModbusServer : IModbusServer
     }
     finally
     {
+      // 取消注册
+      foreach (var unitId in UnitIdentifier)
+        server.UnregisterStation(unitId);
       server.OnSessionConnected -= OnServerSessionConnected;
       server.OnSessionDisconnected -= OnServerSessionDisconnected;
+      _server = null;
     }
   }
 
   /// <inheritdoc />
   public Task StopAsync(CancellationToken ct = default)
   {
-    if (IsRunning) CancelAndDispose(ref _runningCts);
+    if (IsRunning)
+    {
+      var server = _server;
+      if (server != null)
+        foreach (var unitId in UnitIdentifier)
+          server.UnregisterStation(unitId);
+      CancelAndDispose(ref _runningCts);
+    }
 
     return Task.CompletedTask;
   }
@@ -97,7 +120,10 @@ public abstract class BaseModbusServer : IModbusServer
 
     CancelAndDispose(ref _runningCts);
 
+    _frameChannel.Writer.TryComplete();
+
     _sessions.Clear();
+    _server = null;
 
     OnSessionConnected = null;
     OnSessionDisconnected = null;
@@ -150,11 +176,11 @@ public abstract class BaseModbusServer : IModbusServer
   #region Channel 处理循环
 
   /// <summary>
-  ///   从 Channel 读取解析后的请求帧，处理并发送响应
+  ///   从自己的 Channel 读取解析后的请求帧，处理并发送响应
   /// </summary>
-  private async Task ProcessLoopAsync(ChannelReader<ModbusFrameMessage> reader, CancellationToken ct)
+  private async Task ProcessLoopAsync(CancellationToken ct)
   {
-    await foreach (var message in reader.ReadAllAsync(ct).ConfigureAwait(false))
+    await foreach (var message in _frameChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
       try
       {
         var response = await ProcessRequestAsync(
@@ -200,6 +226,13 @@ public abstract class BaseModbusServer : IModbusServer
   }
 
   #region 抽象响应方法
+
+  /// <summary>
+  ///   帧解析委托 — 子类返回对应的解析策略。
+  ///   <see cref="SbModbus.Services.ModbusServer.ModbusRtuServer" /> 返回 RTU 解析；
+  ///   <see cref="SbModbus.Services.ModbusServer.ModbusTcpServer" /> 返回 TCP 解析。
+  /// </summary>
+  protected abstract TryParseFrameDelegate FrameParser { get; }
 
   /// <summary>
   ///   构建并发送正常响应帧（子类实现 RTU/TCP 格式差异）
@@ -411,19 +444,18 @@ public abstract class BaseModbusServer : IModbusServer
 
     lock (CoilsWriteHandlersLocker)
     {
-      foreach (var handler in CoilsWriteHandlers)
-      {
-        var handlerEnd = handler.Start + handler.Count;
-        if (handler.Start < writeEnd && handlerEnd > writeStart)
-          try
-          {
-            handler.Action(args);
-          }
-          catch (Exception ex)
-          {
-            Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
-          }
-      }
+      foreach (var handler in CoilsWriteHandlers
+                 .Select(handler => new { handler, handlerEnd = handler.Start + handler.Count })
+                 .Where(t => t.handler.Start < writeEnd && t.handlerEnd > writeStart)
+                 .Select(t => t.handler))
+        try
+        {
+          handler.Action(args);
+        }
+        catch (Exception ex)
+        {
+          Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
+        }
     }
   }
 
@@ -493,19 +525,18 @@ public abstract class BaseModbusServer : IModbusServer
 
     lock (RegistersWriteHandlersLocker)
     {
-      foreach (var handler in RegistersWriteHandlers)
-      {
-        var handlerEnd = handler.Start + handler.Count;
-        if (handler.Start < writeEnd && handlerEnd > writeStart)
-          try
-          {
-            handler.Action(args);
-          }
-          catch (Exception ex)
-          {
-            Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
-          }
-      }
+      foreach (var handler in RegistersWriteHandlers
+                 .Select(handler => new { handler, handlerEnd = handler.Start + handler.Count })
+                 .Where(t => t.handler.Start < writeEnd && t.handlerEnd > writeStart)
+                 .Select(t => t.handler))
+        try
+        {
+          handler.Action(args);
+        }
+        catch (Exception ex)
+        {
+          Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
+        }
     }
   }
 

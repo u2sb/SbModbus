@@ -13,20 +13,20 @@ namespace SbModbus.TcpStream;
 /// <summary>
 ///   UDP 服务器流 — 基于 .NET 原生 UdpClient，绑定端口监听并管理远程端点会话
 /// </summary>
-public class SbUdpServerStream : IModbusStreamServer
+public class SbUdpStreamServer : IModbusStreamServer
 {
   private static readonly TimeSpan TaskWaitTimeout = TimeSpan.FromSeconds(3);
-
-  private readonly Channel<ModbusFrameMessage> _frameChannel =
-    Channel.CreateUnbounded<ModbusFrameMessage>(new UnboundedChannelOptions
-      { SingleReader = true, SingleWriter = false });
 
   private readonly IPEndPoint _localEndPoint;
 
   private readonly ConcurrentDictionary<IPEndPoint, SbUdpSessionStream> _sessions = new();
 
+  private readonly ConcurrentDictionary<byte, ChannelWriter<ModbusFrameMessage>> _stationWriters = new();
+
   private volatile bool _isDisposed;
   private volatile bool _isListening;
+
+  private TryParseFrameDelegate _frameParser = SbModbus.Services.ModbusServer.FrameParser.TryParseTcp;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
 
@@ -43,7 +43,22 @@ public class SbUdpServerStream : IModbusStreamServer
   public bool IsListening => _isListening;
 
   /// <inheritdoc />
-  public ChannelReader<ModbusFrameMessage> FrameReader => _frameChannel.Reader;
+  public TryParseFrameDelegate FrameParser
+  {
+    set => _frameParser = value;
+  }
+
+  /// <inheritdoc />
+  public void RegisterStation(byte stationId, ChannelWriter<ModbusFrameMessage> writer)
+  {
+    _stationWriters[stationId] = writer;
+  }
+
+  /// <inheritdoc />
+  public void UnregisterStation(byte stationId)
+  {
+    _stationWriters.TryRemove(stationId, out _);
+  }
 
   /// <summary>
   ///   新会话（远程端点首次发来数据）时触发。调用方应在此事件中为每个会话创建 <see cref="Services.ModbusServer.BaseModbusServer" />
@@ -142,7 +157,7 @@ public class SbUdpServerStream : IModbusStreamServer
   /// </summary>
   /// <param name="address">监听地址（通常为 IPAddress.Any）</param>
   /// <param name="port">监听端口</param>
-  public SbUdpServerStream(IPAddress address, int port)
+  public SbUdpStreamServer(IPAddress address, int port)
   {
     _localEndPoint = new IPEndPoint(address, port);
   }
@@ -151,7 +166,7 @@ public class SbUdpServerStream : IModbusStreamServer
   ///   创建 UDP 服务器（监听所有地址）
   /// </summary>
   /// <param name="port">监听端口</param>
-  public SbUdpServerStream(int port)
+  public SbUdpStreamServer(int port)
     : this(IPAddress.Any, port)
   {
   }
@@ -160,7 +175,7 @@ public class SbUdpServerStream : IModbusStreamServer
   ///   创建 UDP 服务器
   /// </summary>
   /// <param name="endpoint">监听端点</param>
-  public SbUdpServerStream(IPEndPoint endpoint)
+  public SbUdpStreamServer(IPEndPoint endpoint)
   {
     _localEndPoint = endpoint;
   }
@@ -258,7 +273,7 @@ public class SbUdpServerStream : IModbusStreamServer
 
     _sessions.Clear();
 
-    _frameChannel.Writer.TryComplete();
+    _stationWriters.Clear();
 
     OnSessionConnected = null;
     OnSessionDisconnected = null;
@@ -319,7 +334,11 @@ public class SbUdpServerStream : IModbusStreamServer
     if (lb.Buffer.Count == 0) return;
     var remaining = lb.Buffer.WrittenSpan;
     var len = remaining.Length;
-    while (FrameParser.TryParseTcp(session, ref remaining, out var message)) _frameChannel.Writer.TryWrite(message);
+    while (_frameParser(session, ref remaining, out var message))
+    {
+      if (_stationWriters.TryGetValue(message.UnitId, out var writer))
+        writer.TryWrite(message);
+    }
 
     var consumed = len - remaining.Length;
     if (consumed > 0)
@@ -418,14 +437,14 @@ public class SbUdpServerStream : IModbusStreamServer
 /// </summary>
 public class SbUdpSessionStream : ModbusStream, IModbusStream
 {
-  private readonly SbUdpServerStream _server;
+  private readonly SbUdpStreamServer _streamServer;
   private readonly string _transportInfo;
 
   private volatile bool _isDisposedLocal;
 
-  internal SbUdpSessionStream(SbUdpServerStream server, IPEndPoint remoteEndPoint)
+  internal SbUdpSessionStream(SbUdpStreamServer streamServer, IPEndPoint remoteEndPoint)
   {
-    _server = server;
+    _streamServer = streamServer;
     RemoteEndPoint = remoteEndPoint;
     _transportInfo = $"UDP-Session:{remoteEndPoint.Address}:{remoteEndPoint.Port}";
   }
@@ -447,11 +466,11 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
     if (_isDisposedLocal)
       throw new SbModbusException("UDP session is disconnected");
 
-    await _server.SendAsync(buffer, RemoteEndPoint, ct).ConfigureAwait(false);
+    await _streamServer.SendAsync(buffer, RemoteEndPoint, ct).ConfigureAwait(false);
   }
 
   /// <summary>
-  ///   将接收到的数据写入缓冲区（由 SbUdpServerStream 接收循环调用）
+  ///   将接收到的数据写入缓冲区（由 SbUdpStreamServer 接收循环调用）
   /// </summary>
   internal void EnqueueReceivedData(byte[] buffer)
   {
@@ -496,7 +515,7 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
     Logger.Information($"UDP session {RemoteEndPoint} disconnecting");
 
     _isDisposedLocal = true;
-    _server.RemoveSession(RemoteEndPoint, this);
+    _streamServer.RemoveSession(RemoteEndPoint, this);
     ConnectStateChanged(false);
     return true;
   }

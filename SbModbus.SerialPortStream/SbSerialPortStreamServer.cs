@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using SbModbus.Models;
 using SbModbus.Services.ModbusServer;
@@ -8,21 +9,22 @@ namespace SbModbus.SerialPortStream;
 /// <summary>
 ///   串口服务器流 — 包装 <see cref="SbSerialPortStream" />，实现 <see cref="IModbusStreamServer" />。
 ///   串口天然是单会话模型，Sessions 列表始终只有 0 或 1 个元素。
+///   按 StationId 将解析后的帧路由到对应注册的 Channel。
 /// </summary>
-public class SbSerialPortServerStream : IModbusStreamServer
+public class SbSerialPortStreamServer : IModbusStreamServer
 {
-  private readonly Channel<ModbusFrameMessage> _frameChannel =
-    Channel.CreateUnbounded<ModbusFrameMessage>(
-      new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+  private readonly ConcurrentDictionary<byte, ChannelWriter<ModbusFrameMessage>> _stationWriters = new();
 
   private volatile bool _isDisposed;
   private volatile bool _isListening;
+
+  private TryParseFrameDelegate _frameParser = SbModbus.Services.ModbusServer.FrameParser.TryParseRtu;
 
   /// <summary>
   ///   创建串口服务器流
   /// </summary>
   /// <param name="stream">底层串口流</param>
-  public SbSerialPortServerStream(SbSerialPortStream stream)
+  public SbSerialPortStreamServer(SbSerialPortStream stream)
   {
     Stream = stream ?? throw new ArgumentNullException(nameof(stream));
     Stream.OnConnectStateChanged += OnStreamConnectStateChanged;
@@ -40,7 +42,22 @@ public class SbSerialPortServerStream : IModbusStreamServer
   public int SessionCount => Stream.IsConnected ? 1 : 0;
 
   /// <inheritdoc />
-  public ChannelReader<ModbusFrameMessage> FrameReader => _frameChannel.Reader;
+  public TryParseFrameDelegate FrameParser
+  {
+    set => _frameParser = value;
+  }
+
+  /// <inheritdoc />
+  public void RegisterStation(byte stationId, ChannelWriter<ModbusFrameMessage> writer)
+  {
+    _stationWriters[stationId] = writer;
+  }
+
+  /// <inheritdoc />
+  public void UnregisterStation(byte stationId)
+  {
+    _stationWriters.TryRemove(stationId, out _);
+  }
 
   /// <inheritdoc />
   public event Action<IModbusStream>? OnSessionConnected;
@@ -69,9 +86,6 @@ public class SbSerialPortServerStream : IModbusStreamServer
   {
     if (!_isListening) return;
 
-    // 先关闭 Channel，让 ProcessLoopAsync 退出
-    _frameChannel.Writer.TryComplete();
-
     Stream.AutoReceive = false;
     Stream.OnDataReceived -= OnStreamDataReceived;
 
@@ -89,7 +103,7 @@ public class SbSerialPortServerStream : IModbusStreamServer
     Stream.OnConnectStateChanged -= OnStreamConnectStateChanged;
     Stream.Dispose();
 
-    _frameChannel.Writer.TryComplete();
+    _stationWriters.Clear();
 
     OnSessionConnected = null;
     OnSessionDisconnected = null;
@@ -105,7 +119,11 @@ public class SbSerialPortServerStream : IModbusStreamServer
     if (lb.Buffer.Count == 0) return;
     var remaining = lb.Buffer.WrittenSpan;
     var len = remaining.Length;
-    while (FrameParser.TryParseRtu(Stream, ref remaining, out var message)) _frameChannel.Writer.TryWrite(message);
+    while (_frameParser(Stream, ref remaining, out var message))
+    {
+      if (_stationWriters.TryGetValue(message.UnitId, out var writer))
+        writer.TryWrite(message);
+    }
 
     var consumed = len - remaining.Length;
     if (consumed > 0)

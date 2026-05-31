@@ -10,7 +10,7 @@ namespace SbModbus.Tests;
 
 public class ModbusTcpE2ETests : IAsyncLifetime
 {
-    private SbTcpServerStream _serverStream = null!;
+    private SbTcpStreamServer _streamServer = null!;
     private ModbusTcpServer _server = null!;
     private SbTcpClientStream _clientStream = null!;
     private ModbusTcpClient _client = null!;
@@ -18,17 +18,17 @@ public class ModbusTcpE2ETests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var probeStream = new SbTcpServerStream(IPAddress.Loopback, 0);
+        var probeStream = new SbTcpStreamServer(IPAddress.Loopback, 0);
         probeStream.Start();
         _port = probeStream.LocalEndPoint!.Port;
         probeStream.Stop();
         probeStream.Dispose();
         await Task.Delay(100);
 
-        _serverStream = new SbTcpServerStream(IPAddress.Loopback, _port);
+        _streamServer = new SbTcpStreamServer(IPAddress.Loopback, _port);
         _server = new ModbusTcpServer();
         _server.UnitIdentifier.Add(1);
-        _ = _server.StartAsync(_serverStream);
+        _ = _server.StartAsync(_streamServer);
         await Task.Delay(300);
 
         _clientStream = new SbTcpClientStream(IPAddress.Loopback, _port);
@@ -39,7 +39,7 @@ public class ModbusTcpE2ETests : IAsyncLifetime
     public async Task DisposeAsync()
     {
         // 先停止服务端，再断开客户端
-        try { await _server.StopAsync(); _serverStream.Stop(); _serverStream.Dispose(); _server.Dispose(); } catch { }
+        try { await _server.StopAsync(); _streamServer.Stop(); _streamServer.Dispose(); _server.Dispose(); } catch { }
         try { await _clientStream.DisconnectAsync(); _clientStream.Dispose(); _client.Dispose(); } catch { }
     }
 
