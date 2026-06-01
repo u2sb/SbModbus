@@ -17,13 +17,13 @@ namespace SbModbus.SerialPortStream;
 public class SbSerialPortStream : ModbusStream, IModbusStream
 {
   /// <inheritdoc />
-  public SbSerialPortStream() : base()
+  public SbSerialPortStream()
   {
     SerialPort = new SerialPort();
   }
 
   /// <inheritdoc />
-  public SbSerialPortStream(SerialPort serialPort) : base()
+  public SbSerialPortStream(SerialPort serialPort)
   {
     SerialPort = serialPort;
   }
@@ -83,11 +83,11 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     // 格式: COM3:9600-8-N-1
     var parity = SerialPort.Parity switch
     {
-      System.IO.Ports.Parity.None => 'N',
-      System.IO.Ports.Parity.Odd => 'O',
-      System.IO.Ports.Parity.Even => 'E',
-      System.IO.Ports.Parity.Mark => 'M',
-      System.IO.Ports.Parity.Space => 'S',
+      Parity.None => 'N',
+      Parity.Odd => 'O',
+      Parity.Even => 'E',
+      Parity.Mark => 'M',
+      Parity.Space => 'S',
       _ => '?'
     };
 

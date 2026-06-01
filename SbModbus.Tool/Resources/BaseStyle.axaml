@@ -45,7 +45,7 @@
   </Style>
 
   <Style Selector="Border">
-    <Setter Property="BorderBrush" Value="#D9D9D9"></Setter>
+    <Setter Property="BorderBrush" Value="#D9D9D9" />
   </Style>
 
   <!-- log items control (no selection) -->

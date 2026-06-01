@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System.Buffers.RingBuffers;
 using Sb.Extensions.System.Threading;
-using SbModbus.Utils;
 
 namespace SbModbus.Models;
 

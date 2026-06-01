@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
-using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -20,7 +19,7 @@ public partial class ModbusTcpClient
       ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
-    var length = 7 + 1 + 1 + ((count + 7) >> 3);
+    var length = 7 + 1 + 1 + (count + 7 >> 3);
     ((ushort)(buffer.WrittenCount - 6)).WriteTo(buffer.RawBuffer.AsSpan(4, 2), BigAndSmallEndianEncodingMode.ABCD);
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
 
@@ -37,7 +36,7 @@ public partial class ModbusTcpClient
       ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
-    var length = 7 + 1 + 1 + ((count + 7) >> 3);
+    var length = 7 + 1 + 1 + (count + 7 >> 3);
     ((ushort)(buffer.WrittenCount - 6)).WriteTo(buffer.RawBuffer.AsSpan(4, 2), BigAndSmallEndianEncodingMode.ABCD);
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
 
@@ -79,7 +78,8 @@ public partial class ModbusTcpClient
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     var l = data.Length;
-    Logger.Log(LogLevel.Debug, $"WriteMultipleRegisters: unit={unitIdentifier}, address={startingAddress}, registers={l / 2}");
+    Logger.Log(LogLevel.Debug,
+      $"WriteMultipleRegisters: unit={unitIdentifier}, address={startingAddress}, registers={l / 2}");
     using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
       writer =>
       {
@@ -127,7 +127,8 @@ public partial class ModbusTcpClient
     ModbusFunctionCode functionCode,
     int startingAddress, int count, CancellationToken ct = default)
   {
-    Logger.Log(LogLevel.Debug, $"ReadRegisters: unit={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
+    Logger.Log(LogLevel.Debug,
+      $"ReadRegisters: unit={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
     using var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 2n数据
@@ -187,8 +188,10 @@ public partial class ModbusTcpClient
             if ((buffer[7] & 0x80) != 0)
             {
               length = 9; // 响应不正常时返回值长度变为9
-              Logger.Log(LogLevel.Warning, $"TCP exception response detected, adjusting expected length to 9, bytesRead={bytesRead}");
+              Logger.Log(LogLevel.Warning,
+                $"TCP exception response detected, adjusting expected length to 9, bytesRead={bytesRead}");
             }
+
             verificationFunctionCode = true;
           }
         }
@@ -215,14 +218,16 @@ public partial class ModbusTcpClient
         throw;
       }
 
-      Logger.Log(LogLevel.Error, $"TCP read timeout after {readTimeout}ms, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
+      Logger.Log(LogLevel.Error,
+        $"TCP read timeout after {readTimeout}ms, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
       SbModbusThrow.Timeout(readTimeout);
       // unreachable
       return default;
     }
     catch (EndOfStreamException)
     {
-      Logger.Log(LogLevel.Error, $"TCP end of stream, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
+      Logger.Log(LogLevel.Error,
+        $"TCP end of stream, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
       SbModbusThrow.Timeout(readTimeout);
       // unreachable
       return default;
@@ -233,7 +238,8 @@ public partial class ModbusTcpClient
     }
     catch (Exception ex)
     {
-      Logger.Error(ex, $"Unexpected error during TCP communication, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
+      Logger.Error(ex,
+        $"Unexpected error during TCP communication, tid={tid}, unit={expectedUnitId}, function=0x{(int)expectedFunctionCode:X2}");
       throw new SbModbusException("An unexpected error occurred during TCP communication.", ex);
     }
   }

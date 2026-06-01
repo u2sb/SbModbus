@@ -197,6 +197,7 @@ public class SbTcpStreamServer : IModbusStreamServer
 
     // 释放所有还存活的会话
     foreach (var kv in _sessions)
+    {
       try
       {
         kv.Value.Dispose();
@@ -205,6 +206,7 @@ public class SbTcpStreamServer : IModbusStreamServer
       {
         /* ignore */
       }
+    }
 
     _sessions.Clear();
 
@@ -344,6 +346,7 @@ public class SbTcpStreamServer : IModbusStreamServer
   private void DisconnectAllSessions()
   {
     foreach (var kv in _sessions)
+    {
       try
       {
         kv.Value.Disconnect();
@@ -352,6 +355,7 @@ public class SbTcpStreamServer : IModbusStreamServer
       {
         Logger.Log(LogLevel.Debug, $"Session disconnect warning: {ex.Message}");
       }
+    }
   }
 
   #endregion

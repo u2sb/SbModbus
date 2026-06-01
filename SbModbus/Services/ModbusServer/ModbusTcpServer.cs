@@ -14,7 +14,7 @@ namespace SbModbus.Services.ModbusServer;
 public class ModbusTcpServer : BaseModbusServer
 {
   /// <inheritdoc />
-  protected override TryParseFrameDelegate FrameParser => SbModbus.Services.ModbusServer.FrameParser.TryParseTcp;
+  protected override TryParseFrameDelegate FrameParser => ModbusServer.FrameParser.TryParseTcp;
 
   #region 响应构建
 
@@ -66,5 +66,4 @@ public class ModbusTcpServer : BaseModbusServer
   }
 
   #endregion
-
 }

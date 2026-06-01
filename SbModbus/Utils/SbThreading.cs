@@ -98,27 +98,6 @@ public static class SbThreading
   private static JoinableTaskContext? _context;
 
   /// <summary>
-  ///   使用当前线程初始化主线程上下文。
-  /// </summary>
-  public static void InitializeMainThread()
-  {
-    InitializeMainThread(Thread.CurrentThread, SynchronizationContext.Current ?? new SynchronizationContext());
-  }
-
-  /// <summary>
-  ///   显式初始化主线程上下文。
-  /// </summary>
-  /// <param name="mainThread">主线程。</param>
-  /// <param name="synchronizationContext">主线程同步上下文。</param>
-  public static void InitializeMainThread(Thread mainThread, SynchronizationContext? synchronizationContext)
-  {
-    lock (Sync)
-    {
-      _context = new JoinableTaskContext(mainThread, synchronizationContext ?? new SynchronizationContext());
-    }
-  }
-
-  /// <summary>
   ///   线程上下文。
   /// </summary>
   public static JoinableTaskContext Context
@@ -141,5 +120,25 @@ public static class SbThreading
   ///   是否在初始化的主线程上。
   /// </summary>
   public static bool IsOnMainThread => Context.IsOnMainThread;
-}
 
+  /// <summary>
+  ///   使用当前线程初始化主线程上下文。
+  /// </summary>
+  public static void InitializeMainThread()
+  {
+    InitializeMainThread(Thread.CurrentThread, SynchronizationContext.Current ?? new SynchronizationContext());
+  }
+
+  /// <summary>
+  ///   显式初始化主线程上下文。
+  /// </summary>
+  /// <param name="mainThread">主线程。</param>
+  /// <param name="synchronizationContext">主线程同步上下文。</param>
+  public static void InitializeMainThread(Thread mainThread, SynchronizationContext? synchronizationContext)
+  {
+    lock (Sync)
+    {
+      _context = new JoinableTaskContext(mainThread, synchronizationContext ?? new SynchronizationContext());
+    }
+  }
+}

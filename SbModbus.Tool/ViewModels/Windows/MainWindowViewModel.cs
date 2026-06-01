@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using R3;
 using SbModbus.Tool.Services.RecordServices;

@@ -123,7 +123,8 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
     // 检查协议标识
     if (data[2] != 0 || data[3] != 0)
     {
-      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: protocol identifier invalid (expected 0x0000, got 0x{data[2]:X2}{data[3]:X2})");
+      Logger.Log(LogLevel.Error,
+        $"TCP VerifyFrame: protocol identifier invalid (expected 0x0000, got 0x{data[2]:X2}{data[3]:X2})");
       SbModbusThrow.InvalidProtocolIdentifier();
     }
 
@@ -137,14 +138,16 @@ public partial class ModbusTcpClient(IModbusStream stream) : BaseModbusClient(st
     // 检查功能码（异常响应时高位会被置1，取低7位比较）
     if ((data[7] & 0x7F) != (byte)expectedFunctionCode)
     {
-      Logger.Log(LogLevel.Error, $"TCP VerifyFrame: function code mismatch, expected=0x{(int)expectedFunctionCode:X2}, actual=0x{data[7]:X2}");
+      Logger.Log(LogLevel.Error,
+        $"TCP VerifyFrame: function code mismatch, expected=0x{(int)expectedFunctionCode:X2}, actual=0x{data[7]:X2}");
       SbModbusThrow.FunctionCodeMismatch();
     }
 
     // 检查错误码
     if ((data[7] & 0x80) != 0)
     {
-      Logger.Log(LogLevel.Warning, $"TCP exception response: unit={data[6]}, function=0x{data[7]:X2}, exceptionCode=0x{data[8]:X2}");
+      Logger.Log(LogLevel.Warning,
+        $"TCP exception response: unit={data[6]}, function=0x{data[7]:X2}, exceptionCode=0x{data[8]:X2}");
       ProcessError((ModbusFunctionCode)data[7], (ModbusExceptionCode)data[8]);
     }
   }

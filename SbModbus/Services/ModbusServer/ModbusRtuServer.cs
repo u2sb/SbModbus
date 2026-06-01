@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
-using Sb.Extensions.System;
 using SbModbus.Models;
 using SbModbus.Utils;
 
@@ -14,7 +13,7 @@ namespace SbModbus.Services.ModbusServer;
 public class ModbusRtuServer : BaseModbusServer
 {
   /// <inheritdoc />
-  protected override TryParseFrameDelegate FrameParser => SbModbus.Services.ModbusServer.FrameParser.TryParseRtu;
+  protected override TryParseFrameDelegate FrameParser => ModbusServer.FrameParser.TryParseRtu;
 
   #region 响应构建
 

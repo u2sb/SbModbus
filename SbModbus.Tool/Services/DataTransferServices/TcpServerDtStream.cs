@@ -8,29 +8,38 @@ namespace SbModbus.Tool.Services.DataTransferServices;
 public class TcpServerDtStream : IDtStream
 {
   private readonly IPEndPoint _endPoint;
-  private Socket? _listenSocket;
+
+  private readonly object _lock = new();
+  private readonly List<Guid> _sessionOrder = [];
+
+  private readonly ConcurrentDictionary<Guid, DtStreamTcpSession> _sessions = new();
   private CancellationTokenSource? _acceptCts;
   private Task? _acceptTask;
 
-  private readonly ConcurrentDictionary<Guid, DtStreamTcpSession> _sessions = new();
-  private readonly List<Guid> _sessionOrder = [];
-
   private volatile bool _isDisposed;
   private volatile bool _isListening;
-
-  private readonly object _lock = new();
+  private Socket? _listenSocket;
 
   public TcpServerDtStream(IPAddress address, int port)
-    => _endPoint = new IPEndPoint(address, port);
+  {
+    _endPoint = new IPEndPoint(address, port);
+  }
 
   public TcpServerDtStream(string address, int port)
-    => _endPoint = new IPEndPoint(IPAddress.Parse(address), port);
+  {
+    _endPoint = new IPEndPoint(IPAddress.Parse(address), port);
+  }
 
   public TcpServerDtStream(DnsEndPoint endpoint)
-    => _endPoint = new IPEndPoint(Dns.GetHostAddresses(endpoint.Host).First(a => a.AddressFamily == AddressFamily.InterNetwork), endpoint.Port);
+  {
+    _endPoint = new IPEndPoint(Dns.GetHostAddresses(endpoint.Host).First(a => a.AddressFamily == AddressFamily.InterNetwork),
+      endpoint.Port);
+  }
 
   public TcpServerDtStream(IPEndPoint endpoint)
-    => _endPoint = endpoint;
+  {
+    _endPoint = endpoint;
+  }
 
   public int SessionIndex { get; set; } = -1;
 
@@ -79,7 +88,14 @@ public class TcpServerDtStream : IDtStream
     WaitTask(_acceptTask);
     _acceptTask = null;
 
-    try { _listenSocket?.Close(); } catch { }
+    try
+    {
+      _listenSocket?.Close();
+    }
+    catch
+    {
+    }
+
     _listenSocket?.Dispose();
     _listenSocket = null;
     _isListening = false;
@@ -87,9 +103,14 @@ public class TcpServerDtStream : IDtStream
     lock (_lock)
     {
       foreach (var (_, session) in _sessions)
-      {
-        try { session.Dispose(); } catch { }
-      }
+        try
+        {
+          session.Dispose();
+        }
+        catch
+        {
+        }
+
       _sessions.Clear();
       _sessionOrder.Clear();
     }
@@ -141,10 +162,22 @@ public class TcpServerDtStream : IDtStream
         if (ls == null) break;
 
         Socket accepted;
-        try { accepted = await ls.AcceptAsync(ct); }
-        catch (OperationCanceledException) { break; }
-        catch (ObjectDisposedException) { break; }
-        catch (SocketException) { break; }
+        try
+        {
+          accepted = await ls.AcceptAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+          break;
+        }
+        catch (ObjectDisposedException)
+        {
+          break;
+        }
+        catch (SocketException)
+        {
+          break;
+        }
 
         accepted.NoDelay = true;
         accepted.LingerState = new LingerOption(true, 0);
@@ -165,6 +198,7 @@ public class TcpServerDtStream : IDtStream
             _sessions.TryRemove(session.Id, out _);
             _sessionOrder.Remove(session.Id);
           }
+
           NotifySessionStateChanged();
         };
 
@@ -172,7 +206,10 @@ public class TcpServerDtStream : IDtStream
         NotifySessionStateChanged();
       }
     }
-    catch { /* accept loop ended */ }
+    catch
+    {
+      /* accept loop ended */
+    }
   }
 
   private void NotifySessionStateChanged()
@@ -194,37 +231,97 @@ public class TcpServerDtStream : IDtStream
   {
     var s = Interlocked.Exchange(ref cts, null);
     if (s == null) return;
-    try { s.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      s.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     s.Dispose();
   }
 
   private static void WaitTask(Task? task)
   {
     if (task == null || task.IsCompleted) return;
-    try { task.Wait(TimeSpan.FromSeconds(2)); }
-    catch (AggregateException ae) { ae.Handle(_ => true); }
-    catch (OperationCanceledException) { }
+    try
+    {
+      task.Wait(TimeSpan.FromSeconds(2));
+    }
+    catch (AggregateException ae)
+    {
+      ae.Handle(_ => true);
+    }
+    catch (OperationCanceledException)
+    {
+    }
   }
 }
 
 public class DtStreamTcpSession : IDisposable
 {
+  private const int ReceiveBufferSize = 4096;
   private readonly Socket _socket;
+  private volatile bool _isDisposed;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
-  private volatile bool _isDisposed;
-
-  private const int ReceiveBufferSize = 4096;
-
-  public Guid Id { get; } = Guid.NewGuid();
-  public EndPoint? RemoteEndPoint => _socket.RemoteEndPoint;
+  internal ReadOnlySpanAction<byte, DtStreamTcpSession>? OnDataReceived;
 
   internal Action? OnDisconnected;
-  internal ReadOnlySpanAction<byte, DtStreamTcpSession>? OnDataReceived;
 
   internal DtStreamTcpSession(Socket socket, TcpServerDtStream _)
   {
     _socket = socket;
+  }
+
+  public Guid Id { get; } = Guid.NewGuid();
+  public EndPoint? RemoteEndPoint => _socket.RemoteEndPoint;
+
+  public void Dispose()
+  {
+    if (_isDisposed) return;
+    _isDisposed = true;
+
+    try
+    {
+      _receiveCts?.Cancel();
+    }
+    catch
+    {
+    }
+
+    try
+    {
+      _receiveTask?.Wait(TimeSpan.FromSeconds(1));
+    }
+    catch
+    {
+    }
+
+    _receiveCts?.Dispose();
+    _receiveCts = null;
+
+    try
+    {
+      _socket.Shutdown(SocketShutdown.Both);
+    }
+    catch
+    {
+    }
+
+    try
+    {
+      _socket.Close();
+    }
+    catch
+    {
+    }
+
+    _socket.Dispose();
+
+    OnDataReceived = null;
+    OnDisconnected = null;
   }
 
   internal void Start()
@@ -244,7 +341,10 @@ public class DtStreamTcpSession : IDisposable
     {
       _socket.Send(data);
     }
-    catch { /* ignore write errors */ }
+    catch
+    {
+      /* ignore write errors */
+    }
   }
 
   private async Task RunReceiveLoopAsync(CancellationToken ct)
@@ -255,10 +355,22 @@ public class DtStreamTcpSession : IDisposable
       while (!ct.IsCancellationRequested)
       {
         int received;
-        try { received = await _socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct); }
-        catch (SocketException) { break; }
-        catch (OperationCanceledException) { break; }
-        catch (ObjectDisposedException) { break; }
+        try
+        {
+          received = await _socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct);
+        }
+        catch (SocketException)
+        {
+          break;
+        }
+        catch (OperationCanceledException)
+        {
+          break;
+        }
+        catch (ObjectDisposedException)
+        {
+          break;
+        }
 
         if (received == 0) break;
         OnDataReceived?.Invoke(buffer.AsSpan(0, received), this);
@@ -272,23 +384,5 @@ public class DtStreamTcpSession : IDisposable
         OnDisconnected?.Invoke();
       }
     }
-  }
-
-  public void Dispose()
-  {
-    if (_isDisposed) return;
-    _isDisposed = true;
-
-    try { _receiveCts?.Cancel(); } catch { }
-    try { _receiveTask?.Wait(TimeSpan.FromSeconds(1)); } catch { }
-    _receiveCts?.Dispose();
-    _receiveCts = null;
-
-    try { _socket.Shutdown(SocketShutdown.Both); } catch { }
-    try { _socket.Close(); } catch { }
-    _socket.Dispose();
-
-    OnDataReceived = null;
-    OnDisconnected = null;
   }
 }

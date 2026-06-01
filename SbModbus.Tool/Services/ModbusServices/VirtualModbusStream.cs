@@ -1,5 +1,4 @@
-﻿using System.IO;
-using SbModbus.Models;
+﻿using SbModbus.Models;
 
 namespace SbModbus.Tool.Services.ModbusServices;
 

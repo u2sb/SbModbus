@@ -1,12 +1,10 @@
 // https://raw.githubusercontent.com/Apollo3zehn/FluentModbus/refs/heads/dev/src/FluentModbus/Client/ModbusClient.cs
 
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System;
 using SbModbus.Models;
-using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -57,7 +55,6 @@ public abstract class BaseModbusClient : IModbusClient
   public void Dispose()
   {
     if (!ModbusStream.IsDisposed)
-    {
       try
       {
         ModbusStream.OnConnectStateChanged -= StreamOnConnectStateChanged;
@@ -66,7 +63,6 @@ public abstract class BaseModbusClient : IModbusClient
       {
         Logger.Error(ex, "Failed to unsubscribe OnConnectStateChanged during Dispose");
       }
-    }
 
     OnConnectStateChanged = null;
     OnDataReceived = null;
@@ -81,6 +77,26 @@ public abstract class BaseModbusClient : IModbusClient
   {
     OnConnectStateChanged?.Invoke(this, b);
   }
+
+  #region 校验
+
+  /// <summary>
+  ///   校验 WriteSingleCoil 数据
+  /// </summary>
+  /// <param name="data"></param>
+  /// <exception cref="SbModbusException"></exception>
+  protected static void ValidateSingleCoilData(ReadOnlyMemory<byte> data)
+  {
+    if (data.Length != 2)
+      throw new SbModbusException("WriteSingleCoil payload length must be exactly 2 bytes.");
+
+    var isOn = data.Span[0] == 0xFF && data.Span[1] == 0x00;
+    var isOff = data.Span[0] == 0x00 && data.Span[1] == 0x00;
+    if (!isOn && !isOff)
+      throw new SbModbusException("WriteSingleCoil payload must be 0xFF00 (ON) or 0x0000 (OFF).");
+  }
+
+  #endregion
 
   #region 事件
 
@@ -194,7 +210,8 @@ public abstract class BaseModbusClient : IModbusClient
   /// <exception cref="SbModbusException"></exception>
   protected void ProcessError(ModbusFunctionCode functionCode, ModbusExceptionCode exceptionCode)
   {
-    Logger.Log(LogLevel.Error, $"Modbus protocol error: functionCode=0x{(int)functionCode:X2}, exceptionCode=0x{(int)exceptionCode:X2}");
+    Logger.Log(LogLevel.Error,
+      $"Modbus protocol error: functionCode=0x{(int)functionCode:X2}, exceptionCode=0x{(int)exceptionCode:X2}");
 
     switch (exceptionCode)
     {
@@ -292,7 +309,8 @@ public abstract class BaseModbusClient : IModbusClient
 
     if (span <= TimeSpan.Zero) return;
 
-    Logger.Log(LogLevel.Debug, $"Waiting {span.TotalMilliseconds:F1}ms for different SID interval (previous={_previousSid}, current={sid})");
+    Logger.Log(LogLevel.Debug,
+      $"Waiting {span.TotalMilliseconds:F1}ms for different SID interval (previous={_previousSid}, current={sid})");
     await Task.Delay(span).ConfigureAwait(false);
   }
 
@@ -323,26 +341,6 @@ public abstract class BaseModbusClient : IModbusClient
   /// <returns></returns>
   protected abstract ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier, ModbusFunctionCode functionCode,
     int startingAddress, int count, CancellationToken ct = default);
-
-  #endregion
-
-  #region 校验
-
-  /// <summary>
-  ///   校验 WriteSingleCoil 数据
-  /// </summary>
-  /// <param name="data"></param>
-  /// <exception cref="SbModbusException"></exception>
-  protected static void ValidateSingleCoilData(ReadOnlyMemory<byte> data)
-  {
-    if (data.Length != 2)
-      throw new SbModbusException("WriteSingleCoil payload length must be exactly 2 bytes.");
-
-    var isOn = data.Span[0] == 0xFF && data.Span[1] == 0x00;
-    var isOff = data.Span[0] == 0x00 && data.Span[1] == 0x00;
-    if (!isOn && !isOff)
-      throw new SbModbusException("WriteSingleCoil payload must be 0xFF00 (ON) or 0x0000 (OFF).");
-  }
 
   #endregion
 

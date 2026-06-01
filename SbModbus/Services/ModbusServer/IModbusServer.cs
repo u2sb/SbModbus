@@ -22,28 +22,6 @@ public interface IModbusServer : IDisposable
   bool IsRunning { get; }
 
   /// <summary>
-  ///   启动服务器
-  /// </summary>
-  /// <param name="server">传输层服务器</param>
-  /// <param name="ct"></param>
-  Task StartAsync(IModbusStreamServer server, CancellationToken ct = default);
-
-  /// <summary>
-  ///   停止服务器
-  /// </summary>
-  Task StopAsync(CancellationToken ct = default);
-
-  /// <summary>
-  ///   会话连接时触发
-  /// </summary>
-  event Action<IModbusStream>? OnSessionConnected;
-
-  /// <summary>
-  ///   会话断开时触发
-  /// </summary>
-  event Action<IModbusStream>? OnSessionDisconnected;
-
-  /// <summary>
   ///   线圈
   /// </summary>
   ModbusCoils Coils { get; }
@@ -67,6 +45,28 @@ public interface IModbusServer : IDisposable
   ///   站号列表
   /// </summary>
   SortedSet<byte> UnitIdentifier { get; }
+
+  /// <summary>
+  ///   启动服务器
+  /// </summary>
+  /// <param name="server">传输层服务器</param>
+  /// <param name="ct"></param>
+  Task StartAsync(IModbusStreamServer server, CancellationToken ct = default);
+
+  /// <summary>
+  ///   停止服务器
+  /// </summary>
+  Task StopAsync(CancellationToken ct = default);
+
+  /// <summary>
+  ///   会话连接时触发
+  /// </summary>
+  event Action<IModbusStream>? OnSessionConnected;
+
+  /// <summary>
+  ///   会话断开时触发
+  /// </summary>
+  event Action<IModbusStream>? OnSessionDisconnected;
 
   /// <summary>
   ///   注册线圈写事件

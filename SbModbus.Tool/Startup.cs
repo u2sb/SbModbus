@@ -35,7 +35,7 @@ public static class Startup
     var loggerFactory = services.GetRequiredService<ILoggerFactory>();
     var melLogger = loggerFactory.CreateLogger("SbModbus");
 
-    SbModbus.Logger.Output = (level, message) =>
+    Logger.Output = (level, message) =>
     {
       var melLevel = level switch
       {
@@ -51,7 +51,7 @@ public static class Startup
     };
 
     // 从配置文件读取日志等级（如有），否则默认 Information
-    SbModbus.Logger.Level = SLogLevel.Information;
+    Logger.Level = SLogLevel.Information;
   }
 
   private static void ConfigServices(HostApplicationBuilder builder)
@@ -86,9 +86,7 @@ public static class Startup
     _host.Start();
 
     if (sender is IClassicDesktopStyleApplicationLifetime desktop)
-    {
       desktop.MainWindow = Ioc.Default.GetRequiredService<MainWindow>();
-    }
   }
 
   private static void AddLang()

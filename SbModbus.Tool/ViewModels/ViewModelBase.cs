@@ -27,10 +27,7 @@ public class ViewModelBase : ObservableValidator
 
   protected T? GetService<T>(T? defaultValue = null) where T : class
   {
-    if (!IsDesignMode)
-    {
-      return Ioc.Default.GetService<T>() ?? defaultValue;
-    }
+    if (!IsDesignMode) return Ioc.Default.GetService<T>() ?? defaultValue;
 
     return defaultValue;
   }

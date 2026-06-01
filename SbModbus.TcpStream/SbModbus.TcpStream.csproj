@@ -45,6 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SbModbus\SbModbus.csproj" />
+    <ProjectReference Include="..\SbModbus\SbModbus.csproj"/>
   </ItemGroup>
 </Project>

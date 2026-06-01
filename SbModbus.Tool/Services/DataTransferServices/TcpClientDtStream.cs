@@ -6,26 +6,33 @@ namespace SbModbus.Tool.Services.DataTransferServices;
 
 public class TcpClientDtStream : IDtStream
 {
+  private const int ReceiveBufferSize = 4096;
   private readonly EndPoint _endPoint;
-  private Socket? _socket;
+  private volatile bool _isConnected;
+  private volatile bool _isDisposed;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
-  private volatile bool _isDisposed;
-  private volatile bool _isConnected;
-
-  private const int ReceiveBufferSize = 4096;
+  private Socket? _socket;
 
   public TcpClientDtStream(IPAddress address, int port)
-    => _endPoint = new IPEndPoint(address, port);
+  {
+    _endPoint = new IPEndPoint(address, port);
+  }
 
   public TcpClientDtStream(string address, int port)
-    => _endPoint = new DnsEndPoint(address, port);
+  {
+    _endPoint = new DnsEndPoint(address, port);
+  }
 
   public TcpClientDtStream(DnsEndPoint endpoint)
-    => _endPoint = endpoint;
+  {
+    _endPoint = endpoint;
+  }
 
   public TcpClientDtStream(IPEndPoint endpoint)
-    => _endPoint = endpoint;
+  {
+    _endPoint = endpoint;
+  }
 
   public ReadOnlySpanAction<byte, IDtStream>? OnDataWrite { get; set; }
   public ReadOnlySpanAction<byte, IDtStream>? OnDataReceived { get; set; }
@@ -117,6 +124,7 @@ public class TcpClientDtStream : IDtStream
       var ipv6 = Array.Find(addresses, a => a.AddressFamily == AddressFamily.InterNetworkV6);
       if (ipv6 != null) return new IPEndPoint(ipv6, dnsEp.Port);
     }
+
     throw new InvalidOperationException($"Cannot resolve endpoint: {_endPoint}");
   }
 
@@ -146,10 +154,22 @@ public class TcpClientDtStream : IDtStream
         if (socket == null || !_isConnected) break;
 
         int received;
-        try { received = await socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct); }
-        catch (SocketException) { break; }
-        catch (OperationCanceledException) { break; }
-        catch (ObjectDisposedException) { break; }
+        try
+        {
+          received = await socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct);
+        }
+        catch (SocketException)
+        {
+          break;
+        }
+        catch (OperationCanceledException)
+        {
+          break;
+        }
+        catch (ObjectDisposedException)
+        {
+          break;
+        }
 
         if (received == 0) break;
         OnDataReceived?.Invoke(buffer.AsSpan(0, received), this);
@@ -167,8 +187,22 @@ public class TcpClientDtStream : IDtStream
 
   private void CloseSocket()
   {
-    try { _socket?.Shutdown(SocketShutdown.Both); } catch { }
-    try { _socket?.Close(); } catch { }
+    try
+    {
+      _socket?.Shutdown(SocketShutdown.Both);
+    }
+    catch
+    {
+    }
+
+    try
+    {
+      _socket?.Close();
+    }
+    catch
+    {
+    }
+
     _socket = null;
   }
 
@@ -176,15 +210,30 @@ public class TcpClientDtStream : IDtStream
   {
     var s = Interlocked.Exchange(ref cts, null);
     if (s == null) return;
-    try { s.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      s.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     s.Dispose();
   }
 
   private static void WaitTask(Task? task)
   {
     if (task == null || task.IsCompleted) return;
-    try { task.Wait(TimeSpan.FromSeconds(2)); }
-    catch (AggregateException ae) { ae.Handle(_ => true); }
-    catch (OperationCanceledException) { }
+    try
+    {
+      task.Wait(TimeSpan.FromSeconds(2));
+    }
+    catch (AggregateException ae)
+    {
+      ae.Handle(_ => true);
+    }
+    catch (OperationCanceledException)
+    {
+    }
   }
 }

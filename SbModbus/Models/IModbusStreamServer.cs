@@ -21,9 +21,9 @@ public interface IModbusStreamServer : IDisposable
   public int SessionCount { get; }
 
   /// <summary>
-  ///   帧解析器 — 由 <see cref="SbModbus.Services.ModbusServer.BaseModbusServer"/> 在 <c>StartAsync</c> 时注入。
-  ///   <see cref="SbModbus.Services.ModbusServer.ModbusRtuServer"/> 注入 RTU 解析；
-  ///   <see cref="SbModbus.Services.ModbusServer.ModbusTcpServer"/> 注入 TCP 解析。
+  ///   帧解析器 — 由 <see cref="SbModbus.Services.ModbusServer.BaseModbusServer" /> 在 <c>StartAsync</c> 时注入。
+  ///   <see cref="SbModbus.Services.ModbusServer.ModbusRtuServer" /> 注入 RTU 解析；
+  ///   <see cref="SbModbus.Services.ModbusServer.ModbusTcpServer" /> 注入 TCP 解析。
   /// </summary>
   public TryParseFrameDelegate FrameParser { set; }
 

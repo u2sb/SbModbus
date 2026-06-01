@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.HighPerformance.Buffers;
 using Sb.Extensions.System;
 using SbModbus.Services.ModbusClient;
 using SbModbus.Utils;
@@ -213,7 +214,10 @@ public class ModbusRequest
   /// <returns>已校验的请求对象。</returns>
   public static ModbusRequest CreateWriteSingleCoil(ushort startingAddress, bool value, byte slaveId = 1)
   {
-    ReadOnlySpan<byte> offData = stackalloc byte[] { 0x00, 0x00 };
+    ReadOnlySpan<byte> offData = stackalloc byte[]
+    {
+      0x00, 0x00
+    };
     return CreateWriteSingleCoil(startingAddress, value ? [0xFF, 0x00] : offData, slaveId);
   }
 
@@ -269,10 +273,11 @@ public class ModbusRequest
   {
     var length = data.Length;
 
-    var bytes = new byte[(length + 7) / 8];
-    data.CopyTo(bytes.AsSpan(), 0, length);
+    using var owner = SpanOwner<byte>.Allocate((length + 7) / 8);
+    var span = owner.Span;
+    data.CopyTo(span, 0, length);
 
-    return CreateWriteRequest(ModbusFunctionCode.WriteMultipleCoils, startingAddress, bytes,
+    return CreateWriteRequest(ModbusFunctionCode.WriteMultipleCoils, startingAddress, span,
       checked((ushort)length), slaveId);
   }
 

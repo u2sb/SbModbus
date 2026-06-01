@@ -49,14 +49,12 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   传输类型
   /// </summary>
-  [ObservableProperty]
-  public partial DataTransferType DataTransferType { get; set; } = DataTransferType.SerialPort;
+  [ObservableProperty] public partial DataTransferType DataTransferType { get; set; } = DataTransferType.SerialPort;
 
   /// <summary>
   ///   连接状态
   /// </summary>
-  [ObservableProperty]
-  public partial bool IsConnected { get; set; }
+  [ObservableProperty] public partial bool IsConnected { get; set; }
 
   public void Dispose()
   {
@@ -160,14 +158,12 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   串口号
   /// </summary>
-  [ObservableProperty]
-  public partial string SerialPortName { get; set; } = string.Empty;
+  [ObservableProperty] public partial string SerialPortName { get; set; } = string.Empty;
 
   /// <summary>
   ///   波特率
   /// </summary>
-  [ObservableProperty]
-  public partial int BaudRate { get; set; }
+  [ObservableProperty] public partial int BaudRate { get; set; }
 
   partial void OnBaudRateChanged(int value)
   {
@@ -177,8 +173,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   波特率
   /// </summary>
-  [ObservableProperty]
-  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
+  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
   public partial string? BaudRateString { get; set; } = "9600";
 
   partial void OnBaudRateStringChanged(string? value)
@@ -189,32 +184,27 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   数据位
   /// </summary>
-  [ObservableProperty]
-  public partial int DataBits { get; set; } = 8;
+  [ObservableProperty] public partial int DataBits { get; set; } = 8;
 
   /// <summary>
   ///   校验位
   /// </summary>
-  [ObservableProperty]
-  public partial Parity Parity { get; set; }
+  [ObservableProperty] public partial Parity Parity { get; set; }
 
   /// <summary>
   ///   停止位
   /// </summary>
-  [ObservableProperty]
-  public partial StopBits StopBits { get; set; }
+  [ObservableProperty] public partial StopBits StopBits { get; set; }
 
   /// <summary>
   ///   流控
   /// </summary>
-  [ObservableProperty]
-  public partial Handshake Handshake { get; set; }
+  [ObservableProperty] public partial Handshake Handshake { get; set; }
 
   /// <summary>
   ///   DTR状态
   /// </summary>
-  [ObservableProperty]
-  public partial bool DtrButton { get; set; }
+  [ObservableProperty] public partial bool DtrButton { get; set; }
 
   partial void OnDtrButtonChanged(bool value)
   {
@@ -227,8 +217,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   RTS状态
   /// </summary>
-  [ObservableProperty]
-  public partial bool RtsButton { get; set; }
+  [ObservableProperty] public partial bool RtsButton { get; set; }
 
   partial void OnRtsButtonChanged(bool value)
   {
@@ -240,8 +229,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   Break状态
   /// </summary>
-  [ObservableProperty]
-  public partial bool BreakButton { get; set; }
+  [ObservableProperty] public partial bool BreakButton { get; set; }
 
   partial void OnBreakButtonChanged(bool value)
   {
@@ -307,29 +295,25 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   IP
   /// </summary>
-  [ObservableProperty]
-  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
+  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
   public partial string TargetIp { get; set; } = "127.0.0.1";
 
   /// <summary>
   ///   IP
   /// </summary>
-  [ObservableProperty]
-  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
+  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
   public partial string LocalIp { get; set; } = "0.0.0.0";
 
   /// <summary>
   ///   目标端口
   /// </summary>
-  [ObservableProperty]
-  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
+  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
   public partial string TargetPort { get; set; } = "13567";
 
   /// <summary>
   ///   本地端口
   /// </summary>
-  [ObservableProperty]
-  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
+  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
   public partial string LocalPort { get; set; } = "13567";
 
   /// <summary>
@@ -508,8 +492,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   输入框
   /// </summary>
-  [ObservableProperty]
-  public partial string InputString { get; set; } = string.Empty;
+  [ObservableProperty] public partial string InputString { get; set; } = string.Empty;
 
   partial void OnInputStringChanged(string value)
   {
@@ -519,8 +502,7 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
   /// <summary>
   ///   输出的文本
   /// </summary>
-  [ObservableProperty]
-  public partial string OutputString { get; set; } = string.Empty;
+  [ObservableProperty] public partial string OutputString { get; set; } = string.Empty;
 
   /// <summary>
   ///   需要发送的Hex值
@@ -618,11 +600,13 @@ public partial class SerialPortAssistantPageViewModel : ViewModelBase, IDisposab
       var cp = 0;
 
       foreach (var c in source)
+      {
         if (c != ' ')
         {
           temp[cp] = c;
           cp++;
         }
+      }
 
       try
       {

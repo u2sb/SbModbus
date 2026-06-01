@@ -10,54 +10,61 @@ namespace SbModbus.Utils;
 /// </summary>
 public sealed class RentedBuffer : IBufferWriter<byte>, IDisposable
 {
-  private byte[] _buffer;
-  private int _count;
-
   /// <summary>
   ///   从 ArrayPool 租用指定最小长度的缓冲区。
   /// </summary>
   public RentedBuffer(int minimumLength)
   {
-    _buffer = ArrayPool<byte>.Shared.Rent(minimumLength);
-    _count = 0;
+    RawBuffer = ArrayPool<byte>.Shared.Rent(minimumLength);
+    WrittenCount = 0;
   }
 
   /// <summary>
   ///   已写入部分的只读内存。
   /// </summary>
-  public ReadOnlyMemory<byte> WrittenMemory => _buffer.AsMemory(0, _count);
+  public ReadOnlyMemory<byte> WrittenMemory => RawBuffer.AsMemory(0, WrittenCount);
 
   /// <summary>
   ///   已写入部分的只读 Span。
   /// </summary>
-  public ReadOnlySpan<byte> WrittenSpan => _buffer.AsSpan(0, _count);
+  public ReadOnlySpan<byte> WrittenSpan => RawBuffer.AsSpan(0, WrittenCount);
 
   /// <summary>
   ///   已写入的字节数。
   /// </summary>
-  public int WrittenCount => _count;
+  public int WrittenCount { get; private set; }
 
   /// <summary>
   ///   底层原始缓冲区（用于需要直接修改已写入区域的场景，如填写 TCP 长度字段）。
   /// </summary>
-  public byte[] RawBuffer => _buffer;
+  public byte[] RawBuffer { get; private set; }
 
   /// <inheritdoc />
   public void Advance(int count)
   {
-    _count += count;
+    WrittenCount += count;
   }
 
   /// <inheritdoc />
   public Memory<byte> GetMemory(int sizeHint = 0)
   {
-    return _buffer.AsMemory(_count);
+    return RawBuffer.AsMemory(WrittenCount);
   }
 
   /// <inheritdoc />
   public Span<byte> GetSpan(int sizeHint = 0)
   {
-    return _buffer.AsSpan(_count);
+    return RawBuffer.AsSpan(WrittenCount);
+  }
+
+  /// <inheritdoc />
+  public void Dispose()
+  {
+    if (RawBuffer != null!)
+    {
+      ArrayPool<byte>.Shared.Return(RawBuffer);
+      RawBuffer = null!;
+    }
   }
 
   /// <summary>
@@ -71,15 +78,5 @@ public sealed class RentedBuffer : IBufferWriter<byte>, IDisposable
     crcBytes[0] = (byte)crc;
     crcBytes[1] = (byte)(crc >> 8);
     Advance(2);
-  }
-
-  /// <inheritdoc />
-  public void Dispose()
-  {
-    if (_buffer != null!)
-    {
-      ArrayPool<byte>.Shared.Return(_buffer);
-      _buffer = null!;
-    }
   }
 }

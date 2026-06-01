@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Models;
-using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
 
@@ -20,7 +19,7 @@ public partial class ModbusRtuClient
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var length = 1 + 1 + 1 + (count + 7 >> 3) + 2;
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
       .ConfigureAwait(false);
 
@@ -37,7 +36,7 @@ public partial class ModbusRtuClient
       ConvertUshort(count).WithEndianness(true));
 
     // 1地址 1功能码 1数据长度 (n +7) / 8数据 2校验
-    var length = 1 + 1 + 1 + ((count + 7) >> 3) + 2;
+    var length = 1 + 1 + 1 + (count + 7 >> 3) + 2;
     var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
       .ConfigureAwait(false);
 
@@ -76,7 +75,8 @@ public partial class ModbusRtuClient
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     var l = data.Length;
-    Logger.Log(LogLevel.Debug, $"WriteMultipleRegisters: slave={unitIdentifier}, address={startingAddress}, registers={l / 2}");
+    Logger.Log(LogLevel.Debug,
+      $"WriteMultipleRegisters: slave={unitIdentifier}, address={startingAddress}, registers={l / 2}");
     using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
       writer =>
       {
@@ -168,8 +168,10 @@ public partial class ModbusRtuClient
             if ((buffer[1] & 0x80) != 0)
             {
               length = 5; // 响应不正常时返回值长度变为5
-              Logger.Log(LogLevel.Warning, $"RTU exception response detected, adjusting expected length to 5, bytesRead={bytesRead}");
+              Logger.Log(LogLevel.Warning,
+                $"RTU exception response detected, adjusting expected length to 5, bytesRead={bytesRead}");
             }
+
             verificationFunctionCode = true;
           }
         }
@@ -197,7 +199,8 @@ public partial class ModbusRtuClient
         throw;
       }
 
-      Logger.Log(LogLevel.Error, $"RTU read timeout after {readTimeout}ms, slave={expectedSlaveId}, function=0x{(int)expectedFunctionCode:X2}");
+      Logger.Log(LogLevel.Error,
+        $"RTU read timeout after {readTimeout}ms, slave={expectedSlaveId}, function=0x{(int)expectedFunctionCode:X2}");
       SbModbusThrow.Timeout(readTimeout);
       // unreachable
       return default;
@@ -215,7 +218,8 @@ public partial class ModbusRtuClient
     }
     catch (Exception ex)
     {
-      Logger.Error(ex, $"Unexpected error during RTU communication, slave={expectedSlaveId}, function=0x{(int)expectedFunctionCode:X2}");
+      Logger.Error(ex,
+        $"Unexpected error during RTU communication, slave={expectedSlaveId}, function=0x{(int)expectedFunctionCode:X2}");
       throw new SbModbusException("An unexpected error occurred during RTU communication.", ex);
     }
     finally
@@ -228,7 +232,8 @@ public partial class ModbusRtuClient
   protected override async ValueTask<Memory<byte>> ReadRegistersAsync(int unitIdentifier,
     ModbusFunctionCode functionCode, int startingAddress, int count, CancellationToken ct = default)
   {
-    Logger.Log(LogLevel.Debug, $"ReadRegisters: slave={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
+    Logger.Log(LogLevel.Debug,
+      $"ReadRegisters: slave={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
     using var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ReadOnlySpan<byte>.Empty, writer =>
     {
       // 写长度

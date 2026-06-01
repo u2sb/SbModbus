@@ -108,7 +108,8 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
     // 检查功能码（异常响应时高位会被置1，取低7位比较）
     if ((data[1] & 0x7F) != (byte)expectedFunctionCode)
     {
-      Logger.Log(LogLevel.Error, $"RTU VerifyFrame: function code mismatch, expected=0x{(int)expectedFunctionCode:X2}, actual=0x{data[1]:X2}");
+      Logger.Log(LogLevel.Error,
+        $"RTU VerifyFrame: function code mismatch, expected=0x{(int)expectedFunctionCode:X2}, actual=0x{data[1]:X2}");
       SbModbusThrow.FunctionCodeMismatch();
     }
 
@@ -117,14 +118,16 @@ public partial class ModbusRtuClient(IModbusStream stream) : BaseModbusClient(st
     // 检查校验值是否正确 注意是小端模式
     if (crc != data[^2..].ToUInt16())
     {
-      Logger.Log(LogLevel.Error, $"RTU VerifyFrame: CRC error, calculated=0x{crc:X4}, received=0x{data[^2..].ToUInt16():X4}");
+      Logger.Log(LogLevel.Error,
+        $"RTU VerifyFrame: CRC error, calculated=0x{crc:X4}, received=0x{data[^2..].ToUInt16():X4}");
       SbModbusThrow.CrcError();
     }
 
     // 检查错误码
     if ((data[1] & 0x80) != 0)
     {
-      Logger.Log(LogLevel.Warning, $"RTU exception response: slave={data[0]}, function=0x{data[1]:X2}, exceptionCode=0x{data[2]:X2}");
+      Logger.Log(LogLevel.Warning,
+        $"RTU exception response: slave={data[0]}, function=0x{data[1]:X2}, exceptionCode=0x{data[2]:X2}");
       ProcessError((ModbusFunctionCode)data[1], (ModbusExceptionCode)data[2]);
     }
   }

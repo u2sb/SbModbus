@@ -6,27 +6,34 @@ namespace SbModbus.Tool.Services.DataTransferServices;
 
 public class UdpClientDtStream : IDtStream
 {
+  private const int ReceiveBufferSize = 4096;
   private readonly EndPoint _endPoint;
-  private UdpClient? _udpClient;
-  private IPEndPoint? _sendEndpoint;
+  private volatile bool _isConnected;
+  private volatile bool _isDisposed;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
-  private volatile bool _isDisposed;
-  private volatile bool _isConnected;
-
-  private const int ReceiveBufferSize = 4096;
+  private IPEndPoint? _sendEndpoint;
+  private UdpClient? _udpClient;
 
   public UdpClientDtStream(IPAddress address, int port)
-    => _endPoint = new IPEndPoint(address, port);
+  {
+    _endPoint = new IPEndPoint(address, port);
+  }
 
   public UdpClientDtStream(string address, int port)
-    => _endPoint = new DnsEndPoint(address, port);
+  {
+    _endPoint = new DnsEndPoint(address, port);
+  }
 
   public UdpClientDtStream(DnsEndPoint endpoint)
-    => _endPoint = endpoint;
+  {
+    _endPoint = endpoint;
+  }
 
   public UdpClientDtStream(IPEndPoint endpoint)
-    => _endPoint = endpoint;
+  {
+    _endPoint = endpoint;
+  }
 
   public ReadOnlySpanAction<byte, IDtStream>? OnDataWrite { get; set; }
   public ReadOnlySpanAction<byte, IDtStream>? OnDataReceived { get; set; }
@@ -71,7 +78,14 @@ public class UdpClientDtStream : IDtStream
     WaitTask(_receiveTask);
     _receiveTask = null;
 
-    try { _udpClient?.Close(); } catch { }
+    try
+    {
+      _udpClient?.Close();
+    }
+    catch
+    {
+    }
+
     _udpClient = null;
     _isConnected = false;
     OnConnectStateChanged?.Invoke(false);
@@ -91,18 +105,15 @@ public class UdpClientDtStream : IDtStream
 
       OnDataWrite?.Invoke(data, this);
     }
-    catch (SocketException) { }
+    catch (SocketException)
+    {
+    }
   }
 
   public ValueTask WriteAsync(ReadOnlyMemory<byte> data)
   {
     Write(data.Span);
     return ValueTask.CompletedTask;
-  }
-
-  public void SetEndpoint(IPEndPoint endpoint)
-  {
-    _sendEndpoint = endpoint;
   }
 
   public void Dispose()
@@ -118,6 +129,11 @@ public class UdpClientDtStream : IDtStream
     OnDataReceived = null;
     OnConnectStateChanged = null;
     GC.SuppressFinalize(this);
+  }
+
+  public void SetEndpoint(IPEndPoint endpoint)
+  {
+    _sendEndpoint = endpoint;
   }
 
   private void StartReceiveLoop()
@@ -145,30 +161,60 @@ public class UdpClientDtStream : IDtStream
         if (client == null) break;
 
         UdpReceiveResult result;
-        try { result = await client.ReceiveAsync(ct); }
-        catch (SocketException) { break; }
-        catch (OperationCanceledException) { break; }
-        catch (ObjectDisposedException) { break; }
+        try
+        {
+          result = await client.ReceiveAsync(ct);
+        }
+        catch (SocketException)
+        {
+          break;
+        }
+        catch (OperationCanceledException)
+        {
+          break;
+        }
+        catch (ObjectDisposedException)
+        {
+          break;
+        }
 
         OnDataReceived?.Invoke(result.Buffer, this);
       }
     }
-    catch { /* receive loop ended */ }
+    catch
+    {
+      /* receive loop ended */
+    }
   }
 
   private static void CancelAndDispose(ref CancellationTokenSource? cts)
   {
     var s = Interlocked.Exchange(ref cts, null);
     if (s == null) return;
-    try { s.Cancel(); } catch (ObjectDisposedException) { }
+    try
+    {
+      s.Cancel();
+    }
+    catch (ObjectDisposedException)
+    {
+    }
+
     s.Dispose();
   }
 
   private static void WaitTask(Task? task)
   {
     if (task == null || task.IsCompleted) return;
-    try { task.Wait(TimeSpan.FromSeconds(2)); }
-    catch (AggregateException ae) { ae.Handle(_ => true); }
-    catch (OperationCanceledException) { }
+    try
+    {
+      task.Wait(TimeSpan.FromSeconds(2));
+    }
+    catch (AggregateException ae)
+    {
+      ae.Handle(_ => true);
+    }
+    catch (OperationCanceledException)
+    {
+    }
   }
 }

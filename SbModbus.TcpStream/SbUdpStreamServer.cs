@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using SbModbus.Models;
-using SbModbus.Services.ModbusServer;
 
 namespace SbModbus.TcpStream;
 
@@ -23,10 +22,10 @@ public class SbUdpStreamServer : IModbusStreamServer
 
   private readonly ConcurrentDictionary<byte, ChannelWriter<ModbusFrameMessage>> _stationWriters = new();
 
+  private TryParseFrameDelegate _frameParser = Services.ModbusServer.FrameParser.TryParseTcp;
+
   private volatile bool _isDisposed;
   private volatile bool _isListening;
-
-  private TryParseFrameDelegate _frameParser = SbModbus.Services.ModbusServer.FrameParser.TryParseTcp;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
 
@@ -262,6 +261,7 @@ public class SbUdpStreamServer : IModbusStreamServer
     _receiveCts = null;
 
     foreach (var kv in _sessions)
+    {
       try
       {
         kv.Value.Dispose();
@@ -270,6 +270,7 @@ public class SbUdpStreamServer : IModbusStreamServer
       {
         /* ignore */
       }
+    }
 
     _sessions.Clear();
 
@@ -335,10 +336,8 @@ public class SbUdpStreamServer : IModbusStreamServer
     var remaining = lb.Buffer.WrittenSpan;
     var len = remaining.Length;
     while (_frameParser(session, ref remaining, out var message))
-    {
       if (_stationWriters.TryGetValue(message.UnitId, out var writer))
         writer.TryWrite(message);
-    }
 
     var consumed = len - remaining.Length;
     if (consumed > 0)
@@ -352,6 +351,7 @@ public class SbUdpStreamServer : IModbusStreamServer
   private void DisconnectAllSessions()
   {
     foreach (var kv in _sessions)
+    {
       try
       {
         kv.Value.Disconnect();
@@ -360,6 +360,7 @@ public class SbUdpStreamServer : IModbusStreamServer
       {
         Logger.Log(LogLevel.Debug, $"Session disconnect warning: {ex.Message}");
       }
+    }
   }
 
   private static void CancelAndDispose(ref CancellationTokenSource? cts)

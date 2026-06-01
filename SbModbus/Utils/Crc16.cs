@@ -1,11 +1,12 @@
 using System;
-using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sb.Extensions.System.Buffers.RingBuffers;
 #if NETSTANDARD2_0
 using Sb.Extensions.System.Buffers;
+#else
+using System.Buffers;
 #endif
-using Sb.Extensions.System.Buffers.RingBuffers;
 
 namespace SbModbus.Utils;
 
@@ -150,9 +151,9 @@ public static class Crc16
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static unsafe ushort CrcN4(ushort crc, byte* data)
   {
-    crc = (ushort)(crc ^ data[0] ^ (data[1] << 8));
+    crc = (ushort)(crc ^ data[0] ^ data[1] << 8);
     var part1 = Table[(crc & 0xFF) + 0x300];
-    var part2 = Table[((crc >> 8) & 0xFF) + 0x200];
+    var part2 = Table[(crc >> 8 & 0xFF) + 0x200];
     var part3 = Table[data[2] + 0x100];
     var part4 = Table[data[3]];
 
@@ -163,7 +164,7 @@ public static class Crc16
   private static ushort CrcN4(ushort crc, byte data)
   {
     crc = (ushort)(crc ^ data);
-    return (ushort)(Table[crc & 0xFF] ^ (crc >> 8));
+    return (ushort)(Table[crc & 0xFF] ^ crc >> 8);
   }
 
 
@@ -182,16 +183,10 @@ public static class Crc16
         var ptr = pData;
 
         // 每次处理 4 字节
-        for (; i + 4 <= length; i += 4, ptr += 4)
-        {
-          crc = CrcN4(crc, ptr);
-        }
+        for (; i + 4 <= length; i += 4, ptr += 4) crc = CrcN4(crc, ptr);
 
         // 处理剩余字节
-        for (; i < length; i++, ptr++)
-        {
-          crc = CrcN4(crc, *ptr);
-        }
+        for (; i < length; i++, ptr++) crc = CrcN4(crc, *ptr);
       }
 
       return crc;
@@ -209,7 +204,7 @@ public static class Crc16
     // 跨段时拷贝到栈上（Modbus RTU帧≤256字节）
     Span<byte> temp = stackalloc byte[data.Length];
     data.CopyTo(temp);
-    return CalculateCrc16((ReadOnlySpan<byte>)temp);
+    return CalculateCrc16(temp);
   }
 
   /// <summary>

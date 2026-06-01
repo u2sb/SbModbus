@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using CommunityToolkit.HighPerformance.Buffers;
 using Sb.Extensions.System;
 using SbModbus.Models;
 
@@ -17,7 +18,11 @@ public abstract class BaseModbusServer : IModbusServer
 
   private readonly Channel<ModbusFrameMessage> _frameChannel =
     Channel.CreateUnbounded<ModbusFrameMessage>(
-      new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+      new UnboundedChannelOptions
+      {
+        SingleReader = true,
+        SingleWriter = true
+      });
 
   private CancellationTokenSource? _runningCts;
   private IModbusStreamServer? _server;
@@ -153,11 +158,13 @@ public abstract class BaseModbusServer : IModbusServer
   private void OnServerSessionDisconnected(IModbusStream stream)
   {
     foreach (var kv in _sessions)
+    {
       if (ReferenceEquals(kv.Value.Stream, stream))
       {
         _sessions.TryRemove(kv.Key, out _);
         break;
       }
+    }
 
     Logger.Log(LogLevel.Information, $"Session disconnected ({stream.GetTransportInfo()})");
 
@@ -181,9 +188,10 @@ public abstract class BaseModbusServer : IModbusServer
   private async Task ProcessLoopAsync(CancellationToken ct)
   {
     await foreach (var message in _frameChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+    {
       try
       {
-        var response = await ProcessRequestAsync(
+        using var response = await ProcessRequestAsync(
           message.UnitId, message.FunctionCode,
           message.StartingAddress, message.Quantity, message.Data, ct
         ).ConfigureAwait(false);
@@ -212,6 +220,7 @@ public abstract class BaseModbusServer : IModbusServer
       {
         Logger.Error(ex, "Unexpected processing error");
       }
+    }
   }
 
   #endregion
@@ -328,16 +337,16 @@ public abstract class BaseModbusServer : IModbusServer
   private static async ValueTask<ModbusResponseResult> ReadBitsAsync(
     ModbusCoils coils, int startingAddress, int quantity, CancellationToken ct)
   {
-    var byteCount = (quantity + 7) >> 3;
-    var result = new byte[1 + byteCount]; // byteCount + data
-    result[0] = (byte)byteCount;
+    var byteCount = quantity + 7 >> 3;
+    var owner = MemoryOwner<byte>.Allocate(1 + byteCount);
+    owner.Span[0] = (byte)byteCount;
 
-    await using (var locked = await coils.LockAsync(ct).ConfigureAwait(false))
+    await using(var locked = await coils.LockAsync(ct).ConfigureAwait(false))
     {
-      locked.Data.CopyTo(result.AsSpan(1), startingAddress, quantity);
+      locked.Data.CopyTo(owner.Span.Slice(1), startingAddress, quantity);
     }
 
-    return new ModbusResponseResult { Data = result };
+    return ModbusResponseResult.Success(owner);
   }
 
   /// <summary>
@@ -347,15 +356,15 @@ public abstract class BaseModbusServer : IModbusServer
     ModbusRegisters registers, int startingAddress, int quantity, CancellationToken ct)
   {
     var byteCount = quantity * 2;
-    var result = new byte[1 + byteCount]; // byteCount + data
-    result[0] = (byte)byteCount;
+    var owner = MemoryOwner<byte>.Allocate(1 + byteCount);
+    owner.Span[0] = (byte)byteCount;
 
-    await using (var locked = await registers.LockAsync(ct).ConfigureAwait(false))
+    await using(var locked = await registers.LockAsync(ct).ConfigureAwait(false))
     {
-      locked.Data.Slice(startingAddress * 2, quantity * 2).CopyTo(result.AsSpan(1));
+      locked.Data.Slice(startingAddress * 2, quantity * 2).CopyTo(owner.Span.Slice(1));
     }
 
-    return new ModbusResponseResult { Data = result };
+    return ModbusResponseResult.Success(owner);
   }
 
   #endregion
@@ -387,12 +396,12 @@ public abstract class BaseModbusServer : IModbusServer
     FireCoilsWriteHandlers(in args, startingAddress, 1);
 
     // 回显: startingAddress(2, BE) + data(2)
-    var echo = new byte[4];
-    startingAddress.WriteTo(echo.AsSpan(), BigAndSmallEndianEncodingMode.ABCD);
+    Span<byte> echo = stackalloc byte[4];
+    startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
     echo[2] = d0;
     echo[3] = d1;
 
-    return new ModbusResponseResult { Data = echo };
+    return ModbusResponseResult.Success(echo.ToArray());
   }
 
   /// <summary>
@@ -406,7 +415,7 @@ public abstract class BaseModbusServer : IModbusServer
 
     // 在 await 之前提取数据（ReadOnlyMemory 可跨 await）
     var byteCount = requestData.Span[0];
-    var expectedByteCount = (quantity + 7) >> 3;
+    var expectedByteCount = quantity + 7 >> 3;
     if (byteCount != expectedByteCount)
       return ModbusResponseResult.Error(ModbusExceptionCode.IllegalDataValue);
 
@@ -421,18 +430,18 @@ public abstract class BaseModbusServer : IModbusServer
     {
       var byteIndex = i >> 3;
       var bitIndex = i & 7;
-      var value = (coilBytes[byteIndex] & (1 << bitIndex)) != 0;
+      var value = (coilBytes[byteIndex] & 1 << bitIndex) != 0;
       locked.Data.Set(startingAddress + i, value);
     }
 
     FireCoilsWriteHandlers(in args, startingAddress, quantity);
 
     // 回显: startingAddress(2, BE) + quantity(2, BE)
-    var echo = new byte[4];
-    startingAddress.WriteTo(echo.AsSpan(), BigAndSmallEndianEncodingMode.ABCD);
-    quantity.WriteTo(echo.AsSpan(2), BigAndSmallEndianEncodingMode.ABCD);
+    Span<byte> echo = stackalloc byte[4];
+    startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
+    quantity.WriteTo(echo.Slice(2), BigAndSmallEndianEncodingMode.ABCD);
 
-    return new ModbusResponseResult { Data = echo };
+    return ModbusResponseResult.Success(echo.ToArray());
   }
 
   /// <summary>
@@ -445,9 +454,14 @@ public abstract class BaseModbusServer : IModbusServer
     lock (CoilsWriteHandlersLocker)
     {
       foreach (var handler in CoilsWriteHandlers
-                 .Select(handler => new { handler, handlerEnd = handler.Start + handler.Count })
+                 .Select(handler => new
+                 {
+                   handler,
+                   handlerEnd = handler.Start + handler.Count
+                 })
                  .Where(t => t.handler.Start < writeEnd && t.handlerEnd > writeStart)
                  .Select(t => t.handler))
+      {
         try
         {
           handler.Action(args);
@@ -456,6 +470,7 @@ public abstract class BaseModbusServer : IModbusServer
         {
           Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
         }
+      }
     }
   }
 
@@ -478,11 +493,11 @@ public abstract class BaseModbusServer : IModbusServer
     FireRegistersWriteHandlers(in args, startingAddress, 1);
 
     // 回显: startingAddress(2, BE) + data(2)
-    var echo = new byte[4];
-    startingAddress.WriteTo(echo.AsSpan(), BigAndSmallEndianEncodingMode.ABCD);
-    requestData.Span.CopyTo(echo.AsSpan(2));
+    Span<byte> echo = stackalloc byte[4];
+    startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
+    requestData.Span.CopyTo(echo.Slice(2));
 
-    return new ModbusResponseResult { Data = echo };
+    return ModbusResponseResult.Success(echo.ToArray());
   }
 
   /// <summary>
@@ -509,11 +524,11 @@ public abstract class BaseModbusServer : IModbusServer
     FireRegistersWriteHandlers(in args, startingAddress, quantity);
 
     // 回显: startingAddress(2, BE) + quantity(2, BE)
-    var echo = new byte[4];
-    startingAddress.WriteTo(echo.AsSpan(), BigAndSmallEndianEncodingMode.ABCD);
-    quantity.WriteTo(echo.AsSpan(2), BigAndSmallEndianEncodingMode.ABCD);
+    Span<byte> echo = stackalloc byte[4];
+    startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
+    quantity.WriteTo(echo.Slice(2), BigAndSmallEndianEncodingMode.ABCD);
 
-    return new ModbusResponseResult { Data = echo };
+    return ModbusResponseResult.Success(echo.ToArray());
   }
 
   /// <summary>
@@ -526,9 +541,14 @@ public abstract class BaseModbusServer : IModbusServer
     lock (RegistersWriteHandlersLocker)
     {
       foreach (var handler in RegistersWriteHandlers
-                 .Select(handler => new { handler, handlerEnd = handler.Start + handler.Count })
+                 .Select(handler => new
+                 {
+                   handler,
+                   handlerEnd = handler.Start + handler.Count
+                 })
                  .Where(t => t.handler.Start < writeEnd && t.handlerEnd > writeStart)
                  .Select(t => t.handler))
+      {
         try
         {
           handler.Action(args);
@@ -537,6 +557,7 @@ public abstract class BaseModbusServer : IModbusServer
         {
           Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
         }
+      }
     }
   }
 
@@ -623,32 +644,70 @@ public abstract class BaseModbusServer : IModbusServer
   #region 内部类型
 
   /// <summary>
-  ///   请求处理结果
+  ///   请求处理结果。当 <see cref="Data" /> 由 <see cref="MemoryOwner{T}" /> 支持时，
+  ///   消费方必须在读取 <see cref="Data" /> 后调用 <see cref="Dispose" /> 归还内存。
   /// </summary>
-  protected readonly struct ModbusResponseResult
+  protected struct ModbusResponseResult : IDisposable
   {
+    private MemoryOwner<byte>? _owner;
+
     /// <summary>正常响应的 PDU 体数据</summary>
-    public ReadOnlyMemory<byte>? Data { get; init; }
+    public ReadOnlyMemory<byte>? Data { get; private set; }
 
     /// <summary>异常码（null 表示正常）</summary>
-    public ModbusExceptionCode? ExceptionCode { get; init; }
+    public ModbusExceptionCode? ExceptionCode { get; private set; }
 
     /// <summary>是否为错误响应</summary>
-    public bool IsError => ExceptionCode.HasValue;
+    public readonly bool IsError => ExceptionCode.HasValue;
 
     /// <summary>是否抑制响应（静默忽略请求）</summary>
-    public bool SuppressResponse { get; init; }
+    public bool SuppressResponse { get; private set; }
+
+    /// <summary>创建成功结果 — 由 <see cref="MemoryOwner{T}" /> 接管内存所有权</summary>
+    public static ModbusResponseResult Success(MemoryOwner<byte> owner)
+    {
+      return new ModbusResponseResult
+      {
+        _owner = owner,
+        Data = owner.Memory
+      };
+    }
+
+    /// <summary>创建成功结果 — 使用已有的 <see cref="ReadOnlyMemory{T}" />（无所有权）</summary>
+    public static ModbusResponseResult Success(ReadOnlyMemory<byte> data)
+    {
+      return new ModbusResponseResult
+      {
+        Data = data
+      };
+    }
 
     /// <summary>创建错误结果</summary>
     public static ModbusResponseResult Error(ModbusExceptionCode code)
     {
-      return new ModbusResponseResult { ExceptionCode = code };
+      return new ModbusResponseResult
+      {
+        ExceptionCode = code
+      };
     }
 
     /// <summary>创建静默忽略结果（不发任何响应）</summary>
     public static ModbusResponseResult SilentlyIgnore()
     {
-      return new ModbusResponseResult { SuppressResponse = true };
+      return new ModbusResponseResult
+      {
+        SuppressResponse = true
+      };
+    }
+
+    /// <summary>
+    ///   释放内存所有者（如果有）。
+    ///   消费方在读取 <see cref="Data" /> 后应调用此方法。
+    /// </summary>
+    public void Dispose()
+    {
+      _owner?.Dispose();
+      _owner = null;
     }
   }
 

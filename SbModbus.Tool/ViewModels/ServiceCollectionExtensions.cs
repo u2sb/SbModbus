@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
     public IServiceCollection AddViewsAndViewModels(Assembly assembly)
     {
       foreach (var type in assembly.GetTypes())
+      {
         if (type is { IsClass: true, IsAbstract: false } &&
             (typeof(ViewModelBase).IsAssignableFrom(type) || typeof(Control).IsAssignableFrom(type)))
         {
@@ -47,6 +48,7 @@ public static class ServiceCollectionExtensions
                 break;
             }
         }
+      }
 
       return services;
     }

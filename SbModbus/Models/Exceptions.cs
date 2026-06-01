@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 
 namespace SbModbus.Models;
 
@@ -27,7 +26,8 @@ public class SbModbusException : Exception
   /// <param name="exceptionCode"></param>
   /// <param name="message"></param>
   /// <param name="innerException"></param>
-  public SbModbusException(ModbusExceptionCode exceptionCode, string message, Exception? innerException = null) : base(message, innerException)
+  public SbModbusException(ModbusExceptionCode exceptionCode, string message, Exception? innerException = null) : base(
+    message, innerException)
   {
     ExceptionCode = exceptionCode;
   }
@@ -39,7 +39,7 @@ public class SbModbusException : Exception
 }
 
 /// <summary>
-///   用于包裹 IO 相关异常，统一对外暴露为 <see cref="SbModbusException"/>。
+///   用于包裹 IO 相关异常，统一对外暴露为 <see cref="SbModbusException" />。
 /// </summary>
 public class SbModbusIOException : SbModbusException
 {
@@ -136,8 +136,10 @@ internal static class SbModbusThrow
     throw new SbModbusException(exceptionCode, functionCode switch
     {
       ModbusFunctionCode.WriteMultipleRegisters => ErrorMessages.ModbusClient_0x03_IllegalDataValue_0x7B,
-      ModbusFunctionCode.ReadHoldingRegisters or ModbusFunctionCode.ReadInputRegisters => ErrorMessages.ModbusClient_0x03_IllegalDataValue_0x7D,
-      ModbusFunctionCode.ReadCoils or ModbusFunctionCode.ReadDiscreteInputs => ErrorMessages.ModbusClient_0x03_IllegalDataValue_0x7D0,
+      ModbusFunctionCode.ReadHoldingRegisters or ModbusFunctionCode.ReadInputRegisters => ErrorMessages
+        .ModbusClient_0x03_IllegalDataValue_0x7D,
+      ModbusFunctionCode.ReadCoils or ModbusFunctionCode.ReadDiscreteInputs => ErrorMessages
+        .ModbusClient_0x03_IllegalDataValue_0x7D0,
       _ => ErrorMessages.ModbusClient_0x03_IllegalDataValue
     });
   }

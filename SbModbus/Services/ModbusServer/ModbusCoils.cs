@@ -117,7 +117,7 @@ public readonly struct ModbusCoilsHandlerArgs
   public ModbusCoilsHandlerArgs(ModbusCoils.LockedModbusCoils data, int offset, int count)
   {
     Data = data;
-    _oldData = new byte[(count + 7) >> 3];
+    _oldData = new byte[count + 7 >> 3];
     data.Data.CopyTo(_oldData.AsSpan(), offset, count);
   }
 
