@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using SbModbus.Models;
+using SbModbus.Utils;
 
 namespace SbModbus.TcpStream;
 

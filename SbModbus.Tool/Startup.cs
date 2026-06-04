@@ -11,8 +11,9 @@ using SbModbus.Tool.Services.RecordServices;
 using SbModbus.Tool.ViewModels;
 using SbModbus.Tool.Views.Windows;
 using ZeroMessenger.DependencyInjection;
+using Logger = SbModbus.Utils.Logger;
 using MLogLevel = Microsoft.Extensions.Logging.LogLevel;
-using SLogLevel = SbModbus.LogLevel;
+using SLogLevel = SbModbus.Utils.LogLevel;
 
 namespace SbModbus.Tool;
 
@@ -108,7 +109,7 @@ public static class Startup
   {
     if (_host is null) return;
 
-    using(_host)
+    using (_host)
     {
       _host.StopAsync().ConfigureAwait(true).GetAwaiter().GetResult();
     }
