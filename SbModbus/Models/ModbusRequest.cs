@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance.Buffers;
 using Sb.Extensions.System;
+using Sb.Extensions.System.Threading;
 using SbModbus.Services.ModbusClient;
 using SbModbus.Utils;
 
@@ -62,7 +63,7 @@ public class ModbusRequest
   ///   发送请求
   /// </summary>
   /// <param name="client"></param>
-  public ModbusResponse Send(IModbusClient client)
+  private ModbusResponse Send(IModbusClient client)
   {
     return SbThreading.Jtf.Run(() => SendAsync(client));
   }
@@ -72,7 +73,7 @@ public class ModbusRequest
   /// </summary>
   /// <param name="client"></param>
   /// <param name="ct"></param>
-  public async Task<ModbusResponse> SendAsync(IModbusClient client, CancellationToken ct = default)
+  private async Task<ModbusResponse> SendAsync(IModbusClient client, CancellationToken ct = default)
   {
     try
     {
@@ -149,11 +150,98 @@ public class ModbusRequest
 
   private static bool IsTimeout(Exception ex)
   {
-    if (ex is TimeoutException or OperationCanceledException) return true;
-    if (ex is SbModbusException mex && mex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase)) return true;
-    if (ex.InnerException is not null && IsTimeout(ex.InnerException)) return true;
-    return false;
+    switch (ex)
+    {
+      case TimeoutException or OperationCanceledException:
+      case SbModbusException mex when mex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase):
+        return true;
+    }
+
+    return ex.InnerException is not null && IsTimeout(ex.InnerException);
   }
+
+  #region 锁
+
+  /// <summary>
+  ///   锁
+  /// </summary>
+  private readonly AsyncLock _lock = new();
+
+  /// <summary>
+  ///   上锁
+  /// </summary>
+  /// <param name="ct"></param>
+  /// <returns></returns>
+  public LockedModbusRequest Lock(CancellationToken ct = default)
+  {
+    var l = _lock.Lock(ct);
+    return new LockedModbusRequest(this, in l);
+  }
+
+  /// <summary>
+  ///   上锁
+  /// </summary>
+  /// <param name="ct"></param>
+  /// <returns></returns>
+  public async ValueTask<LockedModbusRequest> LockAsync(CancellationToken ct = default)
+  {
+    var l = await _lock.LockAsync(ct);
+    return new LockedModbusRequest(this, in l);
+  }
+
+
+  /// <summary>
+  ///   上锁的请求
+  /// </summary>
+  public readonly struct LockedModbusRequest : IDisposable, IAsyncDisposable
+  {
+    private readonly AsyncLock.InnerLock _innerLock;
+    private readonly ModbusRequest Request { get; }
+
+    /// <summary>
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="innerLock"></param>
+    internal LockedModbusRequest(ModbusRequest request, scoped in AsyncLock.InnerLock innerLock)
+    {
+      Request = request;
+      _innerLock = innerLock;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+      _innerLock.Dispose();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+      await _innerLock.DisposeAsync();
+    }
+
+    /// <summary>
+    ///   发送请求
+    /// </summary>
+    /// <param name="client"></param>
+    public ModbusResponse Send(IModbusClient client)
+    {
+      return Request.Send(client);
+    }
+
+    /// <summary>
+    ///   发送请求
+    /// </summary>
+    /// <param name="client"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
+    public Task<ModbusResponse> SendAsync(IModbusClient client, CancellationToken ct = default)
+    {
+      return Request.SendAsync(client, ct);
+    }
+  }
+
+  #endregion
 
   #region 静态函数
 
@@ -214,10 +302,7 @@ public class ModbusRequest
   /// <returns>已校验的请求对象。</returns>
   public static ModbusRequest CreateWriteSingleCoil(ushort startingAddress, bool value, byte slaveId = 1)
   {
-    ReadOnlySpan<byte> offData = stackalloc byte[]
-    {
-      0x00, 0x00
-    };
+    var offData = "\0\0"u8;
     return CreateWriteSingleCoil(startingAddress, value ? [0xFF, 0x00] : offData, slaveId);
   }
 

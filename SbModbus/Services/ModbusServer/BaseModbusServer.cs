@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance.Buffers;
 using Sb.Extensions.System;
 using SbModbus.Models;
+using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusServer;
 
@@ -117,7 +118,7 @@ public abstract class BaseModbusServer : IModbusServer
   {
     try
     {
-      StopAsync().GetAwaiter().GetResult();
+      SbThreading.Jtf.Run(async () => { await StopAsync().ConfigureAwait(false); });
     }
     catch
     {
@@ -158,13 +159,11 @@ public abstract class BaseModbusServer : IModbusServer
   private void OnServerSessionDisconnected(IModbusStream stream)
   {
     foreach (var kv in _sessions)
-    {
       if (ReferenceEquals(kv.Value.Stream, stream))
       {
         _sessions.TryRemove(kv.Key, out _);
         break;
       }
-    }
 
     Logger.Log(LogLevel.Information, $"Session disconnected ({stream.GetTransportInfo()})");
 
@@ -188,7 +187,6 @@ public abstract class BaseModbusServer : IModbusServer
   private async Task ProcessLoopAsync(CancellationToken ct)
   {
     await foreach (var message in _frameChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
-    {
       try
       {
         using var response = await ProcessRequestAsync(
@@ -220,7 +218,6 @@ public abstract class BaseModbusServer : IModbusServer
       {
         Logger.Error(ex, "Unexpected processing error");
       }
-    }
   }
 
   #endregion
@@ -337,11 +334,11 @@ public abstract class BaseModbusServer : IModbusServer
   private static async ValueTask<ModbusResponseResult> ReadBitsAsync(
     ModbusCoils coils, int startingAddress, int quantity, CancellationToken ct)
   {
-    var byteCount = quantity + 7 >> 3;
+    var byteCount = (quantity + 7) >> 3;
     var owner = MemoryOwner<byte>.Allocate(1 + byteCount);
     owner.Span[0] = (byte)byteCount;
 
-    await using(var locked = await coils.LockAsync(ct).ConfigureAwait(false))
+    await using (var locked = await coils.LockAsync(ct).ConfigureAwait(false))
     {
       locked.Data.CopyTo(owner.Span.Slice(1), startingAddress, quantity);
     }
@@ -359,7 +356,7 @@ public abstract class BaseModbusServer : IModbusServer
     var owner = MemoryOwner<byte>.Allocate(1 + byteCount);
     owner.Span[0] = (byte)byteCount;
 
-    await using(var locked = await registers.LockAsync(ct).ConfigureAwait(false))
+    await using (var locked = await registers.LockAsync(ct).ConfigureAwait(false))
     {
       locked.Data.Slice(startingAddress * 2, quantity * 2).CopyTo(owner.Span.Slice(1));
     }
@@ -415,7 +412,7 @@ public abstract class BaseModbusServer : IModbusServer
 
     // 在 await 之前提取数据（ReadOnlyMemory 可跨 await）
     var byteCount = requestData.Span[0];
-    var expectedByteCount = quantity + 7 >> 3;
+    var expectedByteCount = (quantity + 7) >> 3;
     if (byteCount != expectedByteCount)
       return ModbusResponseResult.Error(ModbusExceptionCode.IllegalDataValue);
 
@@ -430,7 +427,7 @@ public abstract class BaseModbusServer : IModbusServer
     {
       var byteIndex = i >> 3;
       var bitIndex = i & 7;
-      var value = (coilBytes[byteIndex] & 1 << bitIndex) != 0;
+      var value = (coilBytes[byteIndex] & (1 << bitIndex)) != 0;
       locked.Data.Set(startingAddress + i, value);
     }
 
@@ -461,7 +458,6 @@ public abstract class BaseModbusServer : IModbusServer
                  })
                  .Where(t => t.handler.Start < writeEnd && t.handlerEnd > writeStart)
                  .Select(t => t.handler))
-      {
         try
         {
           handler.Action(args);
@@ -470,7 +466,6 @@ public abstract class BaseModbusServer : IModbusServer
         {
           Logger.Error(ex, $"Coils write handler [{handler.Start}, {handler.Count}] threw exception");
         }
-      }
     }
   }
 
@@ -548,7 +543,6 @@ public abstract class BaseModbusServer : IModbusServer
                  })
                  .Where(t => t.handler.Start < writeEnd && t.handlerEnd > writeStart)
                  .Select(t => t.handler))
-      {
         try
         {
           handler.Action(args);
@@ -557,7 +551,6 @@ public abstract class BaseModbusServer : IModbusServer
         {
           Logger.Error(ex, $"Registers write handler [{handler.Start}, {handler.Count}] threw exception");
         }
-      }
     }
   }
 

@@ -56,12 +56,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   连接状态
   /// </summary>
-  [ObservableProperty] public partial bool IsConnected { get; set; }
+  [ObservableProperty]
+  public partial bool IsConnected { get; set; }
 
   /// <summary>
   ///   Modbus客户端模式
   /// </summary>
-  [ObservableProperty] public partial ModbusClientType ModbusClientType { get; set; } = 0;
+  [ObservableProperty]
+  public partial ModbusClientType ModbusClientType { get; set; } = 0;
 
   public void Dispose()
   {
@@ -96,12 +98,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   串口号
   /// </summary>
-  [ObservableProperty] public partial string SerialPortName { get; set; } = string.Empty;
+  [ObservableProperty]
+  public partial string SerialPortName { get; set; } = string.Empty;
 
   /// <summary>
   ///   波特率
   /// </summary>
-  [ObservableProperty] public partial int BaudRate { get; set; }
+  [ObservableProperty]
+  public partial int BaudRate { get; set; }
 
   partial void OnBaudRateChanged(int value)
   {
@@ -111,7 +115,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   波特率
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsInt32))]
   public partial string? BaudRateString { get; set; } = "9600";
 
   partial void OnBaudRateStringChanged(string? value)
@@ -122,22 +127,26 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   数据位
   /// </summary>
-  [ObservableProperty] public partial int DataBits { get; set; }
+  [ObservableProperty]
+  public partial int DataBits { get; set; }
 
   /// <summary>
   ///   校验位
   /// </summary>
-  [ObservableProperty] public partial Parity Parity { get; set; }
+  [ObservableProperty]
+  public partial Parity Parity { get; set; }
 
   /// <summary>
   ///   停止位
   /// </summary>
-  [ObservableProperty] public partial StopBits StopBits { get; set; }
+  [ObservableProperty]
+  public partial StopBits StopBits { get; set; }
 
   /// <summary>
   ///   流控
   /// </summary>
-  [ObservableProperty] public partial Handshake Handshake { get; set; }
+  [ObservableProperty]
+  public partial Handshake Handshake { get; set; }
 
   /// <summary>
   ///   串口名称列表
@@ -195,13 +204,15 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   IP
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsIp))]
   public partial string TargetIp { get; set; } = "127.0.0.1";
 
   /// <summary>
   ///   目标端口
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
   public partial string TargetPort { get; set; } = "502";
 
   private void CreateModbusTcpClient()
@@ -244,12 +255,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   站号
   /// </summary>
-  [ObservableProperty] public partial byte StationId { get; set; } = 1;
+  [ObservableProperty]
+  public partial byte StationId { get; set; } = 1;
 
   /// <summary>
   ///   站号字符串
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsByte))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsByte))]
   public partial string? StationIdString { get; set; } = "1";
 
   partial void OnStationIdStringChanged(string? value)
@@ -260,7 +273,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   编码方式
   /// </summary>
-  [ObservableProperty] public partial BigAndSmallEndianEncodingMode EncodingMode { get; set; } =
+  [ObservableProperty]
+  public partial BigAndSmallEndianEncodingMode EncodingMode { get; set; } =
     BigAndSmallEndianEncodingMode.ABCD;
 
   /// <summary>
@@ -271,7 +285,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   被选中的写方法
   /// </summary>
-  [ObservableProperty] public partial int SelectedModbusWriteFunCodeIndex { get; set; } = 2;
+  [ObservableProperty]
+  public partial int SelectedModbusWriteFunCodeIndex { get; set; } = 2;
 
   /// <summary>
   ///   选择的方法
@@ -287,7 +302,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   被选中的写FunCode
   /// </summary>
-  [ObservableProperty] public partial int SelectedModbusReadFunCodeIndex { get; set; } = 2;
+  [ObservableProperty]
+  public partial int SelectedModbusReadFunCodeIndex { get; set; } = 2;
 
   /// <summary>
   ///   选择的方法
@@ -304,12 +320,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   地址
   /// </summary>
-  [ObservableProperty] public partial ushort ModbusAddress { get; set; } = 1;
+  [ObservableProperty]
+  public partial ushort ModbusAddress { get; set; } = 1;
 
   /// <summary>
   ///   地址
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsUInt16))]
   public partial string? ModbusAddressString { get; set; } = "1";
 
   partial void OnModbusAddressStringChanged(string? value)
@@ -324,7 +342,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   Modbus地址类型 0 表示十进制 1表示十六进制
   /// </summary>
-  [ObservableProperty] public partial int ModbusAddressType { get; set; }
+  [ObservableProperty]
+  public partial int ModbusAddressType { get; set; }
 
   partial void OnModbusAddressTypeChanged(int value)
   {
@@ -335,12 +354,14 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   寄存器数量
   /// </summary>
-  [ObservableProperty] public partial byte ReadNumber { get; set; } = 1;
+  [ObservableProperty]
+  public partial byte ReadNumber { get; set; } = 1;
 
   /// <summary>
   ///   寄存器数量
   /// </summary>
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsByte))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsByte))]
   public partial string? ReadNumberString { get; set; } = "1";
 
   partial void OnReadNumberStringChanged(string? value)
@@ -355,7 +376,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   寄存器数量类型 0 表示十进制 1表示十六进制
   /// </summary>
-  [ObservableProperty] public partial int ReadNumberType { get; set; }
+  [ObservableProperty]
+  public partial int ReadNumberType { get; set; }
 
   partial void OnReadNumberTypeChanged(int value)
   {
@@ -366,7 +388,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   /// <summary>
   ///   Modbus值类型
   /// </summary>
-  [ObservableProperty] public partial ModbusValueType SelectedModbusValueType { get; set; } = ModbusValueType.UShort;
+  [ObservableProperty]
+  public partial ModbusValueType SelectedModbusValueType { get; set; } = ModbusValueType.UShort;
 
   /// <summary>
   ///   要读取的寄存器数量
@@ -388,14 +411,16 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     "bit", "short", "ushort", "int", "uint", "long", "ulong", "float", "double"
   ];
 
-  [ObservableProperty] [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsDouble))]
+  [ObservableProperty]
+  [CustomValidation(typeof(SbValidation), nameof(SbValidation.StringIsDouble))]
   public partial string? ModbusInputValueString { get; set; } = "0";
 
 
   /// <summary>
   ///   Modbus输入值类型 0 表示十进制 1表示十六进制
   /// </summary>
-  [ObservableProperty] public partial int ModbusInputValueType { get; set; }
+  [ObservableProperty]
+  public partial int ModbusInputValueType { get; set; }
 
   /// <summary>
   ///   读
@@ -413,7 +438,8 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
     {
       _modbusRequest = ModbusRequest.CreateReadRequest(SelectedModbusReadFunctionCode, ModbusAddress, rc, StationId);
 
-      var result = await _modbusRequest.SendAsync(_modbusClient, cts.Token);
+      await using var lockedRequest = await _modbusRequest.LockAsync(cts.Token);
+      var result = await lockedRequest.SendAsync(_modbusClient, cts.Token);
 
       if (result.IsSucceed)
         App.Current.Dispatcher.Invoke(() =>
@@ -513,7 +539,11 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
           break;
       }
 
-      if (_modbusRequest != null) await _modbusRequest.SendAsync(_modbusClient, cts.Token);
+      if (_modbusRequest != null)
+      {
+        await using var lockedRequest = await _modbusRequest.LockAsync(cts.Token);
+        await lockedRequest.SendAsync(_modbusClient, cts.Token);
+      }
     }
     catch (Exception)
     {

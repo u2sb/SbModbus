@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using SbModbus.Utils;
 
 namespace SbModbus.Models;
 

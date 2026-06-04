@@ -5,6 +5,7 @@ using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
 using SbModbus.Models;
+using SbModbus.Utils;
 #if NETSTANDARD2_0 || NET462_OR_GREATER
 using CommunityToolkit.HighPerformance;
 #endif

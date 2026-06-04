@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System;
 using SbModbus.Models;
+using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
 
