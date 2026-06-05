@@ -196,7 +196,11 @@ public class ModbusRequest
   public readonly struct LockedModbusRequest : IDisposable, IAsyncDisposable
   {
     private readonly AsyncLock.InnerLock _innerLock;
-    private readonly ModbusRequest Request { get; }
+
+    /// <summary>
+    ///   请求
+    /// </summary>
+    public ModbusRequest Request { get; }
 
     /// <summary>
     /// </summary>
