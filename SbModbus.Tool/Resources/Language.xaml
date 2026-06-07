@@ -5,6 +5,8 @@
   <s:String x:Key="lang.title">帅比 Modbus 助手</s:String>
   <s:String x:Key="lang.serialPortAssistant">串口助手</s:String>
   <s:String x:Key="lang.modbus">Modbus</s:String>
+  <s:String x:Key="lang.modbusClient">Modbus 客户端</s:String>
+  <s:String x:Key="lang.modbusServer">Modbus 服务端</s:String>
   <s:String x:Key="lang.noneType">无</s:String>
   <s:String x:Key="lang.serialPortType">串口</s:String>
   <s:String x:Key="lang.tcpClientType">TCP 客户端</s:String>
@@ -30,6 +32,8 @@
   <s:String x:Key="lang.modbusRtuOverTcpType">ModbusRtuOverTcp</s:String>
   <s:String x:Key="lang.modbusRtuOverUdpType">ModbusRtuOverUdp</s:String>
   <s:String x:Key="lang.modbusInterface">连接方式</s:String>
+  <s:String x:Key="lang.modbusServerProtocol">服务端类型</s:String>
+  <s:String x:Key="lang.modbusTransport">连接方式</s:String>
   <s:String x:Key="lang.modbusStationId">站号</s:String>
   <s:String x:Key="lang.modbusEncodeMode">编码方式</s:String>
   <s:String x:Key="lang.modbusReadFunCode">功能码（读）</s:String>
@@ -51,8 +55,17 @@
   <s:String x:Key="lang.btnCancel">取消</s:String>
   <s:String x:Key="lang.btnClear">清空</s:String>
   <s:String x:Key="lang.btnSend">发送</s:String>
+  <s:String x:Key="lang.btnStart">启动</s:String>
+  <s:String x:Key="lang.btnStop">停止</s:String>
   <s:String x:Key="lang.btnDsLog">传输日志</s:String>
   <s:String x:Key="lang.btnRead">读取</s:String>
   <s:String x:Key="lang.btnWrite">写入</s:String>
+  <s:String x:Key="lang.serverStatus">服务器状态</s:String>
+  <s:String x:Key="lang.serverInterface">监听方式</s:String>
+  <s:String x:Key="lang.bindingPanel">数据绑定</s:String>
+  <s:String x:Key="lang.bindingCoil">线圈</s:String>
+  <s:String x:Key="lang.bindingDiscreteInput">离散输入</s:String>
+  <s:String x:Key="lang.bindingHoldingRegister">保持寄存器</s:String>
+  <s:String x:Key="lang.bindingInputRegister">输入寄存器</s:String>
   <!-- ReSharper restore InconsistentNaming -->
 </ResourceDictionary>

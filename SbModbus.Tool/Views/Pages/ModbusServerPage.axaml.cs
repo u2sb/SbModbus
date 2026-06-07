@@ -3,9 +3,9 @@ using SbModbus.Tool.Utils;
 
 namespace SbModbus.Tool.Views.Pages;
 
-public partial class ModbusPage : UserControl
+public partial class ModbusServerPage : UserControl
 {
-  public ModbusPage()
+  public ModbusServerPage()
   {
     InitializeComponent();
     this.AutoCreateViewModel();

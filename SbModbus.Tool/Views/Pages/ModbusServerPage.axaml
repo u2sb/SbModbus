@@ -1,0 +1,259 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
+             xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="SbModbus.Tool.Views.Pages.ModbusServerPage"
+             x:DataType="pvm:ModbusServerPageViewModel">
+  <Design.DataContext>
+    <pvm:ModbusServerPageViewModel />
+  </Design.DataContext>
+  <Grid ColumnDefinitions="280,4,*,4,*">
+    <Grid.Styles>
+      <Style Selector="TextBox">
+        <Setter Property="Width" Value="140" />
+      </Style>
+      <Style Selector="ComboBox">
+        <Setter Property="Width" Value="140" />
+      </Style>
+    </Grid.Styles>
+
+    <!-- ===== 左栏：连接配置 ===== -->
+    <Border Grid.Column="0" Margin="5" BorderThickness="1">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="5">
+          <Grid Height="80">
+            <TextBlock Margin="0,10" VerticalAlignment="Top" Text="{StaticResource lang.modbusServerProtocol}" />
+            <ComboBox VerticalAlignment="Bottom" Height="35" Width="218"
+                      SelectedIndex="{Binding ModbusServerProtocol,
+                        Converter={StaticResource EnumToIntConverter}}">
+              <ComboBoxItem Content="{StaticResource lang.modbusRtuType}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusTcpType}" />
+            </ComboBox>
+          </Grid>
+
+          <Grid Height="80">
+            <TextBlock Margin="0,10" VerticalAlignment="Top" Text="{StaticResource lang.modbusTransport}" />
+            <ComboBox VerticalAlignment="Bottom" Height="35" Width="218"
+                      SelectedIndex="{Binding ModbusServerTransport,
+                        Converter={StaticResource EnumToIntConverter}}">
+              <ComboBoxItem Content="{StaticResource lang.serialPortType}" />
+              <ComboBoxItem Content="{StaticResource lang.tcpServerType}" />
+              <ComboBoxItem Content="{StaticResource lang.udpServerType}" />
+              <ComboBoxItem Content="{StaticResource lang.tcpClientType}" />
+              <ComboBoxItem Content="{StaticResource lang.udpClientType}" />
+            </ComboBox>
+          </Grid>
+
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.serverStatus}" />
+            <Rectangle Margin="5,0" Width="130" Height="15" HorizontalAlignment="Right"
+                       Fill="{Binding IsRunning,
+                         Converter={StaticResource BoolToColorBrushConverter}}" />
+          </Grid>
+
+          <Rectangle Margin="0,5" Height="3" Fill="#1890FF" />
+
+          <!-- 串口 -->
+          <Grid IsVisible="{Binding ModbusServerTransport,
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter=SerialPort}">
+            <StackPanel>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.protName}" />
+                <ComboBox ItemsSource="{Binding SerialPortNames}" SelectedValue="{Binding SerialPortName}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.baudRate}" />
+                <TextBox Text="{Binding BaudRateString}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.dataBit}" />
+                <ComboBox ItemsSource="{Binding DataBitsValues}" SelectedValue="{Binding DataBits}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.parityBit}" />
+                <ComboBox ItemsSource="{Binding ParityValues}" SelectedIndex="{Binding Parity,
+                  Converter={StaticResource EnumToIntConverter}}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.stopBit}" />
+                <ComboBox ItemsSource="{Binding StopBitsValues}" SelectedIndex="{Binding StopBits,
+                  Converter={StaticResource EnumToIntConverter}}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.flowControl}" />
+                <ComboBox ItemsSource="{Binding HandshakeValues}" SelectedIndex="{Binding Handshake,
+                  Converter={StaticResource EnumToIntConverter}}" /></Grid>
+            </StackPanel>
+          </Grid>
+
+          <!-- 监听 (Tcp/Udp) -->
+          <Grid IsVisible="{Binding ModbusServerTransport,
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Tcp;Udp}">
+            <StackPanel>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.localIp}" />
+                <TextBox Text="{Binding LocalIp}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.localPort}" />
+                <TextBox Text="{Binding LocalPort}" /></Grid>
+            </StackPanel>
+          </Grid>
+
+          <!-- 客户端连接 (TcpClient/UdpClient) -->
+          <Grid IsVisible="{Binding ModbusServerTransport,
+            Converter={StaticResource EnumToBoolConverter},
+            ConverterParameter=TcpClient;UdpClient}">
+            <StackPanel>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.targetIp}" />
+                <TextBox Text="{Binding TargetIp}" /></Grid>
+              <Grid Height="40"><TextBlock Text="{StaticResource lang.targetPort}" />
+                <TextBox Text="{Binding TargetPort}" /></Grid>
+            </StackPanel>
+          </Grid>
+
+          <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnStart}"
+                    Command="{Binding StartCommand}" />
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnStop}"
+                    Command="{Binding StopCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <GridSplitter Grid.Column="1" Width="4" Background="#1890FF"
+                  ResizeDirection="Columns" />
+
+    <!-- ===== 中栏：数据绑定 ===== -->
+    <Border Grid.Column="2" Margin="5" BorderThickness="1">
+      <Grid RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" Margin="5" ColumnDefinitions="*,Auto">
+          <TextBlock FontSize="16" FontWeight="Bold"
+                     Text="{StaticResource lang.bindingPanel}" />
+          <Button Grid.Column="1" Width="32" Height="32" FontSize="18" Padding="0"
+                  Content="+" Command="{Binding AddBindingCommand}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding BindingItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="pvm:ModbusBindingItem">
+                <Border Margin="3" Padding="5" BorderThickness="1"
+                        BorderBrush="#E0E0E0" CornerRadius="4">
+                  <StackPanel Spacing="4">
+                    <!-- 第一行：类型 | 地址 | DEC/HEX | 值类型 | 端序 | 删除 -->
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <ComboBox Width="85" Height="28"
+                                SelectedIndex="{Binding BindingType,
+                                  Converter={StaticResource EnumToIntConverter}}">
+                        <ComboBoxItem Content="{StaticResource lang.bindingCoil}" />
+                        <ComboBoxItem Content="{StaticResource lang.bindingDiscreteInput}" />
+                        <ComboBoxItem Content="{StaticResource lang.bindingHoldingRegister}" />
+                        <ComboBoxItem Content="{StaticResource lang.bindingInputRegister}" />
+                      </ComboBox>
+
+                      <TextBox Width="60" Height="28"
+                               Text="{Binding StartAddressString}" />
+                      <ComboBox Width="50" Height="28"
+                                SelectedIndex="{Binding StartAddressType}">
+                        <ComboBoxItem Content="DEC" />
+                        <ComboBoxItem Content="HEX" />
+                      </ComboBox>
+
+                      <!-- 寄存器类型 -->
+                      <ComboBox Width="70" Height="28"
+                                IsVisible="{Binding IsRegisterType}"
+                                SelectedIndex="{Binding ValueType,
+                                  Converter={StaticResource EnumToIntConverter}}">
+                        <ComboBoxItem Content="short" />
+                        <ComboBoxItem Content="ushort" />
+                        <ComboBoxItem Content="int" />
+                        <ComboBoxItem Content="uint" />
+                        <ComboBoxItem Content="long" />
+                        <ComboBoxItem Content="ulong" />
+                        <ComboBoxItem Content="float" />
+                        <ComboBoxItem Content="double" />
+                      </ComboBox>
+
+                      <!-- 线圈类型标识 -->
+                      <Border Width="70" Height="28"
+                              IsVisible="{Binding !IsRegisterType}">
+                        <TextBlock Text="bit" VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                      </Border>
+
+                      <!-- 端序 -->
+                      <ComboBox Width="60" Height="28"
+                                IsVisible="{Binding IsRegisterType}"
+                                SelectedIndex="{Binding EndianMode,
+                                  Converter={StaticResource EnumToIntConverter}}">
+                        <ComboBoxItem Content="DCBA" />
+                        <ComboBoxItem Content="ABCD" />
+                        <ComboBoxItem Content="BADC" />
+                        <ComboBoxItem Content="CDAB" />
+                      </ComboBox>
+
+                      <Button Width="24" Height="24" FontSize="14"
+                              Content="✕" Background="Transparent"
+                              Command="{Binding DeleteSelfCommand}" />
+                    </StackPanel>
+
+                    <!-- 第二行：值 | DEC/HEX | 读 | 写 -->
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                      <!-- 线圈 CheckBox -->
+                      <CheckBox IsVisible="{Binding !IsRegisterType}"
+                                IsChecked="{Binding CoilValue}"
+                                VerticalAlignment="Center" />
+                      <!-- 寄存器值 -->
+                      <TextBox Width="120" Height="28"
+                               IsVisible="{Binding IsRegisterType}"
+                               Text="{Binding DisplayValue}" />
+                      <ComboBox Width="50" Height="28"
+                                IsVisible="{Binding IsRegisterType}"
+                                SelectedIndex="{Binding DisplayMode}">
+                        <ComboBoxItem Content="DEC" />
+                        <ComboBoxItem Content="HEX" />
+                      </ComboBox>
+                      <Button Width="40" Height="28"
+                              Content="{StaticResource lang.btnRead}"
+                              Command="{Binding ReadCommand}" />
+                      <Button Width="40" Height="28"
+                              Content="{StaticResource lang.btnWrite}"
+                              Command="{Binding WriteCommand}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <GridSplitter Grid.Column="3" Width="4" Background="#1890FF"
+                  ResizeDirection="Columns" />
+
+    <!-- ===== 右栏：日志 ===== -->
+    <Border Grid.Column="4" Margin="5" BorderThickness="1">
+      <Grid RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" Margin="5">
+          <Button HorizontalAlignment="Right" Width="80" FontWeight="Bold"
+                  Content="{StaticResource lang.btnClear}"
+                  Command="{Binding CleanOutputCommand}" />
+        </Grid>
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
+                      bh:SmartScrollBehavior.IsEnabled="True">
+          <ItemsControl Classes="logNoSelect" ItemsSource="{Binding DsLogs}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0" ColumnDefinitions="Auto, 10, *">
+                  <SelectableTextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left"
+                                       FontSize="18" Foreground="CornflowerBlue"
+                                       Text="{Binding DateTimeString}" />
+                  <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                       TextWrapping="Wrap" FontSize="18"
+                                       Foreground="{Binding TextColor}"
+                                       Text="{Binding HexString}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

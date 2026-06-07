@@ -15,6 +15,7 @@ using SbModbus.Models;
 using SbModbus.SerialPortStream;
 using SbModbus.Services.ModbusClient;
 using SbModbus.TcpStream;
+using SbModbus.Tool.Models;
 using SbModbus.Tool.Models.Settings;
 using SbModbus.Tool.Services.ModbusServices;
 using SbModbus.Tool.Services.RecordServices;
@@ -23,7 +24,7 @@ using SbModbus.Tool.Utils;
 namespace SbModbus.Tool.ViewModels.Pages;
 
 [AutoInject]
-public partial class ModbusPageViewModel : ViewModelBase, IDisposable
+public partial class ModbusClientPageViewModel : ViewModelBase, IDisposable
 {
   /// <summary>
   ///   日志记录器
@@ -42,9 +43,9 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   private ModbusRequest? _modbusRequest;
 
   private IModbusStream? _modbusStream;
-  private ModbusPageSettings? _settings;
+  private ModbusClientPageSettings? _settings;
 
-  public ModbusPageViewModel()
+  public ModbusClientPageViewModel()
   {
     if (!IsDesignMode)
     {
@@ -662,7 +663,7 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   private void LoadSettings()
   {
     _appSettings = Ioc.Default.GetRequiredService<AppSettings>();
-    _settings = _appSettings?.Modbus;
+    _settings = _appSettings?.ModbusClient;
 
 
     if (_appSettings is not null && _settings is not null)
@@ -719,29 +720,6 @@ public partial class ModbusPageViewModel : ViewModelBase, IDisposable
   {
     DsLogs.Clear();
     MsLogs.Clear();
-  }
-
-  /// <summary>
-  ///   输出日志
-  /// </summary>
-  public record DsLog(DateTime DateTime, byte[] Content, bool IsOut)
-  {
-    public string DateTimeString => $"[{DateTime:yyyy-MM-dd HH:mm:ss.fff}]";
-
-    public SolidColorBrush TextColor => new(IsOut ? Colors.Blue : Colors.Green);
-
-    public string HexString
-    {
-      get
-      {
-        var len = Content.Length * 3 - 1;
-        if (len < 0) return string.Empty;
-
-        var temp = len < 512 ? stackalloc char[len] : new char[len];
-        DataTransmissionRecordLogExtensions.WriteHexChar(Content, temp);
-        return temp.ToString();
-      }
-    }
   }
 
   public record ModbusReadLog(

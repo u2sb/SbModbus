@@ -34,9 +34,14 @@
           <pages:SerialPortAssistantPage Margin="1" />
         </Border>
       </TabItem>
-      <TabItem Header="{StaticResource lang.modbus}">
+      <TabItem Header="{StaticResource lang.modbusClient}">
         <Border>
-          <pages:ModbusPage Margin="1" />
+          <pages:ModbusClientPage Margin="1" />
+        </Border>
+      </TabItem>
+      <TabItem Header="{StaticResource lang.modbusServer}">
+        <Border>
+          <pages:ModbusServerPage Margin="1" />
         </Border>
       </TabItem>
     </TabControl>

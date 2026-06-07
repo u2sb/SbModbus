@@ -1,0 +1,248 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pvm="clr-namespace:SbModbus.Tool.ViewModels.Pages"
+             xmlns:bh="clr-namespace:SbModbus.Tool.Utils.Behavior"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="SbModbus.Tool.Views.Pages.ModbusClientPage"
+             x:DataType="pvm:ModbusClientPageViewModel">
+  <Design.DataContext>
+    <pvm:ModbusClientPageViewModel />
+  </Design.DataContext>
+  <Grid ColumnDefinitions="480,*">
+    <Grid Column="0" Grid.ColumnDefinitions="*, *">
+
+      <Grid.Styles>
+        <Style Selector="TextBox">
+          <Setter Property="Width" Value="140" />
+        </Style>
+
+        <Style Selector="ComboBox">
+          <Setter Property="Width" Value="140" />
+        </Style>
+      </Grid.Styles>
+
+      <!-- 左侧区域 -->
+      <Border Grid.Column="0" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              BorderThickness="1">
+        <StackPanel Margin="5">
+          <Grid Height="80">
+            <TextBlock Margin="0,10" VerticalAlignment="Top" Text="{StaticResource lang.modbusInterface}" />
+            <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35" Width="218"
+                      SelectedIndex="{Binding ModbusClientType,
+                        Converter={StaticResource EnumToIntConverter}}">
+              <ComboBoxItem Content="{StaticResource lang.modbusVirtualType}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusRtuType}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusTcpType}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusRtuOverTcpType}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusRtuOverUdpType}" />
+            </ComboBox>
+
+          </Grid>
+
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.connectionStatus}" />
+            <Rectangle Margin="5,0" Width="130" Height="15" HorizontalAlignment="Right"
+                       Fill="{Binding IsConnected, Converter={StaticResource BoolToColorBrushConverter}}" />
+          </Grid>
+
+          <Rectangle Margin="0,5" HorizontalAlignment="Stretch" Height="3"
+                     Fill="#1890FF" />
+
+          <Grid
+            IsVisible="{Binding ModbusClientType,
+                            Converter={StaticResource EnumToBoolConverter},
+                            ConverterParameter=ModbusRTU }">
+            <StackPanel>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.protName}" />
+                <ComboBox
+                  ItemsSource="{Binding SerialPortNames}"
+                  SelectedValue="{Binding SerialPortName}" />
+              </Grid>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.baudRate}" />
+                <TextBox
+                  Text="{Binding BaudRateString}" />
+              </Grid>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.dataBit}" />
+                <ComboBox ItemsSource="{Binding DataBitsValues}"
+                          SelectedValue="{Binding DataBits}" />
+              </Grid>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.parityBit}" />
+                <ComboBox
+                  ItemsSource="{Binding ParityValues}"
+                  SelectedIndex="{Binding Parity,
+                    Converter={StaticResource EnumToIntConverter}}" />
+              </Grid>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.stopBit}" />
+                <ComboBox
+                  ItemsSource="{Binding StopBitsValues}"
+                  SelectedIndex="{Binding StopBits,
+                    Converter={StaticResource EnumToIntConverter}}" />
+              </Grid>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.flowControl}" />
+                <ComboBox
+                  ItemsSource="{Binding HandshakeValues}"
+                  SelectedIndex="{Binding Handshake,
+                    Converter={StaticResource EnumToIntConverter}}" />
+              </Grid>
+            </StackPanel>
+          </Grid>
+
+          <Grid
+            IsVisible="{Binding ModbusClientType,
+                            Converter={StaticResource EnumToBoolConverter},
+                            ConverterParameter=ModbusTCP;ModbusRTUOverTcp;ModbusRTUOverUdp }">
+
+            <StackPanel>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.targetIp}" />
+                <TextBox
+                  Text="{Binding TargetIp}" />
+              </Grid>
+              <Grid Height="40">
+                <TextBlock Text="{StaticResource lang.targetPort}" />
+                <TextBox
+                  Text="{Binding TargetPort}" />
+              </Grid>
+            </StackPanel>
+          </Grid>
+          <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnConnect}"
+                    Command="{Binding ConnectCommand}" />
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnDisConnect}"
+                    Command="{Binding DisconnectCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- 中间部分 -->
+      <Border Grid.Column="1" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              BorderThickness="1">
+        <StackPanel Margin="5">
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.modbusStationId}" />
+            <TextBox
+              Text="{Binding StationIdString}" />
+          </Grid>
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.modbusEncodeMode}" />
+            <ComboBox
+              ItemsSource="{Binding EncodingModes}"
+              SelectedIndex="{Binding EncodingMode,
+                    Converter={StaticResource EnumToIntConverter}}" />
+          </Grid>
+          <Grid Height="100">
+            <TextBlock Margin="0,15" VerticalAlignment="Top" Text="{StaticResource lang.modbusReadFunCode}" />
+            <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35"
+                      Margin="0,0,0,15" Width="218"
+                      SelectedIndex="{Binding SelectedModbusReadFunCodeIndex}">
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeReadCoils}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeReadDiscreteInputs}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeReadHoldingRegisters}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeReadInputRegisters}" />
+            </ComboBox>
+          </Grid>
+          <Grid Height="100">
+            <TextBlock Margin="0,15" VerticalAlignment="Top" Text="{StaticResource lang.modbusWriteFunCode}" />
+            <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="35"
+                      Margin="0,0,0,15" Width="218"
+                      SelectedIndex="{Binding SelectedModbusWriteFunCodeIndex}">
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeWriteSingleCoil}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeWriteSingleRegister}" />
+              <ComboBoxItem Content="{StaticResource lang.modbusFunCodeWriteMultipleRegisters}" />
+            </ComboBox>
+          </Grid>
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.modbusAddress}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <TextBox Margin="10,5" Width="70" Text="{Binding ModbusAddressString}" />
+              <ComboBox Width="70" SelectedIndex="{Binding ModbusAddressType}">
+                <ComboBoxItem Content="DEC" />
+                <ComboBoxItem Content="HEX" />
+              </ComboBox>
+            </StackPanel>
+          </Grid>
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.modbusReadLength}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <TextBox Margin="10,5" Width="70" Text="{Binding ReadNumberString}" />
+              <ComboBox Width="70" SelectedIndex="{Binding ReadNumberType}">
+                <ComboBoxItem Content="DEC" />
+                <ComboBoxItem Content="HEX" />
+              </ComboBox>
+            </StackPanel>
+          </Grid>
+          <Grid Height="40">
+            <TextBlock Text="{StaticResource lang.modbusValueType}" />
+            <ComboBox
+              ItemsSource="{Binding ModbusValueTypes}"
+              SelectedIndex="{Binding SelectedModbusValueType,
+                    Converter={StaticResource EnumToIntConverter}}" />
+          </Grid>
+          <Grid Height="85">
+            <TextBlock Margin="0,15" VerticalAlignment="Top" Text="{StaticResource lang.modbusValue}" />
+            <StackPanel Orientation="Horizontal" Height="40" VerticalAlignment="Bottom">
+              <TextBox HorizontalAlignment="Stretch" Margin="0,5,10,5" Width="128"
+                       Text="{Binding ModbusInputValueString}" />
+              <ComboBox Width="70" SelectedIndex="{Binding ModbusInputValueType}">
+                <ComboBoxItem Content="DEC" />
+                <ComboBoxItem Content="HEX" />
+              </ComboBox>
+            </StackPanel>
+          </Grid>
+          <StackPanel Margin="0,20" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnRead}"
+                    Command="{Binding ReadCommand}" />
+            <Button Margin="10,0" Width="80" FontWeight="Bold"
+                    Content="{StaticResource lang.btnWrite}"
+                    Command="{Binding WriteCommand}" />
+          </StackPanel>
+          <Grid>
+            <Button Margin="10,0" Width="180" FontWeight="Bold"
+                    Content="{StaticResource lang.btnClear}"
+                    Command="{Binding CleanOutputCommand}" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+
+    <Border Grid.Column="1" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+            BorderThickness="1">
+      <Grid RowDefinitions="*">
+        <Grid Row="0">
+          <Border>
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                          bh:SmartScrollBehavior.IsEnabled="True">
+              <ItemsControl Classes="logNoSelect" ItemsSource="{Binding DsLogs}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0" ColumnDefinitions="Auto, 10, *">
+                      <SelectableTextBlock Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left"
+                                           FontSize="18" Foreground="CornflowerBlue"
+                                           Text="{Binding DateTimeString}" />
+                      <SelectableTextBlock Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                           TextWrapping="Wrap" FontSize="18"
+                                           Foreground="{Binding TextColor}"
+                                           Text="{Binding HexString}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

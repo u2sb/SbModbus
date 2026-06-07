@@ -16,7 +16,9 @@ public class AppSettings
 
   public SerialPortAssistantPageSettings SerialPortAssistant { get; set; } = new();
 
-  public ModbusPageSettings Modbus { get; set; } = new();
+  public ModbusClientPageSettings ModbusClient { get; set; } = new();
+
+  public ModbusServerPageSettings ModbusServer { get; set; } = new();
 
   public Dictionary<string, string> LanguageMap { get; }
 
@@ -156,7 +158,7 @@ public class SerialPortAssistantPageSettings
   public ushort LocalPort { get; set; } = 13567;
 }
 
-public class ModbusPageSettings
+public class ModbusClientPageSettings
 {
   /// <summary>
   ///   传输类型
@@ -207,4 +209,67 @@ public class ModbusPageSettings
   ///   站号
   /// </summary>
   public byte StationId { get; set; } = 0;
+}
+
+public class ModbusServerPageSettings
+{
+  /// <summary>
+  ///   服务端协议类型
+  /// </summary>
+  public ModbusServerProtocol ModbusServerProtocol { get; set; } = ModbusServerProtocol.Tcp;
+
+  /// <summary>
+  ///   服务端传输方式
+  /// </summary>
+  public ModbusServerTransport ModbusServerTransport { get; set; } = ModbusServerTransport.Tcp;
+
+  /// <summary>
+  ///   串口号
+  /// </summary>
+  public string? SerialPortName { get; set; } = "COM1";
+
+  /// <summary>
+  ///   波特率
+  /// </summary>
+  public int BaudRate { get; set; } = 19200;
+
+  /// <summary>
+  ///   数据位
+  /// </summary>
+  public int DataBits { get; set; } = 8;
+
+  /// <summary>
+  ///   停止位
+  /// </summary>
+  public StopBits StopBits { get; set; } = StopBits.One;
+
+  /// <summary>
+  ///   校验位
+  /// </summary>
+  public Parity Parity { get; set; } = Parity.None;
+
+  /// <summary>
+  ///   流控
+  /// </summary>
+  public Handshake Handshake { get; set; } = Handshake.None;
+
+  /// <summary>
+  ///   本地 IP
+  /// </summary>
+  public string LocalIp { get; set; } = "0.0.0.0";
+
+  /// <summary>
+  ///   本地端口
+  /// </summary>
+  public ushort LocalPort { get; set; } = 502;
+
+  /// <summary>
+  ///   目标 IP（TcpClient / UdpClient 模式使用）
+  /// </summary>
+  public string TargetIp { get; set; } = "127.0.0.1";
+
+  /// <summary>
+  ///   目标端口（TcpClient / UdpClient 模式使用）
+  /// </summary>
+  public ushort TargetPort { get; set; } = 502;
 }
