@@ -137,8 +137,14 @@ public partial class ModbusServerPageViewModel : ViewModelBase, IDisposable
   private void AddBinding()
   {
     var item = new ModbusBindingItem(() => _modbusServer);
-    item.DeleteRequested += it => BindingItems.Remove(it);
+    item.DeleteRequested += it =>
+    {
+      it.DeactivateWriteHandlers();
+      BindingItems.Remove(it);
+    };
     BindingItems.Add(item);
+    item.ActivateWriteHandlers();
+    item.RefreshValue();
   }
 
   #endregion
@@ -184,13 +190,14 @@ public partial class ModbusServerPageViewModel : ViewModelBase, IDisposable
 
       if (_modbusServer is null || _streamServer is null) return;
 
+      // 激活所有绑定的写处理器
+      foreach (var item in BindingItems)
+        item.ActivateWriteHandlers();
+
       _streamServer.OnSessionConnected += OnSessionConnected;
       _streamServer.OnSessionDisconnected += OnSessionDisconnected;
 
       _runningCts = new CancellationTokenSource();
-
-      // 启动传输层
-      if (!_streamServer.IsListening) _streamServer.Start();
 
       IsRunning = true;
 
@@ -245,6 +252,10 @@ public partial class ModbusServerPageViewModel : ViewModelBase, IDisposable
       _streamServer.OnSessionDisconnected -= OnSessionDisconnected;
       if (_streamServer.IsListening) _streamServer.Stop();
     }
+
+    // 停用所有绑定的写处理器
+    foreach (var item in BindingItems)
+      item.DeactivateWriteHandlers();
 
     // 取消所有会话订阅
     foreach (var sub in _sessionSubscriptions)

@@ -10,7 +10,7 @@
   <Design.DataContext>
     <pvm:ModbusServerPageViewModel />
   </Design.DataContext>
-  <Grid ColumnDefinitions="280,4,*,4,*">
+  <Grid ColumnDefinitions="240,4,1.5*,4,*">
     <Grid.Styles>
       <Style Selector="TextBox">
         <Setter Property="Width" Value="140" />
@@ -136,7 +136,7 @@
                   <StackPanel Spacing="4">
                     <!-- 第一行：类型 | 地址 | DEC/HEX | 值类型 | 端序 | 删除 -->
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                      <ComboBox Width="85" Height="28"
+                      <ComboBox Width="90" Height="28"
                                 SelectedIndex="{Binding BindingType,
                                   Converter={StaticResource EnumToIntConverter}}">
                         <ComboBoxItem Content="{StaticResource lang.bindingCoil}" />
@@ -147,14 +147,14 @@
 
                       <TextBox Width="60" Height="28"
                                Text="{Binding StartAddressString}" />
-                      <ComboBox Width="50" Height="28"
+                      <ComboBox Width="70" Height="28"
                                 SelectedIndex="{Binding StartAddressType}">
                         <ComboBoxItem Content="DEC" />
                         <ComboBoxItem Content="HEX" />
                       </ComboBox>
 
                       <!-- 寄存器类型 -->
-                      <ComboBox Width="70" Height="28"
+                      <ComboBox Width="80" Height="28"
                                 IsVisible="{Binding IsRegisterType}"
                                 SelectedIndex="{Binding ValueType,
                                   Converter={StaticResource EnumToIntConverter}}">
@@ -169,14 +169,14 @@
                       </ComboBox>
 
                       <!-- 线圈类型标识 -->
-                      <Border Width="70" Height="28"
+                      <Border Width="75" Height="28"
                               IsVisible="{Binding !IsRegisterType}">
                         <TextBlock Text="bit" VerticalAlignment="Center"
                                    HorizontalAlignment="Center" />
                       </Border>
 
                       <!-- 端序 -->
-                      <ComboBox Width="60" Height="28"
+                      <ComboBox Width="80" Height="28"
                                 IsVisible="{Binding IsRegisterType}"
                                 SelectedIndex="{Binding EndianMode,
                                   Converter={StaticResource EnumToIntConverter}}">
@@ -186,9 +186,11 @@
                         <ComboBoxItem Content="CDAB" />
                       </ComboBox>
 
-                      <Button Width="24" Height="24" FontSize="14"
-                              Content="✕" Background="Transparent"
-                              Command="{Binding DeleteSelfCommand}" />
+                      <Button Width="28" Height="28" Padding="4" Background="Transparent"
+                              Command="{Binding DeleteSelfCommand}">
+                        <Path Data="M6,19 C6,20.1 6.9,21 8,21 L16,21 C17.1,21 18,20.1 18,19 L18,7 L6,7 L6,19 Z M19,4 L15.5,4 L14.5,3 L9.5,3 L8.5,4 L5,4 L5,6 L19,6 L19,4 Z"
+                              Stretch="Uniform" Fill="Red" Width="16" Height="16" />
+                      </Button>
                     </StackPanel>
 
                     <!-- 第二行：值 | DEC/HEX | 读 | 写 -->
@@ -201,16 +203,16 @@
                       <TextBox Width="120" Height="28"
                                IsVisible="{Binding IsRegisterType}"
                                Text="{Binding DisplayValue}" />
-                      <ComboBox Width="50" Height="28"
+                      <ComboBox Width="70" Height="28"
                                 IsVisible="{Binding IsRegisterType}"
                                 SelectedIndex="{Binding DisplayMode}">
                         <ComboBoxItem Content="DEC" />
                         <ComboBoxItem Content="HEX" />
                       </ComboBox>
-                      <Button Width="40" Height="28"
+                      <Button Width="60" Height="28"
                               Content="{StaticResource lang.btnRead}"
                               Command="{Binding ReadCommand}" />
-                      <Button Width="40" Height="28"
+                      <Button Width="60" Height="28"
                               Content="{StaticResource lang.btnWrite}"
                               Command="{Binding WriteCommand}" />
                     </StackPanel>

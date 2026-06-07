@@ -14,7 +14,7 @@ var projectDir = args[0];
 if (Directory.Exists(projectDir))
 {
   var source = Path.Combine(projectDir, "i18n", "zh-CN.json");
-  var target = Path.Combine(projectDir, "Resources", "Language.xaml");
+  var target = Path.Combine(projectDir, "Resources", "Language.axaml");
 
   if (File.Exists(source))
   {

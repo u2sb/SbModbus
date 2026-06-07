@@ -1,3 +1,4 @@
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sb.Extensions.System;
@@ -15,13 +16,20 @@ public enum ModbusBindingType
   InputRegister
 }
 
-public partial class ModbusBindingItem : ObservableObject
+public partial class ModbusBindingItem : ObservableObject, IDisposable
 {
   private readonly Func<IModbusServer?> _getServer;
+  private ModbusCoilsWriteHandler? _coilsWriteHandler;
+  private ModbusRegistersWriteHandler? _registersWriteHandler;
 
   public ModbusBindingItem(Func<IModbusServer?> getServer)
   {
     _getServer = getServer;
+  }
+
+  public void Dispose()
+  {
+    DeactivateWriteHandlers();
   }
 
   [ObservableProperty]
@@ -69,6 +77,8 @@ public partial class ModbusBindingItem : ObservableObject
     OnPropertyChanged(nameof(IsRegisterType));
     if (value is ModbusBindingType.Coil or ModbusBindingType.DiscreteInput)
       ValueType = ModbusValueType.Bit;
+    RegisterWriteHandler();
+    ReadCore();
   }
 
   public static string[] ValueTypesForRegister { get; } =
@@ -86,6 +96,98 @@ public partial class ModbusBindingItem : ObservableObject
     _ => 1
   };
 
+  partial void OnStartAddressChanged(ushort value)
+  {
+    RegisterWriteHandler();
+    ReadCore();
+  }
+
+  partial void OnValueTypeChanged(ModbusValueType value)
+  {
+    RegisterWriteHandler();
+    ReadCore();
+  }
+
+  /// <summary>激活写处理器：客户端写入时自动刷新显示值</summary>
+  public void ActivateWriteHandlers()
+  {
+    RegisterWriteHandler();
+  }
+
+  /// <summary>移除写处理器</summary>
+  public void DeactivateWriteHandlers()
+  {
+    UnregisterWriteHandler();
+  }
+
+  private void RegisterWriteHandler()
+  {
+    UnregisterWriteHandler();
+    var server = _getServer();
+    if (server is not { IsRunning: true }) return;
+
+    try
+    {
+      switch (BindingType)
+      {
+        case ModbusBindingType.Coil:
+          _coilsWriteHandler = new ModbusCoilsWriteHandler(StartAddress, 1, OnCoilWritten);
+          server.AddHandler(_coilsWriteHandler);
+          break;
+        case ModbusBindingType.HoldingRegister:
+          _registersWriteHandler = new ModbusRegistersWriteHandler(
+            StartAddress, RegisterCount, OnRegisterWritten);
+          server.AddHandler(_registersWriteHandler);
+          break;
+      }
+    }
+    catch { /* 忽略注册异常 */ }
+  }
+
+  private void UnregisterWriteHandler()
+  {
+    var server = _getServer();
+    if (server == null) return;
+
+    try
+    {
+      if (_coilsWriteHandler != null)
+      {
+        server.RemoveHandler(_coilsWriteHandler);
+        _coilsWriteHandler = null;
+      }
+      if (_registersWriteHandler != null)
+      {
+        server.RemoveHandler(_registersWriteHandler);
+        _registersWriteHandler = null;
+      }
+    }
+    catch { }
+  }
+
+  private void OnCoilWritten(ModbusCoilsHandlerArgs args)
+  {
+    var value = args.Data[StartAddress];
+    App.Current.Dispatcher.Invoke(() =>
+    {
+      CoilValue = value;
+      DisplayValue = value ? "1" : "0";
+    });
+  }
+
+  private void OnRegisterWritten(ModbusRegistersHandlerArgs args)
+  {
+    var span = args.Data.Data.Slice(StartAddress * 2, RegisterCount * 2);
+    var displayValue = FormatRegisterValue(span);
+    App.Current.Dispatcher.Invoke(() => DisplayValue = displayValue);
+  }
+
+  /// <summary>刷新显示值（从服务器读取当前数据）</summary>
+  public void RefreshValue()
+  {
+    ReadCore();
+  }
+
   public event Action<ModbusBindingItem>? DeleteRequested;
 
   [RelayCommand]
@@ -96,6 +198,11 @@ public partial class ModbusBindingItem : ObservableObject
 
   [RelayCommand]
   private void Read()
+  {
+    ReadCore();
+  }
+
+  private void ReadCore()
   {
     var server = _getServer();
     if (server is not { IsRunning: true }) { DisplayValue = "N/A"; return; }
