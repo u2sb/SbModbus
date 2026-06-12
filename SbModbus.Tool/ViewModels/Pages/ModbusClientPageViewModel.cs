@@ -12,6 +12,8 @@ using CommunityToolkit.Mvvm.Input;
 using R3;
 using Sb.Extensions.System;
 using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.SerialPortStream;
 using SbModbus.Services.ModbusClient;
 using SbModbus.TcpStream;

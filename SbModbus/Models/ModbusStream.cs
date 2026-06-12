@@ -1,19 +1,34 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Sb.Extensions.System.Buffers.RingBuffers;
 using Sb.Extensions.System.Threading;
 using SbModbus.Utils;
 
-namespace SbModbus.Models;
+namespace SbModbus.Transport;
 
 /// <inheritdoc />
 public abstract class ModbusStream : IModbusStream
 {
   /// <summary>
+  ///   内部流数据缓冲区（默认基于环形缓冲区 + SemaphoreSlim）。
+  ///   子类可通过构造函数注入不同实现以进行测试。
+  /// </summary>
+  private readonly IStreamBuffer _buffer;
+
+  /// <summary>
   /// </summary>
   protected ModbusStream()
+    : this(new RingBufferStreamBuffer(2048))
   {
+  }
+
+  /// <summary>
+  ///   注入自定义缓冲区的构造（供测试或扩展使用）。
+  /// </summary>
+  /// <param name="buffer">IStreamBuffer 实现</param>
+  internal ModbusStream(IStreamBuffer buffer)
+  {
+    _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
   }
 
   /// <inheritdoc />
@@ -24,7 +39,7 @@ public abstract class ModbusStream : IModbusStream
     OnConnectStateChanged = null;
     OnDataReceived = null;
     OnDataSent = null;
-    _dataAvailable.Dispose();
+    _buffer.Dispose();
     _disposeCts.Dispose();
     StreamLock.Dispose();
     Logger.Information("ModbusStream disposed");
@@ -38,7 +53,7 @@ public abstract class ModbusStream : IModbusStream
     OnConnectStateChanged = null;
     OnDataReceived = null;
     OnDataSent = null;
-    _dataAvailable.Dispose();
+    _buffer.Dispose();
     _disposeCts.Dispose();
     StreamLock.Dispose();
     Logger.Information("ModbusStream disposed async");
@@ -61,7 +76,7 @@ public abstract class ModbusStream : IModbusStream
   public abstract int WriteTimeout { get; set; }
 
   /// <summary>
-  ///   异步锁
+  ///   异步锁 — 保护一次完整的请求-响应事务。
   /// </summary>
   public AsyncLock StreamLock { get; } = new();
 
@@ -102,13 +117,12 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <summary>
-  ///   清除读缓存
+  ///   清除读缓存 — 丢弃所有已缓冲但未消费的数据。
+  ///   支持 CancellationToken：取消时立即返回。
   /// </summary>
-  /// <param name="ct"></param>
-  /// <returns></returns>
   protected virtual ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
-    ClearBuffer();
+    _buffer.Clear();
 #if NET8_0_OR_GREATER
     return ValueTask.CompletedTask;
 #else
@@ -117,50 +131,33 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <summary>
-  ///   异步写入数据
+  ///   异步写入数据到物理传输。
+  ///   子类必须实现。
   /// </summary>
-  /// <param name="buffer"></param>
-  /// <param name="ct"></param>
-  /// <returns></returns>
   protected abstract ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default);
 
   /// <summary>
-  ///   异步读取数据
+  ///   从缓冲区中异步读取数据。阻塞直到 >= 1 字节可用、释放或超时。
+  ///   保证：要么返回正数，要么抛异常（取消/超时），不再返回 0。
   /// </summary>
-  /// <param name="buffer"></param>
-  /// <param name="ct"></param>
-  /// <returns></returns>
   protected virtual async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
   {
     if (_isDisposedInt != 0) throw new SbModbusException("Stream has been disposed");
 
-    while (true)
-    {
-      var length = ReadBuffer(buffer.Span);
-      if (length > 0) return length;
+    // _buffer.ReadAsync 内部处理等待逻辑 — 不再需要外部 while(true) + Task.Yield
+    var read = await _buffer.ReadAsync(buffer, ct).ConfigureAwait(false);
+    if (read > 0) return read;
 
-      if (ct.CanBeCanceled)
-      {
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _disposeCts.Token);
-        // ReSharper disable once InconsistentlySynchronizedField
-        await _dataAvailable.WaitAsync(linkedCts.Token).ConfigureAwait(false);
-      }
-      else
-      {
-        // dispose 时会 Cancel _disposeCts，WaitAsync 抛 OperationCanceledException 退出
-        // ReSharper disable once InconsistentlySynchronizedField
-        await _dataAvailable.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
-      }
-    }
+    // 已释放
+    throw new SbModbusException("Stream has been disposed");
   }
 
   /// <summary>
-  ///   锁定的读写流
+  ///   锁定的读写流 — 持有 AsyncLock，保证事务内独占流访问。
   /// </summary>
-  public struct LockedModbusStream : IDisposable
+  public readonly struct LockedModbusStream : IDisposable
   {
     private readonly AsyncLock.InnerLock _lock;
-
     private readonly ModbusStream _modbusStream;
 
     private LockedModbusStream(ModbusStream modbusStream, AsyncLock.InnerLock l)
@@ -193,8 +190,6 @@ public abstract class ModbusStream : IModbusStream
     /// <summary>
     ///   清除读缓存
     /// </summary>
-    /// <param name="ct"></param>
-    /// <returns></returns>
     public ValueTask ClearReadBufferAsync(CancellationToken ct = default)
     {
       return _modbusStream.ClearReadBufferAsync(ct);
@@ -203,20 +198,15 @@ public abstract class ModbusStream : IModbusStream
     /// <summary>
     ///   异步写入数据
     /// </summary>
-    /// <param name="buffer"></param>
-    /// <param name="ct"></param>
-    /// <returns></returns>
     public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
     {
       return _modbusStream.WriteAsync(buffer, ct);
     }
 
     /// <summary>
-    ///   异步读取数据
+    ///   异步读取数据 — 阻塞直到数据可用。
+    ///   不再返回 0（除非 stream 已释放）。
     /// </summary>
-    /// <param name="buffer"></param>
-    /// <param name="ct"></param>
-    /// <returns></returns>
     public ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
     {
       return _modbusStream.ReadAsync(buffer, ct);
@@ -237,9 +227,8 @@ public abstract class ModbusStream : IModbusStream
   public event Action<IModbusStream, bool>? OnConnectStateChanged;
 
   /// <summary>
-  ///   连接状态发生变化时
+  ///   连接状态发生变化时调用。
   /// </summary>
-  /// <param name="isConnected"></param>
   protected void ConnectStateChanged(bool isConnected)
   {
     Logger.Log(LogLevel.Information, $"Connection state changed: {(isConnected ? "Connected" : "Disconnected")}");
@@ -254,7 +243,7 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <summary>
-  ///   收到数据时触发（子类在 WriteBuffer 后可调用此方法让外部感知）
+  ///   收到数据时触发（子类在 <see cref="WriteBuffer" /> 后可调用此方法让外部感知）。
   /// </summary>
   protected void DataReceived(ReadOnlyMemory<byte> data)
   {
@@ -270,7 +259,7 @@ public abstract class ModbusStream : IModbusStream
   }
 
   /// <summary>
-  ///   发送数据时触发
+  ///   发送数据时触发。
   /// </summary>
   protected void DataSent(ReadOnlyMemory<byte> data)
   {
@@ -287,162 +276,34 @@ public abstract class ModbusStream : IModbusStream
 
   #endregion
 
-  #region 缓冲区
+  #region 缓冲区访问（向后兼容 + 新接口）
 
-#if NET10_0_OR_GREATER
-  private readonly Lock _locker = new();
-#else
-  private readonly object _locker = new();
-#endif
-
-  private readonly SemaphoreSlim _dataAvailable = new(0);
   private readonly CancellationTokenSource _disposeCts = new();
   private int _isDisposedInt;
-  private bool _dataAvailableSignaled;
-
 
   /// <summary>
-  ///   缓冲区
+  ///   向缓冲区写入数据，若 <see cref="AutoReceive" /> 为 true 则触发 <see cref="OnDataReceived" />。
+  ///   子类的接收循环调用此方法馈入数据。
   /// </summary>
-  protected readonly FixedSizeRingBuffer<byte> Buffer = new(2048);
-
-  /// <summary>
-  ///   向缓冲区内写数据，若 AutoReceive 为 true 则触发 OnDataReceived
-  /// </summary>
-  /// <param name="source">原始接收数据</param>
+  /// <param name="source">接收到的原始字节</param>
   protected void WriteBuffer(ReadOnlySpan<byte> source)
   {
-    lock (_locker)
-    {
-      if (_isDisposedInt != 0)
-      {
-        Logger.Warning("Attempted to write buffer after dispose, ignoring");
-        return;
-      }
+    if (source.IsEmpty) return;
 
-      Buffer.AddLastRange(source);
-      if (source.Length > 0 && !_dataAvailableSignaled)
-      {
-        _dataAvailable.Release();
-        _dataAvailableSignaled = true;
-      }
-
-      Logger.Log(LogLevel.Debug, $"Buffer write: {source.Length} bytes, total buffered: {Buffer.Count}");
-    }
+    _buffer.Write(source);
 
     // AutoReceive 模式下触发数据事件（仅在有订阅者时分配）
-    if (AutoReceive && source.Length > 0 && OnDataReceived != null) DataReceived(source.ToArray());
+    if (AutoReceive && OnDataReceived != null)
+      DataReceived(source.ToArray());
   }
 
   /// <summary>
-  ///   清除缓存
+  ///   获取带锁保护的缓冲区句柄，用于零拷贝帧解析。
+  ///   构造时自动上锁，Dispose 时自动解锁。调用方使用 using 块即可。
   /// </summary>
-  protected void ClearBuffer()
+  public BufferLock GetLockedBuffer()
   {
-    lock (_locker)
-    {
-      var cleared = Buffer.Count;
-      Buffer.Clear();
-      while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0))
-      {
-      }
-
-      _dataAvailableSignaled = false;
-      if (cleared > 0)
-        Logger.Log(LogLevel.Debug, $"Buffer cleared, discarded {cleared} bytes");
-    }
-  }
-
-  /// <summary>
-  ///   读缓冲区
-  /// </summary>
-  /// <param name="span"></param>
-  /// <returns></returns>
-  protected int ReadBuffer(in Span<byte> span)
-  {
-    lock (_locker)
-    {
-      if (Buffer.Count == 0)
-      {
-        while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0))
-        {
-        }
-
-        _dataAvailableSignaled = false;
-        return 0;
-      }
-
-      var length = Math.Min(Buffer.Count, span.Length);
-
-      Buffer.WrittenSpan[..length].CopyTo(span);
-      Buffer.RemoveFirst(length);
-
-      if (Buffer.Count > 0 && !_dataAvailableSignaled)
-      {
-        _dataAvailable.Release();
-        _dataAvailableSignaled = true;
-      }
-
-      return length;
-    }
-  }
-
-  /// <summary>
-  ///   获取锁定后的缓冲区，用于外部直接解析帧。
-  ///   在 using 块内可安全操作 <see cref="FixedSizeRingBuffer{T}" />。
-  /// </summary>
-  public LockedBuffer GetLockedBuffer()
-  {
-    return new LockedBuffer(Buffer, _locker);
-  }
-
-  /// <summary>
-  ///   带锁保护的缓冲区句柄（ref struct，确保栈上分配）。
-  ///   持有 <see cref="FixedSizeRingBuffer{T}" /> 引用，Dispose 时自动释放锁。
-  /// </summary>
-  public ref struct LockedBuffer : IDisposable
-  {
-    /// <summary>
-    ///   受锁保护的环形缓冲区
-    /// </summary>
-    public readonly FixedSizeRingBuffer<byte> Buffer;
-
-#if NET10_0_OR_GREATER
-    private Lock.Scope _scope;
-
-    internal LockedBuffer(FixedSizeRingBuffer<byte> buffer, Lock locker)
-    {
-      Buffer = buffer;
-      _scope = locker.EnterScope();
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-      _scope.Dispose();
-    }
-#else
-    private readonly object _locker;
-    private bool _disposed;
-
-    internal LockedBuffer(FixedSizeRingBuffer<byte> buffer, object locker)
-    {
-      Buffer = buffer;
-      _locker = locker;
-      _disposed = false;
-      Monitor.Enter(_locker);
-    }
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-      if (!_disposed)
-      {
-        Monitor.Exit(_locker);
-        _disposed = true;
-      }
-    }
-#endif
+    return _buffer.AcquireLock();
   }
 
   #endregion

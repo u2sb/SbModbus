@@ -1,7 +1,10 @@
 using System;
 using System.Linq;
 
-namespace SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
+
+namespace SbModbus;
 
 /// <summary>
 ///   Modbus 异常

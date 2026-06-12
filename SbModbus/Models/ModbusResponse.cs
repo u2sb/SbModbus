@@ -1,6 +1,7 @@
 using System;
+using SbModbus.Models;
 
-namespace SbModbus.Models;
+namespace SbModbus.Protocol;
 
 /// <summary>
 ///   Modbus请求的返回

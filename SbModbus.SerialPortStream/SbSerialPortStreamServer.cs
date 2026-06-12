@@ -1,4 +1,5 @@
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 
 namespace SbModbus.SerialPortStream;
 

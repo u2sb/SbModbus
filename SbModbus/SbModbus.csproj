@@ -27,6 +27,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SbModbus.Tests" />
+    <InternalsVisibleTo Include="SbModbus.TcpStream" />
+    <InternalsVisibleTo Include="SbModbus.SerialPortStream" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\icons\avatar.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

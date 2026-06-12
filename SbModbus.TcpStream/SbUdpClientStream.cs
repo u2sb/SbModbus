@@ -3,7 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Utils;
 
 namespace SbModbus.TcpStream;

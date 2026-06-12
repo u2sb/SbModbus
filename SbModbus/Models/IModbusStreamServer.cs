@@ -1,7 +1,8 @@
 using System;
 using System.Threading.Channels;
+using SbModbus.Protocol;
 
-namespace SbModbus.Models;
+namespace SbModbus.Transport;
 
 /// <summary>
 ///   Modbus 传输层服务器抽象 — 管理监听和会话生命周期。

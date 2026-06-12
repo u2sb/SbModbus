@@ -1,6 +1,7 @@
 using System;
+using SbModbus.Transport;
 
-namespace SbModbus.Models;
+namespace SbModbus.Protocol;
 
 /// <summary>
 ///   Channel 中传递的已解析 Modbus 请求帧，携带会话引用用于响应路由

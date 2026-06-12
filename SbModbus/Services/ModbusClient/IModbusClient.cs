@@ -1,7 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 
 namespace SbModbus.Services.ModbusClient;
 

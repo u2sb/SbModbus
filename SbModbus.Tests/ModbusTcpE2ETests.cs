@@ -1,5 +1,6 @@
 using System.Net;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Services.ModbusClient;
 using SbModbus.Services.ModbusServer;
 using SbModbus.TcpStream;
@@ -14,7 +15,7 @@ public class ModbusTcpE2ETests : IAsyncLifetime
   private ModbusTcpServer _server = null!;
   private SbTcpStreamServer _streamServer = null!;
 
-  public async Task InitializeAsync()
+  public async ValueTask InitializeAsync()
   {
     var probeStream = new SbTcpStreamServer(IPAddress.Loopback, 0);
     probeStream.Start();
@@ -34,7 +35,7 @@ public class ModbusTcpE2ETests : IAsyncLifetime
     await _clientStream.ConnectAsync();
   }
 
-  public async Task DisposeAsync()
+  public async ValueTask DisposeAsync()
   {
     // 先停止服务端，再断开客户端
     try

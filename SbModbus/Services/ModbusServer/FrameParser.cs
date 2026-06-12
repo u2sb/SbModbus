@@ -2,7 +2,8 @@ using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using Sb.Extensions.System.Buffers.RingBuffers;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusServer;

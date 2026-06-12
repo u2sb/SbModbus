@@ -1,6 +1,6 @@
 // https://raw.githubusercontent.com/Apollo3zehn/FluentModbus/f2d74c6e45ff4b3b41d33ae7d7b3e6243b128472/src/FluentModbus/ModbusExceptionCode.cs
 
-namespace SbModbus.Models;
+namespace SbModbus.Protocol;
 
 /// <summary>
 ///   Specifies the Modbus exception type.

@@ -5,7 +5,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Utils;
 
 namespace SbModbus.TcpStream;
@@ -329,8 +330,8 @@ public class SbTcpStreamServer : IModbusStreamServer
   private void OnSessionDataReceived(Guid sessionId, SbTcpSessionStream session, ReadOnlyMemory<byte> data)
   {
     using var lb = session.GetLockedBuffer();
-    if (lb.Buffer.Count == 0) return;
-    var remaining = lb.Buffer.WrittenSpan;
+    if (lb.WrittenSpan.Length == 0) return;
+    var remaining = lb.WrittenSpan;
     var len = remaining.Length;
     while (_frameParser(session, ref remaining, out var message))
       if (_stationWriters.TryGetValue(message.UnitId, out var writer))
@@ -338,7 +339,7 @@ public class SbTcpStreamServer : IModbusStreamServer
 
     var consumed = len - remaining.Length;
     if (consumed > 0)
-      lb.Buffer.RemoveFirst(consumed);
+      lb.RemoveFirst(consumed);
   }
 
   /// <summary>

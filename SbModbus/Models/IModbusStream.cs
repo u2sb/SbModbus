@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SbModbus.Models;
+namespace SbModbus.Transport;
 
 /// <summary>
 ///   表示当传输层接收到数据时触发的回调

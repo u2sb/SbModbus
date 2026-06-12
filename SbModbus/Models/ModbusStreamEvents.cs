@@ -2,9 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System.Buffers.RingBuffers;
+using SbModbus.Protocol;
 using SbModbus.Services.ModbusClient;
+using SbModbus.Transport;
 
-namespace SbModbus.Models;
+namespace SbModbus;
 
 /// <remarks>
 ///   此文件中的委托被 <see cref="SbModbus.Services.ModbusClient.IModbusClient" /> 的事件

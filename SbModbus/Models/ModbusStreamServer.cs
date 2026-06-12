@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using SbModbus.Protocol;
 using SbModbus.Utils;
 
-namespace SbModbus.Models;
+namespace SbModbus.Transport;
 
 /// <summary>
 ///   Modbus 传输层服务器泛型基类 — 包装任意 <typeparamref name="TStream" />，实现 <see cref="IModbusStreamServer" />。
@@ -119,8 +120,8 @@ public class ModbusStreamServer<TStream> : IModbusStreamServer
   private void OnStreamDataReceived(IModbusStream sender, ReadOnlyMemory<byte> data)
   {
     using var lb = Stream.GetLockedBuffer();
-    if (lb.Buffer.Count == 0) return;
-    var remaining = lb.Buffer.WrittenSpan;
+    if (lb.WrittenSpan.Length == 0) return;
+    var remaining = lb.WrittenSpan;
     var len = remaining.Length;
     while (_frameParser(Stream, ref remaining, out var message))
       if (_stationWriters.TryGetValue(message.UnitId, out var writer))
@@ -128,7 +129,7 @@ public class ModbusStreamServer<TStream> : IModbusStreamServer
 
     var consumed = len - remaining.Length;
     if (consumed > 0)
-      lb.Buffer.RemoveFirst(consumed);
+      lb.RemoveFirst(consumed);
   }
 
   /// <summary>

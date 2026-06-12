@@ -2,7 +2,8 @@ using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sb.Extensions.System;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Services.ModbusServer;
 using SbModbus.Tool.Services.ModbusServices;
 

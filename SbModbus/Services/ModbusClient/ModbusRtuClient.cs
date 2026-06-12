@@ -1,7 +1,8 @@
 using System;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;

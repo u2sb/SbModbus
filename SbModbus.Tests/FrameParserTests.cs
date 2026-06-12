@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
-using SbModbus.Models;
+using SbModbus.Protocol;
+using SbModbus.Transport;
 using SbModbus.Services.ModbusServer;
 using SbModbus.Utils;
 
