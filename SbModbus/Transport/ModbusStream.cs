@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System.Threading;
+using SbModbus.Protocol;
 using SbModbus.Utils;
 
 namespace SbModbus.Transport;
@@ -247,7 +249,8 @@ public abstract class ModbusStream : IModbusStream
   /// </summary>
   protected void DataReceived(ReadOnlyMemory<byte> data)
   {
-    Logger.Log(LogLevel.Debug, $"Data received: {SbModbusLogger.ToHexString(data.Span)}");
+    if (Logger.IsEnabled(LogLevel.Debug))
+      Logger.Log(LogLevel.Debug, $"Data received: {SbModbusLogger.ToHexString(data.Span)}");
     try
     {
       OnDataReceived?.Invoke(this, data);
@@ -263,7 +266,8 @@ public abstract class ModbusStream : IModbusStream
   /// </summary>
   protected void DataSent(ReadOnlyMemory<byte> data)
   {
-    Logger.Log(LogLevel.Debug, $"Data sent: {SbModbusLogger.ToHexString(data.Span)}");
+    if (Logger.IsEnabled(LogLevel.Debug))
+      Logger.Log(LogLevel.Debug, $"Data sent: {SbModbusLogger.ToHexString(data.Span)}");
     try
     {
       OnDataSent?.Invoke(this, data);
@@ -294,7 +298,12 @@ public abstract class ModbusStream : IModbusStream
 
     // AutoReceive 模式下触发数据事件（仅在有订阅者时分配）
     if (AutoReceive && OnDataReceived != null)
-      DataReceived(source.ToArray());
+    {
+      var rented = ArrayPool<byte>.Shared.Rent(source.Length);
+      source.CopyTo(rented);
+      DataReceived(new ReadOnlyMemory<byte>(rented, 0, source.Length));
+      ArrayPool<byte>.Shared.Return(rented);
+    }
   }
 
   /// <summary>

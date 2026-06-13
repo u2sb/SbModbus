@@ -123,7 +123,8 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="data"></param>
   protected async ValueTask DataReceivedAsync(ReadOnlyMemory<byte> data)
   {
-    Logger.Log(LogLevel.Debug, $"Response received: {SbModbusLogger.ToHexString(data.Span)}");
+    if (Logger.IsEnabled(LogLevel.Debug))
+      Logger.Log(LogLevel.Debug, $"Response received: {SbModbusLogger.ToHexString(data.Span)}");
 
     try
     {
@@ -152,7 +153,8 @@ public abstract class BaseModbusClient : IModbusClient
   /// <param name="data"></param>
   protected async ValueTask DataSentAsync(ReadOnlyMemory<byte> data)
   {
-    Logger.Log(LogLevel.Debug, $"Request sent: {SbModbusLogger.ToHexString(data.Span)}");
+    if (Logger.IsEnabled(LogLevel.Debug))
+      Logger.Log(LogLevel.Debug, $"Request sent: {SbModbusLogger.ToHexString(data.Span)}");
 
     try
     {
@@ -379,7 +381,7 @@ public abstract class BaseModbusClient : IModbusClient
   public virtual ValueTask WriteSingleCoilAsync(int unitIdentifier, int startingAddress, bool value,
     CancellationToken ct = default)
   {
-    var buffer = value ? [0xFF, 0x00] : "\0\0"u8.ToArray();
+    var buffer = value ? new byte[] { 0xFF, 0x00 } : new byte[] { 0x00, 0x00 };
     return WriteSingleCoilAsync(unitIdentifier, startingAddress, buffer, ct);
   }
 

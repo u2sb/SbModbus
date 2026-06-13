@@ -391,7 +391,9 @@ public class SbUdpStreamServer : IModbusStreamServer
     }
     catch (AggregateException ae)
     {
-      ae.Handle(ex => ex is OperationCanceledException or ObjectDisposedException);
+      foreach (var ex in ae.InnerExceptions)
+        if (ex is not (OperationCanceledException or ObjectDisposedException))
+          Logger.Log(LogLevel.Debug, $"WaitTask({name}) unexpected inner exception: {ex.Message}");
     }
     catch (OperationCanceledException)
     {
@@ -424,6 +426,12 @@ public class SbUdpStreamServer : IModbusStreamServer
     catch (TimeoutException)
     {
     }
+    catch (AggregateException ae)
+    {
+      foreach (var ex in ae.InnerExceptions)
+        if (ex is not (OperationCanceledException or ObjectDisposedException))
+          Logger.Log(LogLevel.Debug, $"WaitTaskAsync({name}) unexpected inner exception: {ex.Message}");
+    }
     catch (OperationCanceledException)
     {
     }
@@ -443,7 +451,7 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
   private readonly SbUdpStreamServer _streamServer;
   private readonly string _transportInfo;
 
-  private volatile bool _isDisposedLocal;
+  private int _isDisposedInt;
 
   internal SbUdpSessionStream(SbUdpStreamServer streamServer, IPEndPoint remoteEndPoint)
   {
@@ -466,7 +474,7 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   protected override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken ct = default)
   {
-    if (_isDisposedLocal)
+    if (_isDisposedInt != 0)
       throw new SbModbusException("UDP session is disconnected");
 
     await _streamServer.SendAsync(buffer, RemoteEndPoint, ct).ConfigureAwait(false);
@@ -483,7 +491,7 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
   #region 属性
 
   /// <inheritdoc />
-  public override bool IsConnected => !_isDisposedLocal;
+  public override bool IsConnected => _isDisposedInt == 0;
 
   /// <inheritdoc />
   public override int ReadTimeout { get; set; } = 2000;
@@ -513,11 +521,11 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Disconnect()
   {
-    if (_isDisposedLocal) return true;
+    if (_isDisposedInt != 0) return true;
 
     Logger.Information($"UDP session {RemoteEndPoint} disconnecting");
 
-    _isDisposedLocal = true;
+    _isDisposedInt = 1;
     _streamServer.RemoveSession(RemoteEndPoint, this);
     ConnectStateChanged(false);
     return true;
@@ -532,26 +540,22 @@ public class SbUdpSessionStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override void Dispose()
   {
-    if (_isDisposedLocal) return;
-    _isDisposedLocal = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
 
     Disconnect();
 
     base.Dispose();
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
   /// <inheritdoc />
   public override async ValueTask DisposeAsync()
   {
-    if (_isDisposedLocal) return;
-    _isDisposedLocal = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
 
     await DisconnectAsync().ConfigureAwait(false);
 
     await base.DisposeAsync().ConfigureAwait(false);
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 

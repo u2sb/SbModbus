@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Sb.Extensions.System.Buffers.RingBuffers;
+using SbModbus.Protocol;
 using SbModbus.Utils;
 
 namespace SbModbus.Transport;

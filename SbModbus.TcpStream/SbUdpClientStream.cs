@@ -20,7 +20,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   private readonly string _transportInfo;
   private volatile bool _isConnected;
 
-  private volatile bool _isDisposedLocal;
+  private int _isDisposedInt;
   private CancellationTokenSource? _receiveCts;
   private Task? _receiveTask;
 
@@ -105,7 +105,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Connect()
   {
-    if (_isDisposedLocal) return false;
+    if (_isDisposedInt != 0) return false;
     if (IsConnected) return true;
 
     try
@@ -197,8 +197,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override void Dispose()
   {
-    if (_isDisposedLocal) return;
-    _isDisposedLocal = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
 
     Disconnect();
 
@@ -209,15 +208,13 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     _receiveCts = null;
 
     base.Dispose();
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
   /// <inheritdoc />
   public override async ValueTask DisposeAsync()
   {
-    if (_isDisposedLocal) return;
-    _isDisposedLocal = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
 
     await DisconnectAsync().ConfigureAwait(false);
 
@@ -228,7 +225,6 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     _receiveCts = null;
 
     await base.DisposeAsync().ConfigureAwait(false);
-    StreamLock.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -330,7 +326,9 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     }
     catch (AggregateException ae)
     {
-      ae.Handle(ex => ex is OperationCanceledException or ObjectDisposedException);
+      foreach (var ex in ae.InnerExceptions)
+        if (ex is not (OperationCanceledException or ObjectDisposedException))
+          Logger.Log(LogLevel.Debug, $"WaitTask({name}) unexpected inner exception: {ex.Message}");
     }
     catch (OperationCanceledException)
     {
@@ -362,6 +360,12 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
     }
     catch (TimeoutException)
     {
+    }
+    catch (AggregateException ae)
+    {
+      foreach (var ex in ae.InnerExceptions)
+        if (ex is not (OperationCanceledException or ObjectDisposedException))
+          Logger.Log(LogLevel.Debug, $"WaitTaskAsync({name}) unexpected inner exception: {ex.Message}");
     }
     catch (OperationCanceledException)
     {

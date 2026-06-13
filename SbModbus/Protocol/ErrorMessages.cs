@@ -1,4 +1,4 @@
-namespace SbModbus;
+namespace SbModbus.Protocol;
 
 /// <summary>
 ///   Modbus 错误消息常量

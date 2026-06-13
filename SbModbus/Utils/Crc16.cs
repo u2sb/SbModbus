@@ -151,9 +151,9 @@ public static class Crc16
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static unsafe ushort CrcN4(ushort crc, byte* data)
   {
-    crc = (ushort)(crc ^ data[0] ^ data[1] << 8);
+    crc = (ushort)(crc ^ data[0] ^ (data[1] << 8));
     var part1 = Table[(crc & 0xFF) + 0x300];
-    var part2 = Table[(crc >> 8 & 0xFF) + 0x200];
+    var part2 = Table[((crc >> 8) & 0xFF) + 0x200];
     var part3 = Table[data[2] + 0x100];
     var part4 = Table[data[3]];
 
@@ -164,7 +164,7 @@ public static class Crc16
   private static ushort CrcN4(ushort crc, byte data)
   {
     crc = (ushort)(crc ^ data);
-    return (ushort)(Table[crc & 0xFF] ^ crc >> 8);
+    return (ushort)(Table[crc & 0xFF] ^ (crc >> 8));
   }
 
 

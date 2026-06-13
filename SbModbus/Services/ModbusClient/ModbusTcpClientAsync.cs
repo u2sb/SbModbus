@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -166,8 +167,10 @@ public partial class ModbusTcpClient
     cts.CancelAfter(readTimeout);
     try
     {
-      var buffer = new byte[length];
-      var memory = buffer.AsMemory();
+      var buffer = ArrayPool<byte>.Shared.Rent(length);
+      try
+      {
+      var memory = buffer.AsMemory(0, length);
       var bytesRead = 0;
 
       // 是否已验证功能码
@@ -209,7 +212,12 @@ public partial class ModbusTcpClient
 
       await DataReceivedAsync(result);
 
-      return result;
+      return result.ToArray();
+      }
+      finally
+      {
+        ArrayPool<byte>.Shared.Return(buffer);
+      }
     }
     catch (OperationCanceledException)
     {

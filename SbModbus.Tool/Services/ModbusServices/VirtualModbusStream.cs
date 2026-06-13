@@ -15,7 +15,7 @@ public class VirtualModbusStream : ModbusStream
   public override void Dispose()
   {
     base.Dispose();
-    StreamLock.Dispose();
+    GC.SuppressFinalize(this);
   }
 
   public override bool Connect()
@@ -28,7 +28,7 @@ public class VirtualModbusStream : ModbusStream
     return true;
   }
 
-  protected override ValueTask ClearReadBufferAsync(CancellationToken ct = new())
+  protected override ValueTask ClearReadBufferAsync(CancellationToken ct = default)
   {
     return ValueTask.CompletedTask;
   }

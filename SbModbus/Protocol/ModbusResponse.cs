@@ -1,5 +1,4 @@
 using System;
-using SbModbus.Models;
 
 namespace SbModbus.Protocol;
 

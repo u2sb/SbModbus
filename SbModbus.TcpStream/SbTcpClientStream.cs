@@ -32,7 +32,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   // 缓存 DNS 解析结果，避免每次重连都解析
   private IPEndPoint? _cachedResolvedEndPoint;
   private volatile bool _isConnected;
-  private volatile bool _isDisposedLocal;
+  private int _isDisposedInt;
 
   // 用户是否主动断开（区分主动/被动断开，决定是否触发自动重连）
   private volatile bool _isUserDisconnect;
@@ -142,39 +142,40 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Connect()
   {
-    if (_isDisposedLocal) return false;
+    if (_isDisposedInt != 0) return false;
     if (IsConnected) return true;
 
-    try
-    {
-      _isUserDisconnect = false;
+    _isUserDisconnect = false;
 
-      // 同步等待连接完成
-      using var cts = new CancellationTokenSource(ConnectTimeout);
-      var connectTask = TryConnectOnceAsync(cts.Token);
-#pragma warning disable VSTHRD002 // 此方法本身是同步的，需要等待连接完成
-      connectTask.Wait(cts.Token);
-#pragma warning restore VSTHRD002
-      return IsConnected;
-    }
-    catch (OperationCanceledException)
+    return SbThreading.Jtf.Run(async () =>
     {
-      Logger.Error("TCP connection timed out");
-      CleanupSocket();
-      return false;
-    }
-    catch (Exception ex)
-    {
-      Logger.Error(ex, "TCP connection failed");
-      CleanupSocket();
-      return false;
-    }
+      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None);
+      linkedCts.CancelAfter(ConnectTimeout);
+
+      try
+      {
+        await TryConnectOnceAsync(linkedCts.Token).ConfigureAwait(false);
+        return IsConnected;
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.Error("TCP connection timed out");
+        CleanupSocket();
+        return false;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error(ex, "TCP connection failed");
+        CleanupSocket();
+        return false;
+      }
+    });
   }
 
   /// <inheritdoc />
   public override async Task<bool> ConnectAsync(CancellationToken ct = default)
   {
-    if (_isDisposedLocal) return false;
+    if (_isDisposedInt != 0) return false;
     if (IsConnected) return true;
 
     _isUserDisconnect = false;
@@ -260,8 +261,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override void Dispose()
   {
-    if (_isDisposedLocal) return;
-    _isDisposedLocal = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
 
     Disconnect();
 
@@ -280,8 +280,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override async ValueTask DisposeAsync()
   {
-    if (_isDisposedLocal) return;
-    _isDisposedLocal = true;
+    if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
 
     await DisconnectAsync().ConfigureAwait(false);
 
@@ -315,6 +314,11 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     socket.SendBufferSize = SocketBufferSize;
     socket.ReceiveTimeout = ReadTimeout;
     socket.SendTimeout = WriteTimeout;
+    socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+#if NET6_0_OR_GREATER
+    socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 15);
+    socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30);
+#endif
 
     try
     {
@@ -392,6 +396,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   private async Task RunReceiveLoopAsync(CancellationToken ct)
   {
     var buffer = new byte[ReceiveBufferSize];
+    var readTimeoutMs = ReadTimeout > 0 ? ReadTimeout * 3 : 6000;
 
     try
     {
@@ -403,11 +408,19 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
         int received;
         try
         {
+          using var readCts = new CancellationTokenSource(readTimeoutMs);
+          using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, readCts.Token);
 #if NET6_0_OR_GREATER
-          received = await socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, ct).ConfigureAwait(false);
+          received = await socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, linkedCts.Token).ConfigureAwait(false);
 #else
           received = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None).ConfigureAwait(false);
 #endif
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+          // 读取超时 - 可能是空闲断开，视为连接丢失
+          Logger.Log(LogLevel.Warning, $"TCP receive timeout after {readTimeoutMs}ms, treating as disconnect");
+          break;
         }
         catch (SocketException)
         {
@@ -434,7 +447,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     finally
     {
       // 非用户主动断开 → 触发重连
-      if (!_isUserDisconnect && !_isDisposedLocal) HandleDisconnected();
+      if (!_isUserDisconnect && _isDisposedInt == 0) HandleDisconnected();
     }
   }
 
@@ -449,7 +462,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
 
     if (wasConnected) ConnectStateChanged(false);
 
-    if (_isUserDisconnect || _isDisposedLocal) return;
+    if (_isUserDisconnect || _isDisposedInt != 0) return;
 
     // 启动重连循环
     StartReconnectLoop();
@@ -478,7 +491,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// </summary>
   private async Task RunReconnectLoopAsync(CancellationToken ct)
   {
-    while (!ct.IsCancellationRequested && !_isDisposedLocal)
+    while (!ct.IsCancellationRequested && _isDisposedInt == 0)
     {
       try
       {
@@ -591,7 +604,9 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     }
     catch (AggregateException ae)
     {
-      ae.Handle(ex => ex is OperationCanceledException or ObjectDisposedException);
+      foreach (var ex in ae.InnerExceptions)
+        if (ex is not (OperationCanceledException or ObjectDisposedException))
+          Logger.Log(LogLevel.Debug, $"WaitTask({name}) unexpected inner exception: {ex.Message}");
     }
     catch (OperationCanceledException)
     {
@@ -623,6 +638,12 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
       {
       }
 #endif
+    }
+    catch (AggregateException ae)
+    {
+      foreach (var ex in ae.InnerExceptions)
+        if (ex is not (OperationCanceledException or ObjectDisposedException))
+          Logger.Log(LogLevel.Debug, $"WaitTaskAsync({name}) unexpected inner exception: {ex.Message}");
     }
     catch (TimeoutException)
     {

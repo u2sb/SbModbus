@@ -11,7 +11,6 @@ using CommunityToolkit.Mvvm.DependencyInjection;
 using CommunityToolkit.Mvvm.Input;
 using R3;
 using Sb.Extensions.System;
-using SbModbus.Models;
 using SbModbus.Protocol;
 using SbModbus.Transport;
 using SbModbus.SerialPortStream;

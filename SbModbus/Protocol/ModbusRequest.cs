@@ -5,12 +5,10 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance.Buffers;
 using Sb.Extensions.System;
 using Sb.Extensions.System.Threading;
-using SbModbus.Protocol;
-using SbModbus.Transport;
 using SbModbus.Services.ModbusClient;
 using SbModbus.Utils;
 
-namespace SbModbus.Models;
+namespace SbModbus.Protocol;
 
 /// <summary>
 ///   Modbus请求
