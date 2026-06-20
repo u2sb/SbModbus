@@ -127,7 +127,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
       _isConnected = true;
       StartReceiveLoop();
       ConnectStateChanged(true);
-      Logger.Information("UDP client connected");
+      Logger.Information($"UDP client connected");
       return true;
     }
     catch (Exception ex)
@@ -149,7 +149,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Disconnect()
   {
-    Logger.Information("UDP client disconnecting");
+    Logger.Information($"UDP client disconnecting");
 
     CancelAndDispose(ref _receiveCts);
     WaitTask(_receiveTask, "receive");
@@ -173,7 +173,7 @@ public class SbUdpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override async Task<bool> DisconnectAsync(CancellationToken ct = default)
   {
-    Logger.Information("UDP client disconnecting");
+    Logger.Information($"UDP client disconnecting");
 
     CancelAndDispose(ref _receiveCts);
     await WaitTaskAsync(_receiveTask, "receive").ConfigureAwait(false);

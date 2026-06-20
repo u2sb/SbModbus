@@ -147,7 +147,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
   {
     if (!IsConnected)
     {
-      Logger.Warning("Attempted to write to disconnected serial port");
+      Logger.Warning($"Attempted to write to disconnected serial port");
       throw new SbModbusException("Serial port is not connected");
     }
 
@@ -199,7 +199,7 @@ public class SbSerialPortStream : ModbusStream, IModbusStream
     catch (InvalidOperationException)
     {
       // 串口已关闭或设备已断开
-      Logger.Warning("Serial port disconnected (InvalidOperationException in DataReceived)");
+      Logger.Warning($"Serial port disconnected (InvalidOperationException in DataReceived)");
       ConnectStateChanged(false);
     }
     catch (Exception ex)

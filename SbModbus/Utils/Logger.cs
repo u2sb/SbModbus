@@ -143,46 +143,6 @@ public static class Logger
 
   #endregion
 
-  #region 纯字符串重载
-
-  /// <inheritdoc cref="Log" />
-  public static void Trace(string message)
-  {
-    if (IsEnabled(LogLevel.Trace)) Output!(LogLevel.Trace, message);
-  }
-
-  /// <inheritdoc cref="Log" />
-  public static void Debug(string message)
-  {
-    if (IsEnabled(LogLevel.Debug)) Output!(LogLevel.Debug, message);
-  }
-
-  /// <inheritdoc cref="Log" />
-  public static void Information(string message)
-  {
-    if (IsEnabled(LogLevel.Information)) Output!(LogLevel.Information, message);
-  }
-
-  /// <inheritdoc cref="Log" />
-  public static void Warning(string message)
-  {
-    if (IsEnabled(LogLevel.Warning)) Output!(LogLevel.Warning, message);
-  }
-
-  /// <inheritdoc cref="Log" />
-  public static void Error(string message)
-  {
-    if (IsEnabled(LogLevel.Error)) Output!(LogLevel.Error, message);
-  }
-
-  /// <inheritdoc cref="Log" />
-  public static void Critical(string message)
-  {
-    if (IsEnabled(LogLevel.Critical)) Output!(LogLevel.Critical, message);
-  }
-
-  #endregion
-
   #region FormattableString 重载（格式化延迟求值）
 
   /// <inheritdoc cref="Log" />

@@ -49,7 +49,7 @@ public abstract class ModbusStream : IModbusStream
     _buffer.Dispose();
     _disposeCts.Dispose();
     StreamLock.Dispose();
-    Logger.Information("ModbusStream disposed");
+    Logger.Information($"ModbusStream disposed");
   }
 
   /// <inheritdoc />
@@ -68,7 +68,7 @@ public abstract class ModbusStream : IModbusStream
     _buffer.Dispose();
     _disposeCts.Dispose();
     StreamLock.Dispose();
-    Logger.Information("ModbusStream disposed async");
+    Logger.Information($"ModbusStream disposed async");
     await Task.CompletedTask;
   }
 

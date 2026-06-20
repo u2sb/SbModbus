@@ -159,7 +159,7 @@ public class SbTcpStreamServer : IModbusStreamServer
   {
     if (!_isListening) return;
 
-    Logger.Information("TCP server stopping...");
+    Logger.Information($"TCP server stopping...");
 
     // 取消接受循环
     CancelAndDispose(ref _acceptCts);
@@ -183,7 +183,7 @@ public class SbTcpStreamServer : IModbusStreamServer
     // 断开所有活跃会话
     DisconnectAllSessions();
 
-    Logger.Information("TCP server stopped");
+    Logger.Information($"TCP server stopped");
   }
 
   /// <inheritdoc />

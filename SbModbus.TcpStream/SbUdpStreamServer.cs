@@ -224,7 +224,7 @@ public class SbUdpStreamServer : IModbusStreamServer
   {
     if (!_isListening) return;
 
-    Logger.Information("UDP server stopping...");
+    Logger.Information($"UDP server stopping on {_localEndPoint}");
 
     // 取消接收循环
     CancelAndDispose(ref _receiveCts);
@@ -248,7 +248,7 @@ public class SbUdpStreamServer : IModbusStreamServer
     // 断开所有活跃会话
     DisconnectAllSessions();
 
-    Logger.Information("UDP server stopped");
+    Logger.Information($"UDP server stopped on {_localEndPoint}");
   }
 
   /// <inheritdoc />

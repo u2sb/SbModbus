@@ -77,7 +77,7 @@ internal sealed class SbBackgroundThread : IDisposable
       _workerThread.Start();
     }
 
-    Logger.Information("SbBackgroundThread started");
+    Logger.Information($"SbBackgroundThread started");
   }
 
   /// <summary>
@@ -96,7 +96,7 @@ internal sealed class SbBackgroundThread : IDisposable
       _isRunning = false;
     }
 
-    Logger.Information("SbBackgroundThread stopping...");
+    Logger.Information($"SbBackgroundThread stopping...");
 
     var thread = _workerThread;
     _workerThread = null;
@@ -115,7 +115,7 @@ internal sealed class SbBackgroundThread : IDisposable
     }
     else
     {
-      Logger.Information("SbBackgroundThread stopped gracefully");
+      Logger.Information($"SbBackgroundThread stopped gracefully");
     }
   }
 
@@ -157,13 +157,13 @@ internal sealed class SbBackgroundThread : IDisposable
     if (_disposed) throw new ObjectDisposedException(nameof(SbBackgroundThread));
     if (!_isRunning)
     {
-      Logger.Warning("SbBackgroundThread.Post: not running, work dropped");
+      Logger.Warning($"SbBackgroundThread.Post: not running, work dropped");
       return;
     }
 
     var item = new WorkItem(work, null, OnWorkItemException);
     if (!_channel.Writer.TryWrite(item))
-      Logger.Warning("SbBackgroundThread.Post: Channel is closed, work dropped");
+      Logger.Warning($"SbBackgroundThread.Post: Channel is closed, work dropped");
   }
 
   /// <summary>
@@ -201,7 +201,7 @@ internal sealed class SbBackgroundThread : IDisposable
 
     if (!_channel.Writer.TryWrite(item))
     {
-      Logger.Error("SbBackgroundThread.Run<T>: Channel is closed");
+      Logger.Error($"SbBackgroundThread.Run<T>: Channel is closed");
       throw new InvalidOperationException("Background thread channel is closed. The thread may have been stopped.");
     }
 
@@ -240,7 +240,7 @@ internal sealed class SbBackgroundThread : IDisposable
 
     if (!_channel.Writer.TryWrite(item))
     {
-      Logger.Error("SbBackgroundThread.Run: Channel is closed");
+      Logger.Error($"SbBackgroundThread.Run: Channel is closed");
       throw new InvalidOperationException("Background thread channel is closed. The thread may have been stopped.");
     }
 

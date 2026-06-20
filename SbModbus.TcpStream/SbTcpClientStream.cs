@@ -159,7 +159,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
       }
       catch (OperationCanceledException)
       {
-        Logger.Error("TCP connection timed out");
+        Logger.Error($"TCP connection timed out");
         CleanupSocket();
         return false;
       }
@@ -190,7 +190,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
     }
     catch (OperationCanceledException)
     {
-      Logger.Error("TCP connection timed out");
+      Logger.Error($"TCP connection timed out");
       CleanupSocket();
       return false;
     }
@@ -205,7 +205,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override bool Disconnect()
   {
-    Logger.Information("TCP client disconnecting");
+    Logger.Information($"TCP client disconnecting");
 
     _isUserDisconnect = true;
 
@@ -233,7 +233,7 @@ public class SbTcpClientStream : ModbusStream, IModbusStream
   /// <inheritdoc />
   public override async Task<bool> DisconnectAsync(CancellationToken ct = default)
   {
-    Logger.Information("TCP client disconnecting");
+    Logger.Information($"TCP client disconnecting");
 
     _isUserDisconnect = true;
 

@@ -67,7 +67,7 @@ internal sealed class RingBufferStreamBuffer : IStreamBuffer
     {
       if (_isDisposed != 0)
       {
-        Logger.Warning("StreamBuffer: Attempted to write after dispose, ignoring");
+        Logger.Warning($"StreamBuffer: Attempted to write after dispose, ignoring");
         return;
       }
 

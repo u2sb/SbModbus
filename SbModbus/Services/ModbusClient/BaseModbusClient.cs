@@ -71,7 +71,7 @@ public abstract class BaseModbusClient : IModbusClient
     OnDataReceivedAsync = null;
     OnDataSent = null;
     OnDataSentAsync = null;
-    Logger.Information("ModbusClient disposed");
+    Logger.Information($"ModbusClient disposed");
     GC.SuppressFinalize(this);
   }
 
