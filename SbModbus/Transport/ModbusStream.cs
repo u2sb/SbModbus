@@ -20,7 +20,7 @@ public abstract class ModbusStream : IModbusStream
   /// <summary>
   /// </summary>
   protected ModbusStream()
-    : this(new RingBufferStreamBuffer(2048))
+    : this(new RingBufferStreamBuffer())
   {
   }
 
@@ -32,6 +32,11 @@ public abstract class ModbusStream : IModbusStream
   {
     _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
   }
+
+  /// <summary>
+  ///   异步锁 — 保护一次完整的请求-响应事务。
+  /// </summary>
+  public AsyncLock StreamLock { get; } = new();
 
   /// <inheritdoc />
   public virtual void Dispose()
@@ -51,7 +56,12 @@ public abstract class ModbusStream : IModbusStream
   public virtual async ValueTask DisposeAsync()
   {
     if (Interlocked.CompareExchange(ref _isDisposedInt, 1, 0) != 0) return;
+
+#if NET8_0_OR_GREATER
+    await _disposeCts.CancelAsync();
+#else
     _disposeCts.Cancel();
+#endif
     OnConnectStateChanged = null;
     OnDataReceived = null;
     OnDataSent = null;
@@ -76,11 +86,6 @@ public abstract class ModbusStream : IModbusStream
 
   /// <inheritdoc />
   public abstract int WriteTimeout { get; set; }
-
-  /// <summary>
-  ///   异步锁 — 保护一次完整的请求-响应事务。
-  /// </summary>
-  public AsyncLock StreamLock { get; } = new();
 
   /// <inheritdoc />
   public abstract bool Connect();
@@ -148,10 +153,9 @@ public abstract class ModbusStream : IModbusStream
 
     // _buffer.ReadAsync 内部处理等待逻辑 — 不再需要外部 while(true) + Task.Yield
     var read = await _buffer.ReadAsync(buffer, ct).ConfigureAwait(false);
-    if (read > 0) return read;
-
-    // 已释放
-    throw new SbModbusException("Stream has been disposed");
+    return read > 0
+      ? read
+      : throw new SbModbusException("Stream has been disposed");
   }
 
   /// <summary>

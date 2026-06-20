@@ -14,15 +14,17 @@ namespace SbModbus.Services.ModbusServer;
 public static class FrameParser
 {
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  // ReSharper disable once InconsistentNaming
   private static ushort ReadU16BE(RingBufferSpan<byte> buf, int offset)
   {
-    return (ushort)(buf[offset] << 8 | buf[offset + 1]);
+    return (ushort)((buf[offset] << 8) | buf[offset + 1]);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  // ReSharper disable once InconsistentNaming
   private static ushort ReadU16LE(RingBufferSpan<byte> buf, int offset)
   {
-    return (ushort)(buf[offset] | buf[offset + 1] << 8);
+    return (ushort)(buf[offset] | (buf[offset + 1] << 8));
   }
 
   /// <summary>

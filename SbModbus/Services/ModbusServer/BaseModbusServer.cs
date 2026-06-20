@@ -123,6 +123,7 @@ public abstract class BaseModbusServer : IModbusServer
     }
     catch
     {
+      // ignored
     }
 
     CancelAndDispose(ref _runningCts);
@@ -437,7 +438,7 @@ public abstract class BaseModbusServer : IModbusServer
     // 回显: startingAddress(2, BE) + quantity(2, BE)
     Span<byte> echo = stackalloc byte[4];
     startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
-    quantity.WriteTo(echo.Slice(2), BigAndSmallEndianEncodingMode.ABCD);
+    quantity.WriteTo(echo[2..], BigAndSmallEndianEncodingMode.ABCD);
 
     return ModbusResponseResult.Success(echo.ToArray());
   }
@@ -491,7 +492,7 @@ public abstract class BaseModbusServer : IModbusServer
     // 回显: startingAddress(2, BE) + data(2)
     Span<byte> echo = stackalloc byte[4];
     startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
-    requestData.Span.CopyTo(echo.Slice(2));
+    requestData.Span.CopyTo(echo[2..]);
 
     return ModbusResponseResult.Success(echo.ToArray());
   }
@@ -522,7 +523,7 @@ public abstract class BaseModbusServer : IModbusServer
     // 回显: startingAddress(2, BE) + quantity(2, BE)
     Span<byte> echo = stackalloc byte[4];
     startingAddress.WriteTo(echo, BigAndSmallEndianEncodingMode.ABCD);
-    quantity.WriteTo(echo.Slice(2), BigAndSmallEndianEncodingMode.ABCD);
+    quantity.WriteTo(echo[2..], BigAndSmallEndianEncodingMode.ABCD);
 
     return ModbusResponseResult.Success(echo.ToArray());
   }

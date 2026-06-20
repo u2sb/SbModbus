@@ -18,11 +18,7 @@ namespace SbModbus.Utils;
 /// </remarks>
 internal sealed class SbBackgroundThread : IDisposable
 {
-#if NET10_0_OR_GREATER
   private readonly Lock _lifecycleLock = new();
-#else
-  private readonly object _lifecycleLock = new();
-#endif
 
   private readonly Channel<WorkItem> _channel;
   private readonly CancellationTokenSource _disposeCts = new();
@@ -144,8 +140,6 @@ internal sealed class SbBackgroundThread : IDisposable
     }
 
     OnUnhandledException = null;
-
-    GC.SuppressFinalize(this);
   }
 
   #endregion

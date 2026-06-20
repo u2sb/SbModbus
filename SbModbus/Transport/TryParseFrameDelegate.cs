@@ -12,6 +12,5 @@ namespace SbModbus.Transport;
 /// <param name="buffer">RingBuffer 缓冲区引用（解析后自动截断已消费部分）</param>
 /// <param name="message">解析出的帧消息</param>
 /// <returns>true — 成功解析一帧；false — 数据不足或格式错误</returns>
-public delegate bool TryParseFrameDelegate(IModbusStream session,
-  ref RingBufferSpan<byte> buffer,
+public delegate bool TryParseFrameDelegate(IModbusStream session, ref RingBufferSpan<byte> buffer,
   out ModbusFrameMessage message);

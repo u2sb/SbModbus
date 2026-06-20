@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using CommunityToolkit.HighPerformance;
 using Sb.Extensions.System;
 using SbModbus.Protocol;
-using SbModbus.Transport;
 using SbModbus.Utils;
 
 namespace SbModbus.Services.ModbusClient;
@@ -22,9 +21,10 @@ public partial class ModbusTcpClient
       ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
-    var length = 7 + 1 + 1 + (count + 7 >> 3);
+    var length = 7 + 1 + 1 + ((count + 7) >> 3);
     ((ushort)(buffer.WrittenCount - 6)).WriteTo(buffer.RawBuffer.AsSpan(4, 2), BigAndSmallEndianEncodingMode.ABCD);
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
+      .ConfigureAwait(false);
 
     // 返回数据
     return result[9..];
@@ -39,9 +39,10 @@ public partial class ModbusTcpClient
       ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 (n +7) / 8数据
-    var length = 7 + 1 + 1 + (count + 7 >> 3);
+    var length = 7 + 1 + 1 + ((count + 7) >> 3);
     ((ushort)(buffer.WrittenCount - 6)).WriteTo(buffer.RawBuffer.AsSpan(4, 2), BigAndSmallEndianEncodingMode.ABCD);
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
+      .ConfigureAwait(false);
 
     // 返回数据
     return result[9..];
@@ -83,7 +84,8 @@ public partial class ModbusTcpClient
     var l = data.Length;
     Logger.Log(LogLevel.Debug,
       $"WriteMultipleRegisters: unit={unitIdentifier}, address={startingAddress}, registers={l / 2}");
-    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress, data.Span,
+    using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleRegisters, startingAddress,
+      data.Span,
       writer =>
       {
         // 写寄存器数量
@@ -106,7 +108,8 @@ public partial class ModbusTcpClient
     ReadOnlyMemory<byte> data, CancellationToken ct = default)
   {
     var l = data.Length;
-    Logger.Log(LogLevel.Debug, $"WriteMultipleCoils: unit={unitIdentifier}, address={startingAddress}, coils={quantity}");
+    Logger.Log(LogLevel.Debug,
+      $"WriteMultipleCoils: unit={unitIdentifier}, address={startingAddress}, coils={quantity}");
     using var buffer = CreateFrame(unitIdentifier, ModbusFunctionCode.WriteMultipleCoils, startingAddress, data.Span,
       writer =>
       {
@@ -132,12 +135,14 @@ public partial class ModbusTcpClient
   {
     Logger.Log(LogLevel.Debug,
       $"ReadRegisters: unit={unitIdentifier}, function=0x{(int)functionCode:X2}, address={startingAddress}, count={count}");
-    using var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress, ConvertUshort(count).WithEndianness(true));
+    using var buffer = CreateFrame(unitIdentifier, functionCode, startingAddress,
+      ConvertUshort(count).WithEndianness(true));
 
     // 7MBAP 1功能码 1数据长度 2n数据
     var length = 7 + 1 + 1 + count * 2;
     ((ushort)(buffer.WrittenCount - 6)).WriteTo(buffer.RawBuffer.AsSpan(4, 2), BigAndSmallEndianEncodingMode.ABCD);
-    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct).ConfigureAwait(false);
+    var result = await WriteAndReadWithTimeoutAsync(buffer.WrittenMemory, length, ReadTimeout, ct)
+      .ConfigureAwait(false);
 
     // 返回数据
     return result[9..];
@@ -170,49 +175,49 @@ public partial class ModbusTcpClient
       var buffer = ArrayPool<byte>.Shared.Rent(length);
       try
       {
-      var memory = buffer.AsMemory(0, length);
-      var bytesRead = 0;
+        var memory = buffer.AsMemory(0, length);
+        var bytesRead = 0;
 
-      // 是否已验证功能码
-      var verificationFunctionCode = false;
+        // 是否已验证功能码
+        var verificationFunctionCode = false;
 
-      while (bytesRead < length)
-      {
-        cts.Token.ThrowIfCancellationRequested();
-        var read = await mt.ReadAsync(memory[bytesRead..], cts.Token).ConfigureAwait(false);
-
-        // 如果没读到数据就跳过
-        if (read > 0)
+        while (bytesRead < length)
         {
-          bytesRead += read;
+          cts.Token.ThrowIfCancellationRequested();
+          var read = await mt.ReadAsync(memory[bytesRead..], cts.Token).ConfigureAwait(false);
 
-          // 如果已经读到功能码和错误码
-          if (!verificationFunctionCode && bytesRead >= 9)
+          // 如果没读到数据就跳过
+          if (read > 0)
           {
-            // 如果功能码不一致
-            if ((buffer[7] & 0x80) != 0)
-            {
-              length = 9; // 响应不正常时返回值长度变为9
-              Logger.Log(LogLevel.Warning,
-                $"TCP exception response detected, adjusting expected length to 9, bytesRead={bytesRead}");
-            }
+            bytesRead += read;
 
-            verificationFunctionCode = true;
+            // 如果已经读到功能码和错误码
+            if (!verificationFunctionCode && bytesRead >= 9)
+            {
+              // 如果功能码不一致
+              if ((buffer[7] & 0x80) != 0)
+              {
+                length = 9; // 响应不正常时返回值长度变为9
+                Logger.Log(LogLevel.Warning,
+                  $"TCP exception response detected, adjusting expected length to 9, bytesRead={bytesRead}");
+              }
+
+              verificationFunctionCode = true;
+            }
+          }
+          else
+          {
+            await Task.Yield();
           }
         }
-        else
-        {
-          await Task.Yield();
-        }
-      }
 
-      var result = memory[..length];
+        var result = memory[..length];
 
-      VerifyFrame(result.Span, tid, expectedUnitId, expectedFunctionCode);
+        VerifyFrame(result.Span, tid, expectedUnitId, expectedFunctionCode);
 
-      await DataReceivedAsync(result);
+        await DataReceivedAsync(result);
 
-      return result.ToArray();
+        return result.ToArray();
       }
       finally
       {

@@ -199,7 +199,6 @@ public class SbTcpStreamServer : IModbusStreamServer
 
     // 释放所有还存活的会话
     foreach (var kv in _sessions)
-    {
       try
       {
         kv.Value.Dispose();
@@ -208,7 +207,6 @@ public class SbTcpStreamServer : IModbusStreamServer
       {
         /* ignore */
       }
-    }
 
     _sessions.Clear();
 
@@ -353,7 +351,6 @@ public class SbTcpStreamServer : IModbusStreamServer
   private void DisconnectAllSessions()
   {
     foreach (var kv in _sessions)
-    {
       try
       {
         kv.Value.Disconnect();
@@ -362,7 +359,6 @@ public class SbTcpStreamServer : IModbusStreamServer
       {
         Logger.Log(LogLevel.Debug, $"Session disconnect warning: {ex.Message}");
       }
-    }
   }
 
   #endregion
@@ -673,7 +669,8 @@ public class SbTcpSessionStream : ModbusStream, IModbusStream
           using var readCts = new CancellationTokenSource(readTimeoutMs);
           using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, readCts.Token);
 #if NET6_0_OR_GREATER
-          received = await _socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, linkedCts.Token).ConfigureAwait(false);
+          received = await _socket.ReceiveAsync(buffer.AsMemory(), SocketFlags.None, linkedCts.Token)
+            .ConfigureAwait(false);
 #else
           received = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None).ConfigureAwait(false);
 #endif

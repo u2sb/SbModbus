@@ -18,10 +18,10 @@ namespace SbModbus.Transport;
 /// </remarks>
 internal sealed class RingBufferStreamBuffer : IStreamBuffer
 {
-  private readonly object _locker = new();
-  private readonly FixedSizeRingBuffer<byte> _ringBuffer;
   private readonly SemaphoreSlim _dataAvailable = new(0);
   private readonly CancellationTokenSource _disposeCts = new();
+  private readonly Lock _locker = new();
+  private readonly FixedSizeRingBuffer<byte> _ringBuffer;
   private volatile bool _dataAvailableSignaled;
   private int _isDisposed;
 
@@ -39,7 +39,10 @@ internal sealed class RingBufferStreamBuffer : IStreamBuffer
   {
     get
     {
-      lock (_locker) return _ringBuffer.Count;
+      lock (_locker)
+      {
+        return _ringBuffer.Count;
+      }
     }
   }
 
@@ -82,10 +85,9 @@ internal sealed class RingBufferStreamBuffer : IStreamBuffer
         }
         else
         {
-          var keepFromIncoming = capacity;
           _ringBuffer.Clear();
-          if (keepFromIncoming < incoming)
-            data = data.Slice(incoming - keepFromIncoming);
+          if (capacity < incoming)
+            data = data[(incoming - capacity)..];
         }
       }
 
@@ -126,12 +128,6 @@ internal sealed class RingBufferStreamBuffer : IStreamBuffer
     }
   }
 
-  private void DrainSemaphore()
-  {
-    while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0)) { }
-    _dataAvailableSignaled = false;
-  }
-
   /// <inheritdoc />
   public async ValueTask<int> ReadAsync(Memory<byte> destination, CancellationToken ct = default)
   {
@@ -142,11 +138,10 @@ internal sealed class RingBufferStreamBuffer : IStreamBuffer
       var length = Read(destination.Span);
       if (length > 0) return length;
 
-      CancellationToken waitToken;
       if (ct.CanBeCanceled)
       {
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _disposeCts.Token);
-        waitToken = linkedCts.Token;
+        var waitToken = linkedCts.Token;
         try
         {
           await _dataAvailable.WaitAsync(waitToken).ConfigureAwait(false);
@@ -195,7 +190,15 @@ internal sealed class RingBufferStreamBuffer : IStreamBuffer
   /// </remarks>
   public BufferLock AcquireLock()
   {
-    Monitor.Enter(_locker);
     return new BufferLock(_ringBuffer, _locker);
+  }
+
+  private void DrainSemaphore()
+  {
+    while (_dataAvailable.CurrentCount > 0 && _dataAvailable.Wait(0))
+    {
+    }
+
+    _dataAvailableSignaled = false;
   }
 }

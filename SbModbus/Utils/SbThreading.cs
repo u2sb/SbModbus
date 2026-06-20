@@ -125,7 +125,7 @@ public class JoinableTaskFactory
 /// </remarks>
 public static class SbThreading
 {
-  private static readonly object Sync = new();
+  private static readonly Lock Sync = new();
   private static JoinableTaskContext? _context;
   private static SbBackgroundThread? _backgroundThread;
 
@@ -220,6 +220,7 @@ public static class SbThreading
 
     if (thread == null) return;
 
+    // ReSharper disable once EventUnsubscriptionViaAnonymousDelegate
     thread.OnUnhandledException -= _ => { };
     thread.Stop(timeout);
     thread.Dispose();

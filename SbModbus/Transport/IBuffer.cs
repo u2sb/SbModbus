@@ -66,12 +66,16 @@ public readonly ref struct BufferLock : IDisposable
   public readonly RingBufferSpan<byte> WrittenSpan => _ringBuffer.WrittenSpan;
 
   private readonly FixedSizeRingBuffer<byte> _ringBuffer;
-  private readonly object _locker;
+  private readonly Lock _locker;
 
-  internal BufferLock(FixedSizeRingBuffer<byte> ringBuffer, object locker)
+  internal BufferLock(FixedSizeRingBuffer<byte> ringBuffer, Lock locker)
   {
     _ringBuffer = ringBuffer ?? throw new ArgumentNullException(nameof(ringBuffer));
     _locker = locker ?? throw new ArgumentNullException(nameof(locker));
+    if (!_locker.IsHeldByCurrentThread)
+    {
+      _locker.Enter();
+    }
   }
 
   /// <summary>
@@ -82,6 +86,6 @@ public readonly ref struct BufferLock : IDisposable
   /// <inheritdoc />
   public void Dispose()
   {
-    Monitor.Exit(_locker);
+    _locker.Exit();
   }
 }

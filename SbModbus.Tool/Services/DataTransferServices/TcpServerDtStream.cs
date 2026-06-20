@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -9,7 +9,7 @@ public class TcpServerDtStream : IDtStream
 {
   private readonly IPEndPoint _endPoint;
 
-  private readonly object _lock = new();
+  private readonly Lock _lock = new();
   private readonly List<Guid> _sessionOrder = [];
 
   private readonly ConcurrentDictionary<Guid, DtStreamTcpSession> _sessions = new();

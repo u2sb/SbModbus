@@ -263,7 +263,6 @@ public class SbUdpStreamServer : IModbusStreamServer
     _receiveCts = null;
 
     foreach (var kv in _sessions)
-    {
       try
       {
         kv.Value.Dispose();
@@ -272,7 +271,6 @@ public class SbUdpStreamServer : IModbusStreamServer
       {
         /* ignore */
       }
-    }
 
     _sessions.Clear();
 
@@ -353,7 +351,6 @@ public class SbUdpStreamServer : IModbusStreamServer
   private void DisconnectAllSessions()
   {
     foreach (var kv in _sessions)
-    {
       try
       {
         kv.Value.Disconnect();
@@ -362,7 +359,6 @@ public class SbUdpStreamServer : IModbusStreamServer
       {
         Logger.Log(LogLevel.Debug, $"Session disconnect warning: {ex.Message}");
       }
-    }
   }
 
   private static void CancelAndDispose(ref CancellationTokenSource? cts)
